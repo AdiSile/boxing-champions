@@ -151,8 +151,6 @@ function createSchema(database) {
 // Seed hardcoded data (only if tables are empty)
 // ---------------------------------------------------------------------------
 function seedData(database) {
-  const stmtCount = database.prepare('SELECT COUNT(*) AS cnt FROM ?');
-
   // --- Settings ---
   const settingsCount = database.prepare('SELECT COUNT(*) AS cnt FROM settings').get();
   if (settingsCount.cnt === 0) {
