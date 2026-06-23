@@ -246,7 +246,7 @@ function seedData(database) {
         description:
           'Seară de sparring deschis publicului. Membrii clubului și-au testat abilitățile în meciuri amicale intense.',
         photos: [
-          { url: 'images/event-sparring.jpg', caption: 'Sparring round 1', sort_order: 0 },
+          { url: 'images/event-gala.jpg', caption: 'Sparring round 1', sort_order: 0 },
           { url: 'images/event-coaching.jpg', caption: 'Coaching ringside', sort_order: 1 },
         ],
       },

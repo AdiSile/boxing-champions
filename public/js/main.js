@@ -279,3 +279,257 @@ if (document.readyState === 'loading') {
 } else {
   initDynamicContent();
 }
+
+// ===========================================================================
+// PARTICULE CANVAS AURII — 40-60 cercuri animate
+// ===========================================================================
+
+(function () {
+  // Reutilizează canvas-ul din HTML dacă există, altfel creează unul
+  let canvas = document.getElementById('particles-canvas');
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.id = 'particles-canvas';
+    document.body.prepend(canvas);
+  }
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;';
+  const ctx = canvas.getContext('2d');
+
+  let width, height;
+  let particles = [];
+
+  const PARTICLE_COUNT_MIN = 40;
+  const PARTICLE_COUNT_MAX = 60;
+
+  function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+
+  function randomBetween(a, b) {
+    return a + Math.random() * (b - a);
+  }
+
+  function createParticle() {
+    return {
+      x: randomBetween(0, width),
+      y: randomBetween(0, height),
+      radius: randomBetween(1.2, 3.5),
+      speedX: randomBetween(-0.3, 0.3),
+      speedY: randomBetween(-0.3, 0.3),
+      opacity: randomBetween(0.15, 0.55),
+      pulse: randomBetween(0, Math.PI * 2),
+      pulseSpeed: randomBetween(0.005, 0.025),
+    };
+  }
+
+  function initParticles() {
+    const count = Math.floor(randomBetween(PARTICLE_COUNT_MIN, PARTICLE_COUNT_MAX));
+    particles = [];
+    for (let i = 0; i < count; i++) {
+      particles.push(createParticle());
+    }
+  }
+
+  initParticles();
+  window.addEventListener('resize', () => {
+    resize();
+    initParticles();
+  });
+
+  function animate() {
+    ctx.clearRect(0, 0, width, height);
+
+    particles.forEach(function (p) {
+      // actualizează pulsul
+      p.pulse += p.pulseSpeed;
+
+      // actualizează poziția
+      p.x += p.speedX;
+      p.y += p.speedY;
+
+      // wrap around
+      if (p.x < -10) p.x = width + 10;
+      if (p.x > width + 10) p.x = -10;
+      if (p.y < -10) p.y = height + 10;
+      if (p.y > height + 10) p.y = -10;
+
+      // opacitate cu puls
+      const alpha = p.opacity + Math.sin(p.pulse) * 0.12;
+
+      // desenare cerc auriu
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(212, 175, 55, ' + Math.max(0.05, alpha).toFixed(3) + ')';
+      ctx.fill();
+
+      // glow subtil
+      var glowRadius = p.radius * 3;
+      var gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowRadius);
+      gradient.addColorStop(0, 'rgba(212, 175, 55, ' + (Math.max(0.02, alpha * 0.3)).toFixed(3) + ')');
+      gradient.addColorStop(1, 'rgba(212, 175, 55, 0)');
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, glowRadius, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    });
+
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+})();
+
+// ===========================================================================
+// CURSOR PERSONALIZAT — dot + ring cu inerție
+// ===========================================================================
+
+(function () {
+  // elemente DOM pentru cursor — reutilizează din HTML dacă există
+  var dot = document.querySelector('.cursor-dot');
+  if (!dot) {
+    dot = document.createElement('div');
+    dot.className = 'cursor-dot';
+    document.body.appendChild(dot);
+  }
+  dot.setAttribute('aria-hidden', 'true');
+
+  var ring = document.querySelector('.cursor-ring');
+  if (!ring) {
+    ring = document.createElement('div');
+    ring.className = 'cursor-ring';
+    document.body.appendChild(ring);
+  }
+  ring.setAttribute('aria-hidden', 'true');
+
+  // poziții
+  var mouseX = -100;
+  var mouseY = -100;
+  var dotX = -100;
+  var dotY = -100;
+  var ringX = -100;
+  var ringY = -100;
+
+  // stări
+  var isHovering = false;
+  var isVisible = false;
+  var isTouchDevice = false;
+
+  // factori de inerție
+  var dotEasing = 0.35;
+  var ringEasing = 0.12;
+
+  // detectare touch device
+  function detectTouch() {
+    isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (isTouchDevice) {
+      dot.style.display = 'none';
+      ring.style.display = 'none';
+    }
+  }
+
+  detectTouch();
+
+  // actualizează poziția mouse-ului
+  function onMouseMove(e) {
+    if (isTouchDevice) return;
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+
+    if (!isVisible) {
+      dot.style.opacity = '1';
+      ring.style.opacity = '1';
+      isVisible = true;
+    }
+  }
+
+  // ascunde cursorul când iese din fereastră
+  function onMouseLeave() {
+    if (isTouchDevice) return;
+    isVisible = false;
+    dot.style.opacity = '0';
+    ring.style.opacity = '0';
+  }
+
+  function onMouseEnter() {
+    if (isTouchDevice) return;
+    isVisible = true;
+  }
+
+  // hover pe elemente interactive
+  function onElementEnter() {
+    if (isTouchDevice) return;
+    isHovering = true;
+    ring.style.transform = 'translate(-50%, -50%) scale(1.8)';
+    ring.style.borderColor = 'rgba(212, 175, 55, 0.9)';
+    ring.style.borderWidth = '1.5px';
+    dot.style.transform = 'translate(-50%, -50%) scale(1.8)';
+    dot.style.backgroundColor = 'rgba(212, 175, 55, 1)';
+  }
+
+  function onElementLeave() {
+    if (isTouchDevice) return;
+    isHovering = false;
+    ring.style.transform = 'translate(-50%, -50%) scale(1)';
+    ring.style.borderColor = 'rgba(212, 175, 55, 0.5)';
+    ring.style.borderWidth = '1.5px';
+    dot.style.transform = 'translate(-50%, -50%) scale(1)';
+    dot.style.backgroundColor = 'rgba(212, 175, 55, 0.9)';
+  }
+
+  // loop de animație
+  function updateCursor() {
+    if (!isTouchDevice) {
+      // inerție dot
+      dotX += (mouseX - dotX) * dotEasing;
+      dotY += (mouseY - dotY) * dotEasing;
+
+      // inerție ring
+      ringX += (mouseX - ringX) * ringEasing;
+      ringY += (mouseY - ringY) * ringEasing;
+
+      dot.style.left = dotX + 'px';
+      dot.style.top = dotY + 'px';
+
+      ring.style.left = ringX + 'px';
+      ring.style.top = ringY + 'px';
+    }
+
+    requestAnimationFrame(updateCursor);
+  }
+
+  // evenimente mouse
+  document.addEventListener('mousemove', onMouseMove, { passive: true });
+  document.addEventListener('mouseleave', onMouseLeave);
+  document.addEventListener('mouseenter', onMouseEnter);
+
+  // evenimente hover pe elemente interactive
+  var interactiveSelector = 'a, button, input, textarea, select, [role="button"], .btn, .coach-card, .event-card, .tilt-card, .glass-card, .shop-card, [data-content], .nav-link, .schedule-table tr, .tag';
+  document.addEventListener('mouseover', function (e) {
+    var target = e.target.closest(interactiveSelector);
+    if (target) {
+      // verifică dacă nu suntem deja în hover
+      if (!isHovering) {
+        onElementEnter();
+      }
+    }
+  });
+  document.addEventListener('mouseout', function (e) {
+    var target = e.target.closest(interactiveSelector);
+    if (target) {
+      var relatedTarget = e.relatedTarget;
+      // verifică dacă relatedTarget nu este tot un element interactiv
+      if (!relatedTarget || !relatedTarget.closest(interactiveSelector)) {
+        onElementLeave();
+      }
+    }
+  });
+
+  // pornește loop-ul
+  updateCursor();
+})();
