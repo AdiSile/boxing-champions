@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Boxing Champions — Program săptămânal complet Luni–Vineri. Antrenamente pentru copii, feminin, masculin și mixt. Alege categoria potrivită!">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Program — Boxing Champions</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
+</head>
+<body>
+
+  <!-- =======================================================================
+       PARTICLES CANVAS
+       ======================================================================= -->
+  <canvas id="particles-canvas"></canvas>
+
+  <!-- =======================================================================
+       CUSTOM CURSOR
+       ======================================================================= -->
+  <div class="cursor-dot"></div>
+  <div class="cursor-ring"></div>
+
+  <!-- =======================================================================
+       NAVBAR
+       ======================================================================= -->
+  <nav class="navbar z-content">
+    <div class="container">
+      <a href="/" class="nav-logo" aria-label="Boxing Champions — Acasă">
+        <i class="fa-solid fa-glove"></i> BOXING CHAMPIONS
+      </a>
+      <button class="nav-toggle" aria-label="Deschide meniul" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <ul class="nav-links" role="menubar">
+        <li role="none"><a href="/" role="menuitem">Acasă</a></li>
+        <li role="none"><a href="/events" role="menuitem">Evenimente</a></li>
+        <li role="none"><a href="/schedule" role="menuitem" class="active">Program</a></li>
+        <li role="none"><a href="/pricing" role="menuitem">Abonamente</a></li>
+        <li role="none"><a href="/shop" role="menuitem">Magazin</a></li>
+        <li role="none"><a href="/contact" role="menuitem">Contact</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- =======================================================================
+       PAGE HERO — PROGRAM
+       ======================================================================= -->
+  <section class="hero" id="schedule-hero" style="min-height: 50vh;">
+    <div style="position: absolute; inset: 0; z-index: -1;" aria-hidden="true">
+      <img src="images/event-sparring.jpg" alt="" loading="lazy"
+           style="width: 100%; height: 100%; object-fit: cover; opacity: 0.25; filter: brightness(0.4);"
+           aria-hidden="true">
+    </div>
+    <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,0.9) 0%, rgba(10,10,10,0.6) 50%, rgba(10,10,10,0.95) 100%); z-index: -1;" aria-hidden="true"></div>
+    <div class="hero-content z-content" style="padding-top: 6rem;">
+      <span class="hero-badge">
+        <i class="fa-solid fa-clock" style="margin-right: 0.4rem;"></i> Săptămânal
+      </span>
+      <h1 class="hero-title" style="font-size: clamp(2.4rem, 5vw, 4.5rem);">
+        PRO<span class="gold">GRAM</span>
+      </h1>
+      <p class="hero-subtitle">
+        Antrenamente Luni–Vineri pentru toate vârstele și nivelurile. Alege categoria potrivită ție și intră în ring!
+      </p>
+      <div class="btn-group" style="justify-content: center;">
+        <a href="/pricing" class="btn btn-primary btn-lg">
+          <i class="fa-solid fa-ticket"></i> Vezi Abonamente
+        </a>
+        <a href="/contact" class="btn btn-outline btn-lg">
+          <i class="fa-solid fa-calendar-check"></i> Înscrie-te Acum
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       SCHEDULE FULL TABLE SECTION
+       ======================================================================= -->
+  <section class="section" id="schedule-full" style="padding-top: var(--space-3xl);">
+    <div class="container">
+      <span class="section-label fade-in">Săptămânal</span>
+      <h2 class="text-center fade-in">Program <span class="text-gold">Complet</span></h2>
+      <span class="gold-separator fade-in"></span>
+      <p class="text-center text-gray fade-in" style="max-width: 620px; margin-left: auto; margin-right: auto; margin-bottom: var(--space-3xl);">
+        Tabelul de mai jos acoperă toate antrenamentele săptămânale. Program flexibil Luni–Vineri, pentru copii, feminin, masculin și mixt.
+      </p>
+
+      <!-- Container populat dinamic de main.js — loadSchedule() -->
+      <div data-content="schedule" class="slide-up">
+        <!-- Schelet loading — înlocuit la încărcarea datelor -->
+        <div class="schedule-table-wrap">
+          <table class="schedule-table" aria-label="Program săptămânal Boxing Champions">
+            <thead>
+              <tr>
+                <th scope="col">Zi</th>
+                <th scope="col">Interval Orar</th>
+                <th scope="col">Categorie</th>
+                <th scope="col">Gen</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- LUNI schelet -->
+              <tr><td rowspan="4" style="font-weight: 700; color: var(--color-gold); font-family: var(--font-display); font-size: 1.1rem;">Luni</td><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <!-- MARȚI schelet -->
+              <tr><td rowspan="4" style="font-weight: 700; color: var(--color-gold); font-family: var(--font-display); font-size: 1.1rem;">Marți</td><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <!-- MIERCURI schelet -->
+              <tr><td rowspan="4" style="font-weight: 700; color: var(--color-gold); font-family: var(--font-display); font-size: 1.1rem;">Miercuri</td><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <!-- JOI schelet -->
+              <tr><td rowspan="4" style="font-weight: 700; color: var(--color-gold); font-family: var(--font-display); font-size: 1.1rem;">Joi</td><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <!-- VINERI schelet -->
+              <tr><td rowspan="4" style="font-weight: 700; color: var(--color-gold); font-family: var(--font-display); font-size: 1.1rem;">Vineri</td><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Legendă categorii -->
+      <div class="schedule-legend slide-up delay-200" style="margin-top: var(--space-2xl);">
+        <div class="legend-title">
+          <i class="fa-solid fa-palette" style="color: var(--color-gold); margin-right: 0.4rem;"></i> Legendă Categorii
+        </div>
+        <div class="legend-items">
+          <div class="legend-item fade-in delay-300">
+            <span class="tag tag-kids">Copii</span>
+            <span>6–12 ani · Antrenamente dedicate celor mici</span>
+          </div>
+          <div class="legend-item fade-in delay-400">
+            <span class="tag tag-women">Feminin</span>
+            <span>Antrenamente exclusive pentru doamne și domnișoare</span>
+          </div>
+          <div class="legend-item fade-in delay-500">
+            <span class="tag tag-men">Masculin</span>
+            <span>Antrenamente pentru bărbați, toate nivelurile</span>
+          </div>
+          <div class="legend-item fade-in delay-600">
+            <span class="tag tag-mixed">Mixt</span>
+            <span>Antrenamente comune, deschise tuturor</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       SCHEDULE INFO CARDS SECTION
+       ======================================================================= -->
+  <section class="section" id="schedule-info" style="padding-top: 0; background: rgba(212, 175, 55, 0.02);">
+    <div class="container">
+      <div class="info-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-xl);">
+        <!-- Card informativ 1 -->
+        <div class="glass-card tilt-card fade-in">
+          <div class="tilt-card-inner">
+            <div class="tilt-card-glow"></div>
+            <div class="tilt-card-shine"></div>
+            <div style="text-align: center; margin-bottom: var(--space-md);">
+              <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.25); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-md);">
+                <i class="fa-solid fa-child-reaching" style="font-size: 1.3rem; color: var(--color-gold-light);"></i>
+              </div>
+              <h4 style="font-family: var(--font-heading); margin-bottom: var(--space-xs);">Copii (6–12 ani)</h4>
+              <p style="font-size: 0.9rem; color: var(--color-gray-200); margin-bottom: 0;">
+                Antrenamente adaptate vârstei, jocuri și tehnici de bază într-un mediu sigur și distractiv. Dezvoltăm disciplina și încrederea în sine.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card informativ 2 -->
+        <div class="glass-card tilt-card fade-in delay-100">
+          <div class="tilt-card-inner">
+            <div class="tilt-card-glow"></div>
+            <div class="tilt-card-shine"></div>
+            <div style="text-align: center; margin-bottom: var(--space-md);">
+              <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(198, 40, 40, 0.1); border: 1px solid rgba(198, 40, 40, 0.25); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-md);">
+                <i class="fa-solid fa-person-dress" style="font-size: 1.3rem; color: var(--color-red-bright);"></i>
+              </div>
+              <h4 style="font-family: var(--font-heading); margin-bottom: var(--space-xs);">Feminin</h4>
+              <p style="font-size: 0.9rem; color: var(--color-gray-200); margin-bottom: 0;">
+                Antrenamente dedicate doamnelor și domnișoarelor, de la fitness box la tehnică avansată, într-un mediu prietenos și motivant.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card informativ 3 -->
+        <div class="glass-card tilt-card fade-in delay-200">
+          <div class="tilt-card-inner">
+            <div class="tilt-card-glow"></div>
+            <div class="tilt-card-shine"></div>
+            <div style="text-align: center; margin-bottom: var(--space-md);">
+              <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(100, 140, 200, 0.1); border: 1px solid rgba(100, 140, 200, 0.25); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-md);">
+                <i class="fa-solid fa-person" style="font-size: 1.3rem; color: #8bb4f0;"></i>
+              </div>
+              <h4 style="font-family: var(--font-heading); margin-bottom: var(--space-xs);">Masculin</h4>
+              <p style="font-size: 0.9rem; color: var(--color-gray-200); margin-bottom: 0;">
+                De la începători la avansați, antrenamentele pentru bărbați acoperă tehnică, forță, condiție fizică și sparring controlat.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card informativ 4 -->
+        <div class="glass-card tilt-card fade-in delay-300">
+          <div class="tilt-card-inner">
+            <div class="tilt-card-glow"></div>
+            <div class="tilt-card-shine"></div>
+            <div style="text-align: center; margin-bottom: var(--space-md);">
+              <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(160, 120, 200, 0.1); border: 1px solid rgba(160, 120, 200, 0.25); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-md);">
+                <i class="fa-solid fa-people-group" style="font-size: 1.3rem; color: #b898d8;"></i>
+              </div>
+              <h4 style="font-family: var(--font-heading); margin-bottom: var(--space-xs);">Mixt</h4>
+              <p style="font-size: 0.9rem; color: var(--color-gray-200); margin-bottom: 0;">
+                Antrenamente deschise tuturor — condiție fizică, circuit training și open gym. Indiferent de vârstă sau sex, toți sunt bineveniți.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       CALL TO ACTION — ÎNSCRIE-TE
+       ======================================================================= -->
+  <section class="section" id="schedule-cta" style="position: relative; overflow: hidden;">
+    <div style="position: absolute; inset: 0; z-index: 0;" aria-hidden="true">
+      <img src="images/cta-bg.jpg" alt="" loading="lazy"
+           style="width: 100%; height: 100%; object-fit: cover; opacity: 0.2; filter: brightness(0.5);"
+           aria-hidden="true">
+    </div>
+    <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.65) 40%, rgba(10,10,10,0.65) 60%, rgba(10,10,10,0.95) 100%); z-index: 0;" aria-hidden="true"></div>
+    <div class="container" style="position: relative; z-index: 1;">
+      <div class="text-center fade-in">
+        <span class="section-label">Nu aștepta</span>
+        <h2>Primul Antrenament este <span class="text-gold">Gratuit</span></h2>
+        <span class="gold-separator"></span>
+        <p class="text-gray" style="max-width: 600px; margin-left: auto; margin-right: auto; margin-bottom: var(--space-2xl); font-size: 1.05rem;">
+          Vino să descoperi ce înseamnă adevărata disciplină, forță și determinare. Boxing Champions te așteaptă cu ușile deschise!
+        </p>
+        <div class="btn-group" style="justify-content: center;">
+          <a href="/contact" class="btn btn-primary btn-xl">
+            <i class="fa-solid fa-fire"></i> Înscrie-te Acum
+          </a>
+          <a href="/pricing" class="btn btn-outline btn-xl">
+            <i class="fa-solid fa-crown"></i> Vezi Abonamentele
+          </a>
+        </div>
+        <p style="margin-top: var(--space-xl); font-size: 0.85rem; color: var(--color-gray-300);">
+          <i class="fa-solid fa-phone" style="margin-right: 0.4rem; color: var(--color-gold);"></i>
+          <span data-contact="phone">+40 721 234 567</span>
+          &nbsp;&nbsp;|&nbsp;&nbsp;
+          <i class="fa-solid fa-envelope" style="margin-right: 0.4rem; color: var(--color-gold);"></i>
+          <span data-contact="email">contact@boxing-champions.com</span>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       FOOTER
+       ======================================================================= -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <p class="footer-brand"><i class="fa-solid fa-glove" style="margin-right: 0.4rem;"></i> BOXING CHAMPIONS</p>
+          <p class="footer-about" data-setting="about_text">
+            Cel mai bun club de box din România. Tradiție, disciplină și excelență din 1998.
+          </p>
+          <div style="margin-top: var(--space-lg); display: flex; gap: var(--space-md);">
+            <a href="https://facebook.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
+              <i class="fa-brands fa-facebook-f"></i>
+            </a>
+            <a href="https://instagram.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
+              <i class="fa-brands fa-instagram"></i>
+            </a>
+            <a href="https://tiktok.com/@boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="TikTok" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
+              <i class="fa-brands fa-tiktok"></i>
+            </a>
+          </div>
+        </div>
+        <div>
+          <h4>Navigare</h4>
+          <ul class="footer-links">
+            <li><a href="/">Acasă</a></li>
+            <li><a href="/events">Evenimente</a></li>
+            <li><a href="/schedule">Program</a></li>
+            <li><a href="/pricing">Abonamente</a></li>
+            <li><a href="/shop">Magazin</a></li>
+            <li><a href="/contact">Contact</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <ul class="footer-links">
+            <li><a href="#">Termeni &amp; Condiții</a></li>
+            <li><a href="#">Politica de Confidențialitate</a></li>
+            <li><a href="#">GDPR</a></li>
+            <li><a href="#">ANPC</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Contact</h4>
+          <ul class="footer-links">
+            <li><i class="fa-solid fa-location-dot text-gold" style="margin-right: 0.4rem;"></i> <span data-contact="address">Strada Sportului nr. 10, București</span></li>
+            <li><i class="fa-solid fa-phone text-gold" style="margin-right: 0.4rem;"></i> <span data-contact="phone">+40 721 234 567</span></li>
+            <li><i class="fa-solid fa-envelope text-gold" style="margin-right: 0.4rem;"></i> <span data-contact="email">contact@boxing-champions.com</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Boxing Champions. Toate drepturile rezervate. <span style="color: var(--color-gold);">#BoxingChampions</span></p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

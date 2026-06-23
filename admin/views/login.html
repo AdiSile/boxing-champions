@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Autentificare Admin — Boxing Champions</title>
+
+  <!-- Font Awesome (CDN) -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style nonce="%NONCE%">
+    /* ================================================================
+       BOXING CHAMPIONS — ADMIN LOGIN — GLASSMORPHISM THEME
+       ================================================================ */
+
+    :root {
+      --glass-bg: rgba(15, 15, 20, 0.55);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --glass-shadow: 0 8px 40px rgba(0, 0, 0, 0.55);
+      --glass-blur: blur(20px) saturate(140%);
+
+      --accent: #e63946;
+      --accent-hover: #ff4d5a;
+      --accent-glow: rgba(230, 57, 70, 0.35);
+      --gold: #f4a261;
+      --gold-light: #f7c59f;
+
+      --text-primary: #f1f1f3;
+      --text-secondary: rgba(241, 241, 243, 0.65);
+      --text-muted: rgba(241, 241, 243, 0.4);
+
+      --input-bg: rgba(255, 255, 255, 0.06);
+      --input-border: rgba(255, 255, 255, 0.15);
+      --input-focus-border: rgba(230, 57, 70, 0.5);
+      --input-focus-glow: rgba(230, 57, 70, 0.15);
+
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.1);
+      --success: #22c55e;
+
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+      color: var(--text-primary);
+      background: #0a0a10;
+    }
+
+    /* ---- Background Layer ---- */
+    .login-page {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .login-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .login-bg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.35) contrast(1.1) saturate(0.7);
+    }
+
+    .login-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(230, 57, 70, 0.18) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 30%, rgba(244, 162, 97, 0.09) 0%, transparent 50%),
+        radial-gradient(ellipse at 60% 80%, rgba(230, 57, 70, 0.07) 0%, transparent 50%);
+    }
+
+    /* ---- Floating particles (decorative) ---- */
+    .particles {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      background: white;
+      opacity: 0;
+      animation: floatUp linear infinite;
+    }
+
+    @keyframes floatUp {
+      0% {
+        transform: translateY(105vh) scale(0);
+        opacity: 0;
+      }
+      10% {
+        opacity: 0.6;
+      }
+      90% {
+        opacity: 0.1;
+      }
+      100% {
+        transform: translateY(-10vh) scale(1.4);
+        opacity: 0;
+      }
+    }
+
+    /* ---- Main Glass Card ---- */
+    .login-card-wrapper {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 440px;
+      margin: 20px;
+      animation: cardEntry 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+
+    @keyframes cardEntry {
+      0% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.96);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .login-card {
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,0.05);
+      padding: 44px 36px 40px;
+      text-align: center;
+    }
+
+    /* ---- Logo / Brand ---- */
+    .login-brand {
+      margin-bottom: 32px;
+    }
+
+    .login-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--accent), #b71c1c);
+      margin-bottom: 16px;
+      font-size: 28px;
+      color: #fff;
+      box-shadow: 0 6px 24px var(--accent-glow);
+    }
+
+    .login-brand h1 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+    }
+
+    .login-brand p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      font-weight: 400;
+    }
+
+    /* ---- Error Message ---- */
+    .login-error {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      background: var(--danger-bg);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      font-size: 0.84rem;
+      color: #fca5a5;
+      text-align: left;
+      animation: shakeError 0.45s ease;
+    }
+
+    .login-error.visible {
+      display: flex;
+    }
+
+    .login-error i {
+      font-size: 1.1rem;
+      color: var(--danger);
+      flex-shrink: 0;
+    }
+
+    @keyframes shakeError {
+      0%, 100% { transform: translateX(0); }
+      15% { transform: translateX(-6px); }
+      30% { transform: translateX(6px); }
+      45% { transform: translateX(-5px); }
+      60% { transform: translateX(5px); }
+      75% { transform: translateX(-2px); }
+      90% { transform: translateX(2px); }
+    }
+
+    /* ---- Form ---- */
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .form-group {
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-wrapper i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      transition: color var(--transition);
+      pointer-events: none;
+    }
+
+    .input-wrapper input {
+      width: 100%;
+      padding: 13px 14px 13px 42px;
+      font-family: inherit;
+      font-size: 0.93rem;
+      font-weight: 400;
+      color: var(--text-primary);
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: var(--radius-md);
+      outline: none;
+      transition:
+        border-color var(--transition),
+        box-shadow var(--transition),
+        background var(--transition);
+    }
+
+    .input-wrapper input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .input-wrapper input:focus {
+      border-color: var(--input-focus-border);
+      box-shadow: 0 0 0 4px var(--input-focus-glow);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .input-wrapper input:focus ~ i {
+      color: var(--accent);
+    }
+
+    /* Toggle password visibility */
+    .toggle-password {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.95rem;
+      padding: 4px;
+      transition: color var(--transition);
+      pointer-events: auto;
+    }
+
+    .toggle-password:hover {
+      color: var(--text-secondary);
+    }
+
+    /* ---- Validation: field error ---- */
+    .input-wrapper.error input {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+    }
+
+    .field-error {
+      display: none;
+      color: #fca5a5;
+      font-size: 0.78rem;
+      margin-top: 5px;
+      font-weight: 400;
+    }
+
+    .field-error.visible {
+      display: block;
+    }
+
+    /* ---- Submit Button ---- */
+    .btn-login {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 24px;
+      margin-top: 6px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), #c62828);
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition:
+        transform var(--transition),
+        box-shadow var(--transition),
+        opacity var(--transition);
+      box-shadow: 0 4px 18px var(--accent-glow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-login::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
+      transform: translateX(-100%);
+      transition: transform 0.55s ease;
+    }
+
+    .btn-login:hover::before {
+      transform: translateX(100%);
+    }
+
+    .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px var(--accent-glow);
+    }
+
+    .btn-login:active {
+      transform: translateY(0);
+      box-shadow: 0 3px 12px var(--accent-glow);
+    }
+
+    .btn-login:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-login .spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    .btn-login.loading .spinner {
+      display: inline-block;
+    }
+
+    .btn-login.loading .btn-text {
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ---- Divider ---- */
+    .login-divider {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 24px 0 8px;
+    }
+
+    .login-divider::before,
+    .login-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--glass-border);
+    }
+
+    .login-divider span {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* ---- Back Link ---- */
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color var(--transition);
+      font-weight: 400;
+    }
+
+    .back-link:hover {
+      color: var(--text-primary);
+    }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 480px) {
+      .login-card {
+        padding: 32px 22px 30px;
+        border-radius: var(--radius-lg);
+      }
+
+      .login-brand h1 {
+        font-size: 1.35rem;
+      }
+
+      .login-card-wrapper {
+        margin: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-page">
+
+  <!-- Background image -->
+  <div class="login-bg">
+    <img src="/admin/images/login-bg.jpg"
+         alt=""
+         aria-hidden="true"
+         loading="eager">
+  </div>
+
+  <!-- Floating particles -->
+  <div class="particles" id="particles" aria-hidden="true"></div>
+
+  <!-- Glass card -->
+  <div class="login-card-wrapper">
+    <div class="login-card">
+
+      <!-- Brand -->
+      <div class="login-brand">
+        <div class="login-logo" aria-hidden="true">
+          <i class="fa-solid fa-glove"></i>
+        </div>
+        <h1>Boxing Champions</h1>
+        <p>Panou de administrare</p>
+      </div>
+
+      <!-- Error message -->
+      <div class="login-error" id="loginError" role="alert" aria-live="polite">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span id="loginErrorMessage"></span>
+      </div>
+
+      <!-- Login form -->
+      <form class="login-form" id="loginForm" novalidate autocomplete="off">
+
+        <!-- Email -->
+        <div class="form-group">
+          <label for="email">Email</label>
+          <div class="input-wrapper" id="emailWrapper">
+            <i class="fa-solid fa-envelope"></i>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="admin@boxing-champions.com"
+              autocomplete="email"
+              required
+              maxlength="320"
+            >
+          </div>
+          <div class="field-error" id="emailError"></div>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label for="password">Parolă</label>
+          <div class="input-wrapper" id="passwordWrapper">
+            <i class="fa-solid fa-lock"></i>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              required
+              minlength="8"
+              maxlength="128"
+            >
+            <button
+              type="button"
+              class="toggle-password"
+              id="togglePassword"
+              aria-label="Arată parola"
+              tabindex="-1"
+            >
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+          <div class="field-error" id="passwordError"></div>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="btn-login" id="btnLogin">
+          <span class="btn-text">Autentificare</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+
+      </form>
+
+      <!-- Divider -->
+      <div class="login-divider">
+        <span>Boxing Champions</span>
+      </div>
+
+      <!-- Back to site -->
+      <a href="/" class="back-link">
+        <i class="fa-solid fa-arrow-left"></i>
+        Înapoi la site
+      </a>
+
+    </div>
+  </div>
+
+</div>
+
+<script nonce="%NONCE%">
+  // ======================================================================
+  // BOXING CHAMPIONS — ADMIN LOGIN — CLIENT-SIDE LOGIC
+  // ======================================================================
+
+  (function () {
+    'use strict';
+
+    // ---- DOM references ----
+    const loginForm       = document.getElementById('loginForm');
+    const emailInput      = document.getElementById('email');
+    const passwordInput   = document.getElementById('password');
+    const emailWrapper    = document.getElementById('emailWrapper');
+    const passwordWrapper = document.getElementById('passwordWrapper');
+    const emailErrorEl    = document.getElementById('emailError');
+    const passwordErrorEl = document.getElementById('passwordError');
+    const loginErrorEl    = document.getElementById('loginError');
+    const loginErrorMsg   = document.getElementById('loginErrorMessage');
+    const btnLogin        = document.getElementById('btnLogin');
+    const togglePassBtn   = document.getElementById('togglePassword');
+
+    // ---- Configuration ----
+    const DASHBOARD_URL   = '/admin/dashboard';
+    const AUTH_URL        = '/api/auth/login';
+    const CHECK_URL       = '/api/auth/check';
+
+    // ---- Regex ----
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+
+    // ---- State ----
+    let isSubmitting = false;
+
+    // ====================================================================
+    // Floating particles (decorative)
+    // ====================================================================
+    function createParticles() {
+      const container = document.getElementById('particles');
+      const count = 35;
+
+      for (let i = 0; i < count; i++) {
+        const particle = document.createElement('div');
+        particle.classList.add('particle');
+
+        const size = Math.random() * 4 + 1.5;
+        const left = Math.random() * 100;
+        const delay = Math.random() * 14;
+        const duration = Math.random() * 10 + 8;
+        const opacity = Math.random() * 0.35 + 0.05;
+
+        particle.style.cssText = [
+          'width: ' + size + 'px',
+          'height: ' + size + 'px',
+          'left: ' + left + '%',
+          'animation-delay: ' + delay + 's',
+          'animation-duration: ' + duration + 's',
+          'opacity: ' + opacity,
+        ].join(';');
+
+        container.appendChild(particle);
+      }
+    }
+
+    // ====================================================================
+    // Validation helpers
+    // ====================================================================
+    function isValidEmail(val) {
+      return typeof val === 'string' && EMAIL_RE.test(val.trim());
+    }
+
+    function isValidPassword(val) {
+      return typeof val === 'string' && val.length >= 8 && val.length <= 128;
+    }
+
+    // ====================================================================
+    // Field error display
+    // ====================================================================
+    function clearFieldErrors() {
+      emailWrapper.classList.remove('error');
+      passwordWrapper.classList.remove('error');
+      emailErrorEl.classList.remove('visible');
+      emailErrorEl.textContent = '';
+      passwordErrorEl.classList.remove('visible');
+      passwordErrorEl.textContent = '';
+    }
+
+    function setFieldError(wrapper, errorEl, message) {
+      wrapper.classList.add('error');
+      errorEl.textContent = message;
+      errorEl.classList.add('visible');
+    }
+
+    // ====================================================================
+    // General (banner) error
+    // ====================================================================
+    function showGeneralError(message) {
+      loginErrorMsg.textContent = message;
+      loginErrorEl.classList.add('visible');
+      // Re-trigger shake animation
+      loginErrorEl.style.animation = 'none';
+      void loginErrorEl.offsetWidth; // force reflow
+      loginErrorEl.style.animation = '';
+    }
+
+    function hideGeneralError() {
+      loginErrorEl.classList.remove('visible');
+    }
+
+    // ====================================================================
+    // Loading state
+    // ====================================================================
+    function setLoading(loading) {
+      isSubmitting = loading;
+      if (loading) {
+        btnLogin.classList.add('loading');
+        btnLogin.disabled = true;
+        emailInput.disabled = true;
+        passwordInput.disabled = true;
+        togglePassBtn.disabled = true;
+      } else {
+        btnLogin.classList.remove('loading');
+        btnLogin.disabled = false;
+        emailInput.disabled = false;
+        passwordInput.disabled = false;
+        togglePassBtn.disabled = false;
+      }
+    }
+
+    // ====================================================================
+    // Toggle password visibility
+    // ====================================================================
+    togglePassBtn.addEventListener('click', function () {
+      const isPassword = passwordInput.type === 'password';
+      passwordInput.type = isPassword ? 'text' : 'password';
+      const icon = togglePassBtn.querySelector('i');
+      icon.className = isPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+      togglePassBtn.setAttribute('aria-label', isPassword ? 'Ascunde parola' : 'Arată parola');
+    });
+
+    // ====================================================================
+    // Live validation on input
+    // ====================================================================
+    emailInput.addEventListener('input', function () {
+      if (document.activeElement === emailInput) {
+        emailWrapper.classList.remove('error');
+        emailErrorEl.classList.remove('visible');
+      }
+    });
+
+    passwordInput.addEventListener('input', function () {
+      if (document.activeElement === passwordInput) {
+        passwordWrapper.classList.remove('error');
+        passwordErrorEl.classList.remove('visible');
+      }
+    });
+
+    // ====================================================================
+    // Form submit
+    // ====================================================================
+    loginForm.addEventListener('submit', async function (ev) {
+      ev.preventDefault();
+
+      if (isSubmitting) return;
+
+      // Clear previous state
+      clearFieldErrors();
+      hideGeneralError();
+
+      const email    = emailInput.value;
+      const password = passwordInput.value;
+      let hasError   = false;
+
+      // ---- Validate email ----
+      if (!email.trim()) {
+        setFieldError(emailWrapper, emailErrorEl, 'Adresa de email este obligatorie.');
+        hasError = true;
+      } else if (!isValidEmail(email)) {
+        setFieldError(emailWrapper, emailErrorEl, 'Formatul email-ului nu este valid.');
+        hasError = true;
+      }
+
+      // ---- Validate password ----
+      if (!password) {
+        setFieldError(passwordWrapper, passwordErrorEl, 'Parola este obligatorie.');
+        hasError = true;
+      } else if (password.length < 8) {
+        setFieldError(passwordWrapper, passwordErrorEl, 'Parola trebuie să aibă minim 8 caractere.');
+        hasError = true;
+      } else if (password.length > 128) {
+        setFieldError(passwordWrapper, passwordErrorEl, 'Parola depășește 128 de caractere.');
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      // ---- Submit ----
+      setLoading(true);
+
+      try {
+        const response = await fetch(AUTH_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.trim(),
+            password: password,
+          }),
+          credentials: 'same-origin',
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          showGeneralError(
+            data.error || 'Autentificare eșuată. Verifică datele introduse.'
+          );
+          setLoading(false);
+          return;
+        }
+
+        window.location.href = DASHBOARD_URL;
+
+      } catch (err) {
+        console.error('[Login] Network error:', err);
+        showGeneralError(
+          'Eroare de rețea. Verifică conexiunea la internet și încearcă din nou.'
+        );
+        setLoading(false);
+      }
+    });
+
+    // ====================================================================
+    // Check if already authenticated on page load
+    // ====================================================================
+    async function checkExistingSession() {
+      try {
+        const response = await fetch(CHECK_URL, {
+          method: 'GET',
+          credentials: 'same-origin',
+        });
+
+        if (response.ok) {
+          window.location.href = DASHBOARD_URL;
+        }
+      } catch (_) {
+        // Silently ignore
+      }
+    }
+
+    // ====================================================================
+    // Initialization
+    // ====================================================================
+    function init() {
+      createParticles();
+      emailInput.focus();
+      checkExistingSession();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+
+  })();
+</script>
+
+</body>
+</html>
+### admin/views/dashboard.html
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Dashboard Admin — Boxing Champions</title>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style nonce="%NONCE%">
+    :root {
+      --glass-bg: rgba(15, 15, 20, 0.55);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --accent: #e63946;
+      --accent-hover: #ff4d5a;
+      --text-primary: #f1f1f3;
+      --text-secondary: rgba(241, 241, 243, 0.65);
+      --radius-md: 14px;
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+      background: #0a0a10;
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dashboard-placeholder {
+      text-align: center;
+      padding: 48px 32px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid var(--glass-border);
+      border-radius: 28px;
+      max-width: 520px;
+      width: 100%;
+    }
+
+    .dashboard-placeholder .icon {
+      font-size: 52px;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    .dashboard-placeholder h1 {
+      font-size: 1.7rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .dashboard-placeholder p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    .btn-logout {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 28px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #fff;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition);
+    }
+
+    .btn-logout:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+
+<div class="dashboard-placeholder">
+  <div class="icon">
+    <i class="fa-solid fa-gauge-high"></i>
+  </div>
+  <h1>Dashboard Admin</h1>
+  <p>
+    Bine ai venit în panoul de administrare Boxing Champions.<br>
+    Dashboard-ul complet este în curs de dezvoltare.
+  </p>
+  <button class="btn-logout" id="btnLogout">
+    <i class="fa-solid fa-right-from-bracket"></i>
+    Deconectare
+  </button>
+</div>
+
+<script nonce="%NONCE%">
+  (function () {
+    'use strict';
+
+    var btnLogout = document.getElementById('btnLogout');
+
+    fetch('/api/auth/check', { method: 'GET', credentials: 'same-origin' })
+      .then(function (res) {
+        if (!res.ok) {
+          window.location.href = '/admin';
+        }
+      })
+      .catch(function () {
+        window.location.href = '/admin';
+      });
+
+    btnLogout.addEventListener('click', function () {
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+        .then(function () {
+          window.location.href = '/admin';
+        })
+        .catch(function () {
+          window.location.href = '/admin';
+        });
+    });
+  })();
+</script>
+
+</body>
+</html>

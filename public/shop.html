@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Magazin Boxing Champions — Echipament premium de box, îmbrăcăminte, accesorii și nutriție sportivă. Glove, bandaje, saci și multe altele.">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Magazin — Boxing Champions</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="preload" as="image" href="images/shop-hero-bg.jpg">
+</head>
+<body>
+
+  <!-- =======================================================================
+       PARTICLES CANVAS
+       ======================================================================= -->
+  <canvas id="particles-canvas"></canvas>
+
+  <!-- =======================================================================
+       CUSTOM CURSOR
+       ======================================================================= -->
+  <div class="cursor-dot"></div>
+  <div class="cursor-ring"></div>
+
+  <!-- =======================================================================
+       NAVBAR
+       ======================================================================= -->
+  <nav class="navbar z-content">
+    <div class="container">
+      <a href="/" class="nav-logo" aria-label="Boxing Champions — Acasă">
+        <i class="fa-solid fa-glove"></i> BOXING CHAMPIONS
+      </a>
+      <button class="nav-toggle" aria-label="Deschide meniul" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <ul class="nav-links" role="menubar">
+        <li role="none"><a href="/" role="menuitem">Acasă</a></li>
+        <li role="none"><a href="/events" role="menuitem">Evenimente</a></li>
+        <li role="none"><a href="/schedule" role="menuitem">Program</a></li>
+        <li role="none"><a href="/pricing" role="menuitem">Abonamente</a></li>
+        <li role="none"><a href="/shop" role="menuitem" class="active">Magazin</a></li>
+        <li role="none"><a href="/contact" role="menuitem">Contact</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- =======================================================================
+       SHOP HERO — imagine de fundal
+       ======================================================================= -->
+  <section class="hero" id="shop-hero" style="min-height: 55vh; max-height: 620px;">
+    <img src="images/shop-hero-bg.jpg" alt="" class="hero-video" aria-hidden="true"
+         style="object-fit: cover; filter: brightness(0.3);">
+    <div class="hero-overlay" aria-hidden="true"></div>
+    <div class="hero-content z-content" style="padding-top: var(--space-3xl); padding-bottom: var(--space-3xl);">
+      <span class="hero-badge">
+        <i class="fa-solid fa-store" style="margin-right: 0.4rem;"></i> Magazin Oficial
+      </span>
+      <h1 class="hero-title" style="font-size: clamp(2.5rem, 6vw, 5.5rem);">
+        ECHIPAMENT DE
+        <span class="gold">CAMPIONI</span>
+      </h1>
+      <p class="hero-subtitle">
+        Descoperă echipamentul oficial Boxing Champions. Mănuși, bandaje, saci de box,
+        îmbrăcăminte și nutriție sportivă — calitate garantată pentru antrenamente de elită.
+      </p>
+      <div class="btn-group">
+        <button class="btn btn-primary btn-lg" id="hero-cart-btn" type="button">
+          <i class="fa-solid fa-cart-shopping"></i> Vezi Coșul
+        </button>
+        <a href="#shop-grid" class="btn btn-outline btn-lg">
+          <i class="fa-solid fa-arrow-down"></i> Explorează Produsele
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       SHOP SECTION — filtre, sortare, grid produse, schelet loading
+       ======================================================================= -->
+  <section class="section" id="shop-grid" style="padding-top: var(--space-2xl);">
+    <div class="container">
+
+      <!-- Categorii tabs -->
+      <div class="shop-categories fade-in" role="tablist" aria-label="Categorii produse">
+        <button class="shop-cat-tab active" data-category="all" role="tab"
+                aria-selected="true" type="button">
+          <i class="fa-solid fa-grid-2" style="margin-right: 0.35rem;"></i> Toate
+        </button>
+        <button class="shop-cat-tab" data-category="Îmbrăcăminte" role="tab"
+                aria-selected="false" type="button">
+          <i class="fa-solid fa-shirt" style="margin-right: 0.35rem;"></i> Îmbrăcăminte
+        </button>
+        <button class="shop-cat-tab" data-category="Echipament" role="tab"
+                aria-selected="false" type="button">
+          <i class="fa-solid fa-glove" style="margin-right: 0.35rem;"></i> Echipament
+        </button>
+        <button class="shop-cat-tab" data-category="Accesorii" role="tab"
+                aria-selected="false" type="button">
+          <i class="fa-solid fa-tag" style="margin-right: 0.35rem;"></i> Accesorii
+        </button>
+        <button class="shop-cat-tab" data-category="Nutriție" role="tab"
+                aria-selected="false" type="button">
+          <i class="fa-solid fa-bottle-droplet" style="margin-right: 0.35rem;"></i> Nutriție
+        </button>
+      </div>
+
+      <!-- Toolbar: număr rezultate + sortare -->
+      <div class="shop-toolbar fade-in delay-100">
+        <div class="shop-hero-bar" style="margin-bottom: 0; flex: 1;">
+          <span class="shop-result-count" id="shop-result-count" aria-live="polite">
+            Se încarcă produsele...
+          </span>
+          <!-- Cart toggle button (desktop/tablet) -->
+          <button class="cart-toggle-btn" id="cart-toggle-btn" type="button"
+                  aria-label="Deschide coșul de cumpărături" aria-expanded="false">
+            <i class="fa-solid fa-cart-shopping"></i>
+            <span class="cart-count-badge" id="cart-count-badge" aria-hidden="true">0</span>
+          </button>
+        </div>
+        <div style="position: relative; display: inline-flex; align-items: center;">
+          <label for="shop-sort-select" class="sr-only">Sortează produsele</label>
+          <select class="shop-sort-select" id="shop-sort-select" aria-label="Sortează produsele">
+            <option value="newest">Cele mai noi</option>
+            <option value="price-asc">Preț: Crescător</option>
+            <option value="price-desc">Preț: Descrescător</option>
+            <option value="name-asc">Nume: A–Z</option>
+            <option value="name-desc">Nume: Z–A</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Schelet loading (afișat cât timp se încarcă produsele) -->
+      <div class="shop-loading-skeleton" id="shop-loading-skeleton" aria-hidden="true">
+        <div class="shop-skeleton-card">
+          <div class="shop-skeleton-img"></div>
+          <div class="shop-skeleton-body">
+            <div class="shop-skeleton-line"></div>
+            <div class="shop-skeleton-line"></div>
+            <div class="shop-skeleton-line"></div>
+            <div class="shop-skeleton-line"></div>
+          </div>
+        </div>
+        <div class="shop-skeleton-card">
+          <div class="shop-skeleton-img"></div>
+          <div class="shop-skeleton-body">
+            <div class="shop-skeleton-line"></div>
+            <div class="shop-skeleton-line"></div>
+            <div class="shop-skeleton-line"></div>
+            <div class="shop-skeleton-line"></div>
+          </div>
+        </div>
+        <div class="shop-skeleton-card">
+          <div class="shop-skeleton-img"></div>
+          <div class="shop-skeleton-body">
+            <div class="shop-skeleton-line"></div>
+            <div class="shop-skeleton-line"></div>
+            <div class="shop-skeleton-line"></div>
+            <div class="shop-skeleton-line"></div>
+          </div>
+        </div>
+        <div class="shop-skeleton-card">
+          <div class="shop-skeleton-img"></div>
+          <div class="shop-skeleton-body">
+            <div class="shop-skeleton-line"></div>
+            <div class="shop-skeleton-line"></div>
+            <div class="shop-skeleton-line"></div>
+            <div class="shop-skeleton-line"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid produse — populat dinamic de shop.js -->
+      <div class="shop-product-grid" id="shop-product-grid" role="region"
+           aria-label="Catalog de produse" aria-live="polite">
+        <!-- Populat dinamic de shop.js -->
+      </div>
+
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       CART OFF-CANVAS + OVERLAY
+       ======================================================================= -->
+
+  <!-- Overlay semi-transparent -->
+  <div class="cart-overlay" id="cart-overlay" aria-hidden="true"></div>
+
+  <!-- Panoul off-canvas -->
+  <aside class="cart-offcanvas" id="cart-offcanvas" aria-hidden="true"
+         aria-label="Coș de cumpărături" role="dialog" aria-modal="true">
+    <!-- Header -->
+    <div class="cart-header">
+      <h2 class="cart-title">
+        <i class="fa-solid fa-cart-shopping" style="margin-right: 0.5rem; color: var(--color-gold);"></i>
+        Coșul Tău
+      </h2>
+      <button class="cart-close-btn" id="cart-close-btn" type="button"
+              aria-label="Închide coșul de cumpărături">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Conținut items -->
+    <div class="cart-items" id="cart-items-container">
+      <!-- Populat dinamic de shop.js -->
+    </div>
+
+    <!-- Footer cu total și butoane -->
+    <div class="cart-footer" id="cart-footer" style="display: none;">
+      <div class="cart-total-row">
+        <span>Total:</span>
+        <span id="cart-total-amount">0.00 RON</span>
+      </div>
+      <div class="cart-footer-buttons">
+        <button class="btn btn-primary btn-block" id="cart-checkout-btn" type="button">
+          <i class="fa-solid fa-lock"></i> Finalizează Comanda
+        </button>
+        <button class="btn btn-ghost btn-block btn-sm" id="cart-clear-btn" type="button">
+          <i class="fa-solid fa-trash-can" style="margin-right: 0.35rem;"></i> Golește Coșul
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- =======================================================================
+       CHECKOUT MODAL (STRIPE)
+       ======================================================================= -->
+
+  <!-- Overlay modal -->
+  <div class="modal-overlay" id="checkout-modal-overlay" aria-hidden="true"></div>
+
+  <!-- Modal checkout -->
+  <div class="checkout-modal" id="checkout-modal" aria-hidden="true"
+       role="dialog" aria-modal="true" aria-labelledby="checkout-modal-title">
+    <!-- Header -->
+    <div class="checkout-modal-header">
+      <h2 class="checkout-modal-title" id="checkout-modal-title">
+        <i class="fa-solid fa-credit-card" style="margin-right: 0.5rem; color: var(--color-gold);"></i>
+        Finalizare Comandă
+      </h2>
+      <button class="checkout-modal-close" id="checkout-modal-close" type="button"
+              aria-label="Închide fereastra de checkout">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="checkout-modal-body">
+      <!-- Mesaje globale -->
+      <div class="checkout-global-message checkout-global-message--error"
+           id="checkout-global-error" role="alert" style="display: none;"></div>
+      <div class="checkout-global-message checkout-global-message--success"
+           id="checkout-global-success" role="status" style="display: none;"></div>
+
+      <!-- Rezumat comandă -->
+      <div id="checkout-summary" class="checkout-summary" style="margin-bottom: var(--space-xl);">
+        <!-- Populat dinamic de shop.js -->
+      </div>
+
+      <!-- Formular date client -->
+      <form id="checkout-form" novalidate>
+        <div class="checkout-form-group">
+          <label for="checkout-name">Nume complet <span style="color: var(--color-red-bright);">*</span></label>
+          <input type="text" id="checkout-name" name="name"
+                 placeholder="ex: Ion Popescu"
+                 autocomplete="name"
+                 required minlength="2" maxlength="200"
+                 aria-describedby="checkout-name-error">
+          <span class="checkout-error" id="checkout-name-error" role="alert"></span>
+        </div>
+
+        <div class="checkout-form-group">
+          <label for="checkout-email">Email <span style="color: var(--color-red-bright);">*</span></label>
+          <input type="email" id="checkout-email" name="email"
+                 placeholder="ex: ion@email.com"
+                 autocomplete="email"
+                 required
+                 aria-describedby="checkout-email-error">
+          <span class="checkout-error" id="checkout-email-error" role="alert"></span>
+        </div>
+
+        <div class="checkout-form-group">
+          <label for="checkout-phone">Telefon (opțional)</label>
+          <input type="tel" id="checkout-phone" name="phone"
+                 placeholder="ex: +40 721 234 567"
+                 autocomplete="tel"
+                 maxlength="30">
+        </div>
+
+        <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
+          <button type="submit" class="btn btn-primary btn-block"
+                  id="checkout-submit-btn" style="flex: 2;">
+            <i class="fa-solid fa-lock"></i> Plătește Acum
+          </button>
+          <button type="button" class="btn btn-outline"
+                  id="checkout-cancel-btn" style="flex: 1;">
+            Renunță
+          </button>
+        </div>
+      </form>
+
+      <p style="margin-top: var(--space-lg); font-size: 0.75rem; color: var(--color-gray-400); text-align: center;">
+        <i class="fa-solid fa-shield-halved" style="margin-right: 0.35rem; color: var(--color-success);"></i>
+        Plată securizată prin Stripe. Datele tale sunt protejate.
+      </p>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       FOOTER
+       ======================================================================= -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <p class="footer-brand"><i class="fa-solid fa-glove" style="margin-right: 0.4rem;"></i> BOXING CHAMPIONS</p>
+          <p class="footer-about">
+            Cel mai bun club de box din România. Tradiție, disciplină și excelență din 1998.
+          </p>
+          <div style="margin-top: var(--space-lg); display: flex; gap: var(--space-md);">
+            <a href="https://facebook.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
+              <i class="fa-brands fa-facebook-f"></i>
+            </a>
+            <a href="https://instagram.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
+              <i class="fa-brands fa-instagram"></i>
+            </a>
+            <a href="https://tiktok.com/@boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="TikTok" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
+              <i class="fa-brands fa-tiktok"></i>
+            </a>
+          </div>
+        </div>
+        <div>
+          <h4>Navigare</h4>
+          <ul class="footer-links">
+            <li><a href="/">Acasă</a></li>
+            <li><a href="/events">Evenimente</a></li>
+            <li><a href="/schedule">Program</a></li>
+            <li><a href="/pricing">Abonamente</a></li>
+            <li><a href="/shop">Magazin</a></li>
+            <li><a href="/contact">Contact</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <ul class="footer-links">
+            <li><a href="#">Termeni &amp; Condiții</a></li>
+            <li><a href="#">Politica de Confidențialitate</a></li>
+            <li><a href="#">GDPR</a></li>
+            <li><a href="#">ANPC</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Contact</h4>
+          <ul class="footer-links">
+            <li><i class="fa-solid fa-location-dot text-gold" style="margin-right: 0.4rem;"></i> Strada Sportului nr. 10, București</li>
+            <li><i class="fa-solid fa-phone text-gold" style="margin-right: 0.4rem;"></i> +40 721 234 567</li>
+            <li><i class="fa-solid fa-envelope text-gold" style="margin-right: 0.4rem;"></i> contact@boxing-champions.com</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Boxing Champions. Toate drepturile rezervate. <span style="color: var(--color-gold);">#BoxingChampions</span></p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =======================================================================
+       SCRIPTS
+       ======================================================================= -->
+  <script src="js/main.js"></script>
+  <script src="js/shop.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+node_modules/
+boxing.db
+.env
+uploads/
+*.log
+.DS_Store

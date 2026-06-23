@@ -1,0 +1,33 @@
+{
+  "name": "boxing-champions",
+  "version": "1.0.0",
+  "description": "Boxing Champions — cel mai bun site de club de box, cu magazin integrat",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --passWithNoTests",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.7.0",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "stripe": "^17.3.1"
+  },
+  "devDependencies": {
+    "eslint": "^9.15.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.4.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}
