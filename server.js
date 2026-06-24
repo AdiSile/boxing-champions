@@ -47,11 +47,14 @@ app.use(nonceMiddleware);
 
 // ---------------------------------------------------------------------------
 // Fișiere statice — public/
+// extensions: ['html'] permite URL-uri „curate” (ex: /contact → contact.html)
+// fără a interfera cu rutele API, admin sau fallback-ul SPA.
 // ---------------------------------------------------------------------------
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1h',
   etag: true,
   lastModified: true,
+  extensions: ['html'],
 }));
 
 // ---------------------------------------------------------------------------
@@ -85,6 +88,8 @@ app.use(require('./routes/promotions'));
 
 // ---------------------------------------------------------------------------
 // Fallback SPA — trimite index.html doar pentru rutele publice necunoscute
+// Paginile statice (.html) sunt deja rezolvate de express.static cu
+// extensions: ['html'], așa că aici ajung doar rutele fără corespondent real.
 // ---------------------------------------------------------------------------
 app.get('*', (req, res, next) => {
   // Nu interfera cu rutele API sau admin
@@ -95,7 +100,7 @@ app.get('*', (req, res, next) => {
   if (path.extname(req.path) !== '') {
     return next();
   }
-  // Trimite index.html ca fallback pentru rutele SPA (ex: /about, /contact)
+  // Trimite index.html ca fallback pentru rutele SPA (ex: /about, /despre)
   res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
     if (err) next();
   });

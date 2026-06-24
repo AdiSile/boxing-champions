@@ -39,6 +39,21 @@
       "role": "system",
       "content": "🚀 Proiect pornit: Proiect: boxing-champions",
       "timestamp": 1782330523.9566712
+    },
+    {
+      "role": "assistant",
+      "content": "✅ Pas 1 (tdd-guide): 1 fișiere salvate.\n✅ Pas 2 (tdd-guide): 1 fișiere salvate.\n✅ Pas 3 (tdd-guide): 1 fișiere salvate.\n✅ Pas 4 (tdd-guide): 2 fișiere salvate.\n✅ Pas 5 (tdd-guide): 1 fișiere salvate.\n✅ Pas 6 (tdd-guide): 1 fișiere salvate.\n✅ Pas 7 (tdd-guide): 1 fișiere salvate.\n✅ Pas 8 (tdd-guide): 1 fișiere salvate.",
+      "timestamp": 1782331644.7401783
+    },
+    {
+      "role": "user",
+      "content": "Repară și finalizează panoul de administrare al proiectului „Boxing Champions\" (boxing-champions). Există mai multe probleme critice care blochează utilizarea: secțiunile Comenzi și Mesaje afișează „Eroare la încărcare\", adăugarea unui antrenor întoarce „trebuie să te loghezi\" deși ești autentificat, iar adăugarea unui eveniment eșuează cu „validation failed\". Vreau să repari aceste probleme și orice altceva care nu funcționează.  1. **Repară autentificarea pe rutele API:**    - `routes/auth.js`: Asigură-te că middleware-ul de autentificare (ex: `verifyToken`) este aplicat pe toate rutele care necesită admin (POST/PUT/DELETE pentru coaches, events, schedule, plans, products, orders, contact messages). Middleware-ul trebuie să citească token-ul JWT din cookie-ul `token`, să-l verifice și să adauge `req.user` dacă este valid.    - Dacă middleware-ul lipsește de pe vreo rută protejată, adaugă-l. Dacă verificarea token-ului eșuează chiar dacă ești logat, verifică dacă numele cookie-ului este `token` și dacă secretul JWT este același peste tot.    - Ruta `GET /api/auth/check` trebuie să funcționeze și să fie folosită de dashboard la încărcare pentru a verifica autentificarea.  2. **Repară secțiunea „Comenzi\" (Orders):**    - `routes/api.js` (sau fișierul care conține rutele): Asigură-te că ruta `GET /api/orders` există, este protejată prin autentificare și returnează un array JSON (poate fi gol `[]`). Dacă ruta nu există, creeaz-o și folosește interogarea corectă a bazei de date (tabela `orders`).    - `admin/views/dashboard.html`: Verifică scriptul care face fetch la `/api/orders`. Asigură-te că trimite cererea cu `credentials: 'include'` (sau similar) pentru a include cookie-ul de autentificare. Dacă răspunsul nu este OK, afișează un mesaj prietenos, nu doar „Eroare la încărcare\".  3. **Repară secțiunea „Mesaje\" (Contact Messages):**    - Similar, asigură-te că `GET /api/contact` există, este protejată și returnează array-ul de mesaje.    - Verifică fetch-ul din dashboard și include credențialele.  4. **Repară adăugarea antrenorilor:**    - `routes/api.js`: Ruta `POST /api/coaches` trebuie să fie protejată și să accepte câmpurile necesare (nume, specializare, certificări, poză URL, citat, activ/inactiv). Dacă primești eroarea „trebuie să te loghezi\", înseamnă că middleware-ul de auth respinge cererea. Asigură-te că ruta este accesibilă după ce token-ul este verificat.    - `admin/views/dashboard.html`: Verifică formularul de adăugare antrenor – trimite `POST /api/coaches` cu header-ul `Content-Type: application/json` și body-ul corect, plus `credentials: 'include'`.  5. **Repară publicarea evenimentelor:**    - `routes/api.js`: Ruta `POST /api/events` trebuie să fie protejată și să valideze câmpurile: titlu, dată, locație, descriere, galerie foto (array de URL-uri opțional). Dacă returnează „validation failed\", verifică validările – probabil un câmp este lipsă sau are un tip greșit. Relaxează validările pentru a permite câmpuri opționale (ex: galeria foto).    - Asigură-te că evenimentele sunt doar trecute (nu viitoare) – dar asta ține de modul în care adminul le adaugă, nu de API. API-ul trebuie să permită orice dată.  6. **Verificare generală și corectare suplimentară:**    - Scanează toate celelalte secțiuni ale dashboard-ului: Setări Generale, Program, Abonamente, Produse. Asigură-te că fiecare face fetch corect la rutele API și că butoanele de adăugare/editare/ștergere funcționează.    - Verifică dacă există erori în consola browser-ului și repară-le.    - Asigură-te că toate rutele API returnează JSON valid, chiar și atunci când nu există date (array gol).    - Dacă găsești orice altă problemă în proiect, repar-o fără să aștepți instrucțiuni suplimentare.  7. **După ce ai terminat, returnează toate fișierele modificate în formatul exact:** cale/relativă/la/fișier.ext conținut complet  END",
+      "timestamp": 1782331809.6303067
+    },
+    {
+      "role": "system",
+      "content": "🚀 Proiect pornit: Proiect: boxing-champions",
+      "timestamp": 1782331809.642231
     }
   ],
   "cerinta": "Creează proiectul complet „Boxing Champions\" de la zero, o aplicație web full‑stack de lux, cu prezentare club de box, magazin integrat și panou de administrare 100% funcțional. Tot conținutul public este dinamic, încărcat din API, iar modificările din dashboard se reflectă instant pe site. Design imersiv premium: temă de box cu negru profund, auriu și roșu închis, glassmorphism, particule canvas aurii, cursor personalizat, fără emoji‑uri, iconițe Font Awesome. Securitate modernă, performanță maximă, responsive perfect.  1. **Backend (Node.js + Express + SQLite):**    - `config/db.js`: inițializează curat baza de date cu `better‑sqlite3`. Creează tabelele: `settings` (cu o coloană `data TEXT` pentru JSON‑ul complet al setărilor), `users` (email, password, role), `coaches`, `events`, `schedule`, `plans`, `products`, `orders`, `contact_messages`. La prima pornire, populează `settings` cu datele implicite (nume club, slogan, contact, rețele sociale, promoție globală inactivă etc.). Dacă `users` e goală, seed‑ează adminul `admin@boxingchampions.ro` / `boxing2026` (hash bcrypt). Celelalte tabele pot rămâne goale.    - `models/settingsModel.js`: `getSettings()` returnează JSON‑ul din `data`; `updateSettings(newData)` face merge și salvează.    - Rute API (toate returnează JSON valid, array gol dacă nu există date):      * `GET /api/settings` – returnează obiectul complet de setări. `PUT /api/settings` – actualizează setările (face merge).      * `GET /api/coaches`, `POST /api/coaches`, `PUT /api/coaches/:id`, `DELETE /api/coaches/:id`      * `GET /api/events`, `POST /api/events`, `PUT /api/events/:id`, `DELETE /api/events/:id`      * `GET /api/schedule`, `PUT /api/schedule` – gestionează programul săptămânal.      * `GET /api/plans`, `POST /api/plans`, `PUT /api/plans/:id`, `DELETE /api/plans/:id` – pentru abonamente.      * `GET /api/products`, `POST /api/products`, `PUT /api/products/:id`, `DELETE /api/products/:id` – produse din magazin.      * `GET /api/contact` (admin), `POST /api/contact` (public) – mesaje de contact.      * `GET /api/orders`, `PUT /api/orders/:id` – vizualizare comenzi (pentru admin).    - `routes/auth.js`: `POST /api/auth/login` verifică email‑ul și parola (bcrypt), setează cookie `token` JWT (HttpOnly, Secure, SameSite=Strict). Fără CSRF. `GET /api/auth/check` verifică token‑ul și returnează `{authenticated: true/false}`.    - Securitate modernă: CSP cu nonces, Helmet, X‑Content‑Type‑Options, X‑Frame‑Options, rate limiting pe auth, prepared statements peste tot, validare strictă input, erori generice fără detalii.  2. **Sistem de promoții (global și per‑produs):**    - În setări există `globalPromo` cu câmpurile: `active`, `discountPercent`, `label`, `startDate`, `endDate`.    - Produsele pot avea propriul `discountPercent` și etichetă promo. Când promoția globală este activă, **se aplică doar promoția globală** pe toate produsele, ignorând reducerile individuale. Dacă globalPromo este inactiv, se aplică reducerile per‑produs (dacă există).    - Pe cardul de produs se afișează prețul vechi tăiat, prețul redus și eticheta reducerii (globală sau individuală).    - Panoul de administrare include secțiunea **Promoții** pentru a gestiona promoția globală.  3. **Paginile publice (toate dinamice, cu fallback hardcodat):**    - **`public/index.html`** (Home): Hero video/fallback imagine, nume club „BOXING CHAMPIONS\", slogan, badge „New Season 2026 – Join the Legacy\", butoane CTA. Secțiuni: Antrenori (din `/api/coaches`), Realizări (numărători animate), Program rapid (din `/api/schedule`), CTA finală. Footer cu date de contact și link‑uri sociale (din `/api/settings`).    - **`public/events.html`**: Listă evenimente trecute (din `/api/events`). Fiecare eveniment: titlu, dată, locație, descriere, galerie foto. Dacă nu există, mesaj prietenos.    - **`public/schedule.html`**: Tabel săptămânal (din `/api/schedule`), culori pe categorii (Copii, Feminin, Masculin, Mixt), legendă.    - **`public/pricing.html`**: Planuri de abonament (din `/api/plans`), toggle lunar/anual, cel mai popular evidențiat.    - **`public/shop.html`**: Grid de produse (din `/api/products`), filtre pe categorii, coș de cumpărături (localStorage), checkout Stripe (mod test, cheie setată în `.env`).    - **`public/contact.html`**: Formular (trimite la `POST /api/contact`), date de contact din `/api/settings`, hartă Google Maps, buton WhatsApp.    - Toate paginile păstrează designul premium existent. La încărcare fac `fetch` către API‑ul corespunzător. Dacă API‑ul nu răspunde, folosesc datele hardcodate curente.  4. **Panoul de administrare (complet funcțional):**    - `admin/views/login.html`: design imersiv, formular email+parolă, trimite `fetch` la `/api/auth/login`, redirecționează.    - `admin/views/dashboard.html`: sidebar cu secțiunile:      * **Setări Generale:** nume club, slogan, email, telefon, adresă, link‑uri Facebook/TikTok/Instagram.      * **Promoții:** gestiune promoție globală (active/inactive, discount, etichetă, perioadă).      * **Antrenori:** CRUD complet (nume, specializare, certificări, poză, citat, activ/inactiv).      * **Evenimente:** CRUD (titlu, dată, locație, descriere, galerie foto). Evenimentele sunt doar trecute – adminul le adaugă după ce au avut loc.      * **Program:** tabel editable cu zile/ore/categorii.      * **Abonamente:** CRUD planuri (nume, preț lunar, preț anual, beneficii, evidențiat).      * **Produse:** CRUD complet (nume, descriere, preț, preț vechi, etichetă reducere, etichetă contextuală, categorie, imagine URL, stoc, activ/inactiv).      * **Comenzi:** vizualizare comenzi primite.      * **Mesaje:** vezi mesajele din formularul de contact.    - Fiecare secțiune încarcă datele prin fetch la ruta API corespunzătoare și salvează modificările. După salvare, toast verde de confirmare.  5. **Design și experiență (toate paginile):**    - Temă: negru (#0a0a0a), auriu (#d4af37, #f0c040), roșu (#8b0000, #c62828). Glassmorphism pe carduri, navbar și formulare.    - Particule canvas aurii plutitoare pe toate paginile. Cursor personalizat (cerc auriu cu trail). Animații la scroll, carduri 3D cu tilt, preloader animat.    - Fonturi Google: 'Bebas Neue' (titluri), 'Montserrat' (corp), 'Oswald' (subtitluri).    - 100% responsive (320px–2560px), fără emoji‑uri, doar Font Awesome.  6. **Alte cerințe:**    - Serverul pornește fără erori (`node server.js`). Fișierul principal este `server.js` (nu `src/index.js`).    - În `package.json`, setează `\"start\": \"node server.js\"` și `\"engines\": { \"node\": \"20.x\" }`. Creează fișierul `.node-version` cu `20`.    - După deploy, orice modificare din dashboard se reflectă pe paginile publice după refresh.    - Proiectul este complet și gata de producție.  7. **După terminare, returnează toate fișierele modificate sau create în formatul exact:** ### cale/relativă/la/fișier.ext conținut complet ### END",
@@ -162,12 +177,30 @@
       "desc": "`public/schedule.html` - Verifică și uniformizează navbar\n\nIMPORTANT: Returnează fiecare fișier generat/modificat în formatul strict:\n### cale/relativă/la/fișier.ext\nconținutul complet al fișierului\n### END\nNu include explicații în afara blocurilor ###.\nFolosește DOAR căi relative la proiect, nu absolute.\n",
       "agent": "tdd-guide",
       "status": "pending"
+    },
+    {
+      "id": "3302ac85",
+      "desc": "`public/pricing.html` - Verifică și uniformizează navbar\n\nIMPORTANT: Returnează fiecare fișier generat/modificat în formatul strict:\n### cale/relativă/la/fișier.ext\nconținutul complet al fișierului\n### END\nNu include explicații în afara blocurilor ###.\nFolosește DOAR căi relative la proiect, nu absolute.\n",
+      "agent": "tdd-guide",
+      "status": "pending"
+    },
+    {
+      "id": "47cae159",
+      "desc": "`public/contact.html` - Verifică și uniformizează navbar\n\nIMPORTANT: Returnează fiecare fișier generat/modificat în formatul strict:\n### cale/relativă/la/fișier.ext\nconținutul complet al fișierului\n### END\nNu include explicații în afara blocurilor ###.\nFolosește DOAR căi relative la proiect, nu absolute.\n",
+      "agent": "tdd-guide",
+      "status": "pending"
+    },
+    {
+      "id": "ffc3c234",
+      "desc": "`server.js` - Repară fallback-ul SPA să nu interfereze cu paginile statice\n\nSkill-uri relevante:\nSkill: angular-developer\n# Angular Developer Guidelines\n\n## When to Activate\n\n- Working in any Angular project or codebase\n- Creating or scaffolding a new Angular project, application, or library\n- Generating components, services, directives, pipes, guards, or resolvers\n- Implementing reactivity with Angular Signals, `linke\n\nSkill: compose-multiplatform-patterns\n# Compose Multiplatform Patterns\n\nPatterns for building shared UI across Android, iOS, Desktop, and Web using Compose Multiplatform and Jetpack Compose. Covers state management, navigation, theming, and performance.\n\n## When to Activate\n\n- Building Compose UI (Jetpack Compose or Compose Multiplatfor\n\nSkill: continuous-agent-loop\n# Continuous Agent Loop\n\nThis is the v1.8+ canonical loop skill name. It supersedes `autonomous-loops` while keeping compatibility for one release.\n\n## Loop Selection Flow\n\n```text\nStart\n  |\n  +-- Need strict CI/PR control? -- yes --> continuous-pr\n  |\n  +-- Need RFC decomposition? -- yes --> rfc-da\n\nReguli:\n---\npaths:\n  - \"**/*.component.ts\"\n  - \"**/*.component.html\"\n  - \"**/*.service.ts\"\n  - \"**/*.directive.ts\"\n  - \"**/*.pipe.ts\"\n  - \"**/*.guard.ts\"\n  - \"**/*.resolver.ts\"\n  - \"**/*.module.ts\"\n---\n# Angular Coding Style\n> This file extends [common/coding-style.md](../common/coding-style.md) with Angular specific content.\nAlways check the project's Angular version before writing code — features differ significantly between versions. Run `ng version` or inspect `package.json`. When creating a new project, do not pin a version unless the user specifies one.\n\nIMPORTANT: Returnează fiecare fișier generat/modificat în formatul strict:\n### cale/relativă/la/fișier.ext\nconținutul complet al fișierului\n### END\nNu include explicații în afara blocurilor ###.\nFolosește DOAR căi relative la proiect, nu absolute.\n",
+      "agent": "tdd-guide",
+      "status": "pending"
     }
   ],
   "plan": [],
-  "status": "in_progress",
+  "status": "completed",
   "checkpoint": {
-    "step": 4,
+    "step": 8,
     "files": {
       ".env": "e79b6b83ad870624b4b7b98259d14b61",
       ".node-version": "183ee5c38f5718616e4d909d5298b395",
@@ -175,8 +208,8 @@
       "package-lock.json": "ffdb81dc999415e1e2501ec5fd70dcf2",
       "package.json": "dd5e722ec81e639dd738b2184035f3c1",
       "plan.md": "38f53ee07f8e5a55e52edd2b265127cd",
-      "server.js": "1f3e5f32843c6ea0ea2b86323f4b1ec2",
-      "state.json": "e4fc2f3ef9b90cccccf83f21c9085641",
+      "server.js": "0cbb1009ef0a8aa0fc92f9852a47a4e1",
+      "state.json": "f934b4428323ea89d27addf0e957dfb2",
       "_auth_output.txt": "0b6679c3a60006d70c15da0d13b9f606",
       "admin\\css\\admin.css": "20a784051d30af5cdf5d06a7367479ed",
       "admin\\images\\admin-badge.png": "e5cc84867a9b5e5e8db574577998cddb",
@@ -189,10 +222,10 @@
       "middleware\\security.js": "11bfbee6815806e1c8d0bd8b22c656a7",
       "middleware\\validate.js": "8af8cd877a91156f487a3f6a38689dbd",
       "models\\settingsModel.js": "5b2ef394aeba55d059801f345a18f6d4",
-      "public\\contact.html": "aa1f8d77734c3683eb99ccd38dcd5020",
+      "public\\contact.html": "fc1b8e381286dbac853c6012fbb5463c",
       "public\\events.html": "a2cc43e20695e98d60e9337a5a4de1c4",
       "public\\index.html": "8b1bf5457a137b3b9137ec72fa6a647f",
-      "public\\pricing.html": "98454bbe6d4643d0c69378dbc7383cdb",
+      "public\\pricing.html": "c8f6a43d0a2e409f0b2baf8796d116b1",
       "public\\schedule.html": "57e76726b4f1db01fdfe39f10f63707c",
       "public\\shop.html": "6a40637da507ca557533c1b232ac20a2",
       "public\\css\\style.css": "cad7bb9711aaa58ac1308d93447351cd",
@@ -239,5 +272,5 @@
     }
   },
   "modified_files": {},
-  "updated": 1782331059.080674
+  "updated": 1782331644.73011
 }
