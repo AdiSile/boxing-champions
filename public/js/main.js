@@ -42,7 +42,7 @@ async function apiFetch(url, options = {}, fallback = null) {
       ...options,
     });
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      throw new Error('HTTP ' + response.status);
     }
     return await response.json();
   } catch (err) {
@@ -59,27 +59,86 @@ async function apiFetch(url, options = {}, fallback = null) {
  */
 function renderEmptyState(message, iconClass) {
   const icon = iconClass || 'fa-circle-info';
-  return `
-    <div class="shop-empty-state" style="grid-column: 1 / -1;">
-      <div class="shop-empty-icon">
-        <i class="fa-solid ${icon}"></i>
-      </div>
-      <h3 class="shop-empty-title">Momentan nu există date</h3>
-      <p class="shop-empty-desc">${escapeHtml(message)}</p>
-    </div>
-  `;
+  return (
+    '<div class="shop-empty-state" style="grid-column: 1 / -1;">' +
+    '<div class="shop-empty-icon">' +
+    '<i class="fa-solid ' + icon + '"></i>' +
+    '</div>' +
+    '<h3 class="shop-empty-title">Momentan nu există date</h3>' +
+    '<p class="shop-empty-desc">' + escapeHtml(message) + '</p>' +
+    '</div>'
+  );
 }
 
 // ===========================================================================
 // ÎNCĂRCARE DINAMICĂ — CONȚINUT PE PAGINI
 // ===========================================================================
 
-// --- Schedule ---
-async function loadSchedule() {
-  const container = document.querySelector('.schedule-table-wrap, [data-content="schedule"]');
+// --- fetchSettings ---
+// Populează toate elementele [data-setting] și [data-contact]
+// din GET /api/settings, cu fallback la conținutul hardcodat existent.
+async function fetchSettings() {
+  const settingEls = document.querySelectorAll('[data-setting]');
+  const contactEls = document.querySelectorAll('[data-contact]');
+
+  if (settingEls.length === 0 && contactEls.length === 0) return;
+
+  // Fallback: păstrează conținutul curent (hardcodat) din fiecare element
+  const fallbackSettings = {};
+  settingEls.forEach(function (el) {
+    var key = el.getAttribute('data-setting');
+    if (key) {
+      fallbackSettings[key] = el.textContent.trim();
+    }
+  });
+  contactEls.forEach(function (el) {
+    var key = el.getAttribute('data-contact');
+    if (key) {
+      fallbackSettings[key] = el.textContent.trim();
+    }
+  });
+
+  const settings = await apiFetch(API_BASE + '/settings', {}, null);
+
+  // Populează [data-setting]
+  settingEls.forEach(function (el) {
+    var key = el.getAttribute('data-setting');
+    if (!key) return;
+    var value = null;
+    if (settings && typeof settings[key] === 'string') {
+      value = settings[key];
+    } else if (fallbackSettings[key]) {
+      value = fallbackSettings[key];
+    }
+    if (value !== null) {
+      el.textContent = value;
+    }
+  });
+
+  // Populează [data-contact]
+  contactEls.forEach(function (el) {
+    var key = el.getAttribute('data-contact');
+    if (!key) return;
+    var value = null;
+    if (settings && typeof settings[key] === 'string') {
+      value = settings[key];
+    } else if (fallbackSettings[key]) {
+      value = fallbackSettings[key];
+    }
+    if (value !== null) {
+      el.textContent = value;
+    }
+  });
+}
+
+// --- fetchSchedule ---
+// Populează tabelul de program din GET /api/schedule.
+// Țintește [data-content="schedule"] (pagina /schedule).
+async function fetchSchedule() {
+  var container = document.querySelector('[data-content="schedule"]');
   if (!container) return;
 
-  const schedule = await apiFetch(`${API_BASE}/schedule`, {}, FALLBACK_DATA.schedule);
+  var schedule = await apiFetch(API_BASE + '/schedule', {}, FALLBACK_DATA.schedule);
 
   if (!schedule || schedule.length === 0) {
     container.innerHTML = renderEmptyState('Programul nu este disponibil momentan.', 'fa-clock');
@@ -87,23 +146,23 @@ async function loadSchedule() {
   }
 
   // Grupează pe zile
-  const days = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
-  const grouped = {};
-  days.forEach(d => { grouped[d] = []; });
-  schedule.forEach(s => {
+  var days = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
+  var grouped = {};
+  days.forEach(function (d) { grouped[d] = []; });
+  schedule.forEach(function (s) {
     if (grouped[s.day]) grouped[s.day].push(s);
   });
 
-  const activeDays = days.filter(d => grouped[d].length > 0);
+  var activeDays = days.filter(function (d) { return grouped[d].length > 0; });
 
   function getTagClass(slot) {
-    const category = (slot.category || '').toLowerCase();
-    const gender = (slot.gender || '').toLowerCase();
+    var category = (slot.category || '').toLowerCase();
+    var gender = (slot.gender || '').toLowerCase();
 
-    if (category.includes('copii') || category.includes('copil')) {
+    if (category.indexOf('copii') !== -1 || category.indexOf('copil') !== -1) {
       return 'tag-kids';
     }
-    if (gender === 'feminin' || category.includes('feminin')) {
+    if (gender === 'feminin' || category.indexOf('feminin') !== -1) {
       return 'tag-women';
     }
     if (gender === 'masculin') {
@@ -112,21 +171,21 @@ async function loadSchedule() {
     return 'tag-mixed';
   }
 
-  let html = '<div class="schedule-table-wrap"><table class="schedule-table" aria-label="Program săptămânal Boxing Champions"><thead><tr>';
+  var html = '<div class="schedule-table-wrap"><table class="schedule-table" aria-label="Program săptămânal Boxing Champions"><thead><tr>';
   html += '<th scope="col">Zi</th><th scope="col">Interval Orar</th><th scope="col">Categorie</th><th scope="col">Gen</th>';
   html += '</tr></thead><tbody>';
 
-  activeDays.forEach(day => {
-    grouped[day].forEach((slot, idx) => {
-      const rowspan = idx === 0 ? `rowspan="${grouped[day].length}"` : '';
-      const tagClass = getTagClass(slot);
+  activeDays.forEach(function (day) {
+    grouped[day].forEach(function (slot, idx) {
+      var rowspan = idx === 0 ? ' rowspan="' + grouped[day].length + '"' : '';
+      var tagClass = getTagClass(slot);
       html += '<tr class="fade-in">';
       if (idx === 0) {
-        html += `<td ${rowspan} style="font-weight: 700; color: var(--color-gold); font-family: var(--font-display); font-size: 1.1rem;">${escapeHtml(day)}</td>`;
+        html += '<td' + rowspan + ' style="font-weight: 700; color: var(--color-gold); font-family: var(--font-display); font-size: 1.1rem;">' + escapeHtml(day) + '</td>';
       }
-      html += `<td>${escapeHtml(slot.start_time)} – ${escapeHtml(slot.end_time)}</td>`;
-      html += `<td>${escapeHtml(slot.category)}</td>`;
-      html += `<td><span class="tag ${tagClass}">${escapeHtml(slot.gender)}</span></td>`;
+      html += '<td>' + escapeHtml(slot.start_time) + ' – ' + escapeHtml(slot.end_time) + '</td>';
+      html += '<td>' + escapeHtml(slot.category) + '</td>';
+      html += '<td><span class="tag ' + tagClass + '">' + escapeHtml(slot.gender) + '</span></td>';
       html += '</tr>';
     });
   });
@@ -135,51 +194,56 @@ async function loadSchedule() {
   container.innerHTML = html;
 }
 
-// --- Coaches ---
-async function loadCoaches() {
-  const container = document.querySelector('[data-content="coaches"]');
+// --- fetchCoaches ---
+// Populează [data-content="coaches"] din GET /api/coaches.
+async function fetchCoaches() {
+  var container = document.querySelector('[data-content="coaches"]');
   if (!container) return;
 
-  const coaches = await apiFetch(`${API_BASE}/coaches`, {}, FALLBACK_DATA.coaches);
+  var coaches = await apiFetch(API_BASE + '/coaches', {}, FALLBACK_DATA.coaches);
 
   if (!coaches || coaches.length === 0) {
     container.innerHTML = renderEmptyState('Momentan nu sunt antrenori disponibili.', 'fa-user-slash');
     return;
   }
 
-  let html = '';
-  coaches.forEach((coach, index) => {
-    const delay = index * 100;
-    html += `
-      <div class="coach-card glass-card tilt-card fade-in delay-${delay}">
-        <div class="tilt-card-inner">
-          <div class="tilt-card-glow"></div>
-          <div class="tilt-card-shine"></div>
-          <div class="coach-card-img" style="width:160px;height:160px;border-radius:50%;margin:0 auto var(--space-lg);overflow:hidden;">
-            ${coach.photo
-              ? `<img src="${escapeHtml(coach.photo)}" alt="${escapeHtml(coach.name)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`
-              : `<div style="width:100%;height:100%;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-size:3rem;color:var(--color-gray-400);"><i class="fa-solid fa-user"></i></div>`
-            }
-          </div>
-          <h3 style="text-align:center;font-family:var(--font-display);font-size:1.3rem;margin-bottom:var(--space-xs);">${escapeHtml(coach.name)}</h3>
-          <p style="text-align:center;font-size:0.85rem;color:var(--color-gold-light);margin-bottom:var(--space-md);">${escapeHtml(coach.specialization)}</p>
-          ${coach.quote
-            ? `<p style="text-align:center;font-size:0.85rem;color:var(--color-gray-200);font-style:italic;">„${escapeHtml(coach.quote)}”</p>`
-            : ''}
-        </div>
-      </div>
-    `;
+  var html = '';
+  coaches.forEach(function (coach, index) {
+    var delay = index * 100;
+    html += '<div class="coach-card glass-card tilt-card fade-in delay-' + delay + '">' +
+      '<div class="tilt-card-inner">' +
+      '<div class="tilt-card-glow"></div>' +
+      '<div class="tilt-card-shine"></div>' +
+      '<div class="coach-card-img" style="width:160px;height:160px;border-radius:50%;margin:0 auto var(--space-lg);overflow:hidden;">';
+
+    if (coach.photo) {
+      html += '<img src="' + escapeHtml(coach.photo) + '" alt="' + escapeHtml(coach.name) + '" style="width:100%;height:100%;object-fit:cover;" loading="lazy">';
+    } else {
+      html += '<div style="width:100%;height:100%;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-size:3rem;color:var(--color-gray-400);"><i class="fa-solid fa-user"></i></div>';
+    }
+
+    html += '</div>' +
+      '<h3 style="text-align:center;font-family:var(--font-display);font-size:1.3rem;margin-bottom:var(--space-xs);">' + escapeHtml(coach.name) + '</h3>' +
+      '<p style="text-align:center;font-size:0.85rem;color:var(--color-gold-light);margin-bottom:var(--space-md);">' + escapeHtml(coach.specialization) + '</p>';
+
+    if (coach.quote) {
+      html += '<p style="text-align:center;font-size:0.85rem;color:var(--color-gray-200);font-style:italic;">„' + escapeHtml(coach.quote) + '”</p>';
+    }
+
+    html += '</div></div>';
   });
 
   container.innerHTML = html;
 }
 
-// --- Events Preview ---
-async function loadEventsPreview() {
-  const container = document.querySelector('[data-content="events-preview"]');
+// --- fetchEventsPreview ---
+// Populează [data-content="events-preview"] din GET /api/events
+// (afișează primele 3 evenimente).
+async function fetchEventsPreview() {
+  var container = document.querySelector('[data-content="events-preview"]');
   if (!container) return;
 
-  const events = await apiFetch(`${API_BASE}/events`, {}, FALLBACK_DATA.events);
+  var events = await apiFetch(API_BASE + '/events', {}, FALLBACK_DATA.events);
 
   if (!events || events.length === 0) {
     container.innerHTML = renderEmptyState('Momentan nu sunt evenimente programate.', 'fa-calendar-xmark');
@@ -187,91 +251,188 @@ async function loadEventsPreview() {
   }
 
   // Ia primele 3 evenimente
-  const preview = events.slice(0, 3);
+  var preview = events.slice(0, 3);
 
-  let html = '';
-  preview.forEach((event, index) => {
-    const delay = index * 100;
-    const firstPhoto = event.photos && event.photos.length > 0 ? event.photos[0].url : '';
-    html += `
-      <div class="event-card glass-card tilt-card fade-in delay-${delay}">
-        <div class="tilt-card-inner">
-          <div class="tilt-card-glow"></div>
-          <div class="tilt-card-shine"></div>
-          <div class="event-card-img-wrap" style="height:220px;overflow:hidden;border-radius:var(--radius-md) var(--radius-md) 0 0;">
-            ${firstPhoto
-              ? `<img src="${escapeHtml(firstPhoto)}" alt="${escapeHtml(event.title)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`
-              : `<div style="width:100%;height:100%;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-size:3rem;color:var(--color-gray-400);"><i class="fa-solid fa-calendar-days"></i></div>`
-            }
-          </div>
-          <div class="event-card-body" style="padding:var(--space-lg);">
-            <span style="font-size:0.75rem;color:var(--color-gold-light);">${escapeHtml(event.event_date)}</span>
-            <h3 style="font-family:var(--font-display);font-size:1.15rem;margin:var(--space-xs) 0;color:var(--color-light);">${escapeHtml(event.title)}</h3>
-            ${event.location ? `<p style="font-size:0.8rem;color:var(--color-gray-300);margin-bottom:var(--space-sm);"><i class="fa-solid fa-location-dot" style="margin-right:0.35rem;color:var(--color-gold);"></i>${escapeHtml(event.location)}</p>` : ''}
-            ${event.description ? `<p style="font-size:0.82rem;color:var(--color-gray-200);line-height:1.5;">${escapeHtml(event.description.length > 100 ? event.description.slice(0, 100) + '...' : event.description)}</p>` : ''}
-          </div>
-        </div>
-      </div>
-    `;
+  var html = '';
+  preview.forEach(function (event, index) {
+    var delay = index * 100;
+    var firstPhoto = event.photos && event.photos.length > 0 ? event.photos[0].url : '';
+
+    html += '<div class="event-card glass-card tilt-card fade-in delay-' + delay + '">' +
+      '<div class="tilt-card-inner">' +
+      '<div class="tilt-card-glow"></div>' +
+      '<div class="tilt-card-shine"></div>' +
+      '<div class="event-card-img-wrap" style="height:220px;overflow:hidden;border-radius:var(--radius-md) var(--radius-md) 0 0;">';
+
+    if (firstPhoto) {
+      html += '<img src="' + escapeHtml(firstPhoto) + '" alt="' + escapeHtml(event.title) + '" style="width:100%;height:100%;object-fit:cover;" loading="lazy">';
+    } else {
+      html += '<div style="width:100%;height:100%;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-size:3rem;color:var(--color-gray-400);"><i class="fa-solid fa-calendar-days"></i></div>';
+    }
+
+    html += '</div>' +
+      '<div class="event-card-body" style="padding:var(--space-lg);">' +
+      '<span style="font-size:0.75rem;color:var(--color-gold-light);">' + escapeHtml(event.event_date) + '</span>' +
+      '<h3 style="font-family:var(--font-display);font-size:1.15rem;margin:var(--space-xs) 0;color:var(--color-light);">' + escapeHtml(event.title) + '</h3>';
+
+    if (event.location) {
+      html += '<p style="font-size:0.8rem;color:var(--color-gray-300);margin-bottom:var(--space-sm);"><i class="fa-solid fa-location-dot" style="margin-right:0.35rem;color:var(--color-gold);"></i>' + escapeHtml(event.location) + '</p>';
+    }
+
+    if (event.description) {
+      var desc = event.description.length > 100 ? event.description.slice(0, 100) + '...' : event.description;
+      html += '<p style="font-size:0.82rem;color:var(--color-gray-200);line-height:1.5;">' + escapeHtml(desc) + '</p>';
+    }
+
+    html += '</div></div></div>';
   });
 
   container.innerHTML = html;
 }
 
-// --- Events (full page) ---
-async function loadEvents() {
-  const container = document.querySelector('[data-content="events"]');
+// --- fetchEvents ---
+// Populează [data-content="events"] din GET /api/events
+// (afișează toate evenimentele, cu galerie foto).
+async function fetchEvents() {
+  var container = document.querySelector('[data-content="events"]');
   if (!container) return;
 
-  const events = await apiFetch(`${API_BASE}/events`, {}, FALLBACK_DATA.events);
+  var events = await apiFetch(API_BASE + '/events', {}, FALLBACK_DATA.events);
 
   if (!events || events.length === 0) {
     container.innerHTML = renderEmptyState('Momentan nu sunt evenimente de afișat.', 'fa-calendar-xmark');
     return;
   }
 
-  let html = '';
-  events.forEach((event, index) => {
-    const delay = index * 100;
-    const firstPhoto = event.photos && event.photos.length > 0 ? event.photos[0].url : '';
-    html += `
-      <div class="event-card glass-card tilt-card fade-in delay-${delay}">
-        <div class="tilt-card-inner">
-          <div class="tilt-card-glow"></div>
-          <div class="tilt-card-shine"></div>
-          <div style="height:220px;overflow:hidden;border-radius:var(--radius-md) var(--radius-md) 0 0;">
-            ${firstPhoto
-              ? `<img src="${escapeHtml(firstPhoto)}" alt="${escapeHtml(event.title)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`
-              : `<div style="width:100%;height:100%;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-size:3rem;color:var(--color-gray-400);"><i class="fa-solid fa-calendar-days"></i></div>`
-            }
-          </div>
-          <div style="padding:var(--space-lg);">
-            <span style="font-size:0.75rem;color:var(--color-gold-light);">${escapeHtml(event.event_date)}</span>
-            <h3 style="font-family:var(--font-display);font-size:1.15rem;margin:var(--space-xs) 0;color:var(--color-light);">${escapeHtml(event.title)}</h3>
-            ${event.location ? `<p style="font-size:0.8rem;color:var(--color-gray-300);margin-bottom:var(--space-sm);"><i class="fa-solid fa-location-dot" style="margin-right:0.35rem;color:var(--color-gold);"></i>${escapeHtml(event.location)}</p>` : ''}
-            ${event.description ? `<p style="font-size:0.82rem;color:var(--color-gray-200);line-height:1.5;">${escapeHtml(event.description)}</p>` : ''}
-            ${event.photos && event.photos.length > 1 ? `
-              <div style="display:flex;gap:var(--space-xs);margin-top:var(--space-md);flex-wrap:wrap;">
-                ${event.photos.map(p => `<span style="display:inline-block;padding:0.2rem 0.6rem;background:rgba(212,175,55,0.08);border-radius:50px;font-size:0.7rem;color:var(--color-gray-300);"><i class="fa-solid fa-image" style="margin-right:0.25rem;"></i>${escapeHtml(p.caption || 'Foto')}</span>`).join('')}
-              </div>
-            ` : ''}
-          </div>
-        </div>
-      </div>
-    `;
+  var html = '';
+  events.forEach(function (event, index) {
+    var delay = index * 100;
+    var firstPhoto = event.photos && event.photos.length > 0 ? event.photos[0].url : '';
+
+    html += '<div class="event-card glass-card tilt-card fade-in delay-' + delay + '">' +
+      '<div class="tilt-card-inner">' +
+      '<div class="tilt-card-glow"></div>' +
+      '<div class="tilt-card-shine"></div>' +
+      '<div style="height:220px;overflow:hidden;border-radius:var(--radius-md) var(--radius-md) 0 0;">';
+
+    if (firstPhoto) {
+      html += '<img src="' + escapeHtml(firstPhoto) + '" alt="' + escapeHtml(event.title) + '" style="width:100%;height:100%;object-fit:cover;" loading="lazy">';
+    } else {
+      html += '<div style="width:100%;height:100%;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-size:3rem;color:var(--color-gray-400);"><i class="fa-solid fa-calendar-days"></i></div>';
+    }
+
+    html += '</div>' +
+      '<div style="padding:var(--space-lg);">' +
+      '<span style="font-size:0.75rem;color:var(--color-gold-light);">' + escapeHtml(event.event_date) + '</span>' +
+      '<h3 style="font-family:var(--font-display);font-size:1.15rem;margin:var(--space-xs) 0;color:var(--color-light);">' + escapeHtml(event.title) + '</h3>';
+
+    if (event.location) {
+      html += '<p style="font-size:0.8rem;color:var(--color-gray-300);margin-bottom:var(--space-sm);"><i class="fa-solid fa-location-dot" style="margin-right:0.35rem;color:var(--color-gold);"></i>' + escapeHtml(event.location) + '</p>';
+    }
+
+    if (event.description) {
+      html += '<p style="font-size:0.82rem;color:var(--color-gray-200);line-height:1.5;">' + escapeHtml(event.description) + '</p>';
+    }
+
+    if (event.photos && event.photos.length > 1) {
+      html += '<div style="display:flex;gap:var(--space-xs);margin-top:var(--space-md);flex-wrap:wrap;">';
+      event.photos.forEach(function (p) {
+        html += '<span style="display:inline-block;padding:0.2rem 0.6rem;background:rgba(212,175,55,0.08);border-radius:50px;font-size:0.7rem;color:var(--color-gray-300);"><i class="fa-solid fa-image" style="margin-right:0.25rem;"></i>' + escapeHtml(p.caption || 'Foto') + '</span>';
+      });
+      html += '</div>';
+    }
+
+    html += '</div></div></div>';
   });
 
   container.innerHTML = html;
+}
+
+// --- fetchAchievements ---
+// Populează [data-content="achievements"] din GET /api/achievements.
+// Actualizează date-target, data-duration și label, apoi declanșează animația.
+async function fetchAchievements() {
+  var container = document.querySelector('[data-content="achievements"]');
+  if (!container) return;
+
+  var achievements = await apiFetch(API_BASE + '/achievements', {}, null);
+
+  if (!achievements || achievements.length === 0) return;
+
+  // Mapează realizările după cheie
+  var achMap = {};
+  achievements.forEach(function (a) {
+    achMap[a.key] = a;
+  });
+
+  // Actualizează fiecare stat-card pe baza clasei .stat-label
+  // Mapare: label → key
+  var labelToKey = {
+    'Campionate': 'championships',
+    'Meciuri Câștigate': 'matches_won',
+    'Membri Activi': 'active_members',
+    'Ani de Experiență': 'years_experience',
+  };
+
+  var cards = container.querySelectorAll('.stat-card');
+  cards.forEach(function (card) {
+    var labelEl = card.querySelector('.stat-label');
+    var numberEl = card.querySelector('.stat-number');
+    if (!labelEl || !numberEl) return;
+
+    var labelText = labelEl.textContent.trim();
+    var key = labelToKey[labelText];
+    if (!key || !achMap[key]) return;
+
+    var ach = achMap[key];
+
+    // Actualizează eticheta
+    labelEl.textContent = ach.label;
+
+    // Actualizează data-target pentru counter
+    numberEl.setAttribute('data-target', ach.value);
+    numberEl.textContent = '0';
+  });
+
+  // Declanșează animația de counter (dacă elementele sunt vizibile)
+  animateCounters();
+}
+
+// --- Animație counter pentru statistici ---
+function animateCounters() {
+  var counters = document.querySelectorAll('.stat-number[data-target]');
+  if (counters.length === 0) return;
+
+  counters.forEach(function (counter) {
+    var target = parseInt(counter.getAttribute('data-target'), 10);
+    var duration = parseInt(counter.getAttribute('data-duration'), 10) || 2200;
+    var start = 0;
+    var startTime = null;
+
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      var progress = timestamp - startTime;
+      var current = Math.min(Math.floor((progress / duration) * target), target);
+      counter.textContent = current;
+      if (progress < duration) {
+        requestAnimationFrame(step);
+      }
+    }
+
+    requestAnimationFrame(step);
+  });
 }
 
 // ===========================================================================
 // INIT — execută toate încărcările disponibile pe pagină
 // ===========================================================================
 function initDynamicContent() {
-  loadSchedule();
-  loadCoaches();
-  loadEventsPreview();
-  loadEvents();
+  fetchSettings();
+  fetchSchedule();
+  fetchCoaches();
+  fetchEventsPreview();
+  fetchEvents();
+  fetchAchievements();
 }
 
 if (document.readyState === 'loading') {
@@ -286,20 +447,20 @@ if (document.readyState === 'loading') {
 
 (function () {
   // Reutilizează canvas-ul din HTML dacă există, altfel creează unul
-  let canvas = document.getElementById('particles-canvas');
+  var canvas = document.getElementById('particles-canvas');
   if (!canvas) {
     canvas = document.createElement('canvas');
     canvas.id = 'particles-canvas';
     document.body.prepend(canvas);
   }
   canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;';
-  const ctx = canvas.getContext('2d');
+  var ctx = canvas.getContext('2d');
 
-  let width, height;
-  let particles = [];
+  var width, height;
+  var particles = [];
 
-  const PARTICLE_COUNT_MIN = 40;
-  const PARTICLE_COUNT_MAX = 60;
+  var PARTICLE_COUNT_MIN = 40;
+  var PARTICLE_COUNT_MAX = 60;
 
   function resize() {
     width = window.innerWidth;
@@ -329,15 +490,15 @@ if (document.readyState === 'loading') {
   }
 
   function initParticles() {
-    const count = Math.floor(randomBetween(PARTICLE_COUNT_MIN, PARTICLE_COUNT_MAX));
+    var count = Math.floor(randomBetween(PARTICLE_COUNT_MIN, PARTICLE_COUNT_MAX));
     particles = [];
-    for (let i = 0; i < count; i++) {
+    for (var i = 0; i < count; i++) {
       particles.push(createParticle());
     }
   }
 
   initParticles();
-  window.addEventListener('resize', () => {
+  window.addEventListener('resize', function () {
     resize();
     initParticles();
   });
@@ -360,7 +521,7 @@ if (document.readyState === 'loading') {
       if (p.y > height + 10) p.y = -10;
 
       // opacitate cu puls
-      const alpha = p.opacity + Math.sin(p.pulse) * 0.12;
+      var alpha = p.opacity + Math.sin(p.pulse) * 0.12;
 
       // desenare cerc auriu
       ctx.beginPath();

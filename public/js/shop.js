@@ -627,6 +627,9 @@
     // Ascunde și scheletul
     if (loadingSkeleton) loadingSkeleton.style.display = 'none';
 
+    // Actualizează contorul
+    updateResultCount(0);
+
     productGrid.innerHTML = `
       <div class="shop-empty-state">
         <div class="shop-empty-icon">
@@ -687,10 +690,28 @@
     return filtered;
   }
 
+  function updateResultCount(count) {
+    const el = document.getElementById('shop-result-count');
+    if (!el) return;
+    if (isLoading) {
+      el.textContent = 'Se încarcă produsele...';
+    } else if (loadError && allProducts.length === 0) {
+      el.textContent = 'Eroare la încărcare';
+    } else if (count === 0) {
+      el.textContent = '0 produse găsite';
+    } else {
+      const categoryLabel = currentCategory !== 'all'
+        ? ' în categoria ' + currentCategory
+        : '';
+      el.textContent = count + ' produse găsite' + categoryLabel;
+    }
+  }
+
   function renderProducts() {
     if (!productGrid) return;
 
     const filtered = getFilteredAndSorted();
+    updateResultCount(filtered.length);
 
     // Empty state
     if (filtered.length === 0) {

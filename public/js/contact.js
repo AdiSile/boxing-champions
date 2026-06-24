@@ -3,8 +3,8 @@
 // ===========================================================================
 // CONTACT FORM MODULE — Boxing Champions
 // Validare live: regex email/telefon, cerințe minim caractere,
-// mesaje eroare inline, submit prin fetch API la /api/contact, toast
-// succes/eroare. Backend: routes/contact.js
+// mesaje eroare inline, submit prin fetch API la /api/messages, toast
+// succes/eroare. Backend: routes/api.js (POST /api/messages)
 //
 // Depinde de: main.js (escapeHtml — se verifică existența, altfel polyfill)
 // ===========================================================================
@@ -27,7 +27,7 @@
 
   const TOAST_DURATION = 3200;
   const API_BASE = window.API_BASE || '/api';
-  const CONTACT_API = API_BASE + '/contact';
+  const CONTACT_API = API_BASE + '/messages';
 
   // ──────────────────────────────────────────────────────────────────────────
   // REFERINȚE DOM
@@ -49,7 +49,7 @@
   const PHONE_REGEX = /^[+]?[\d\s()-]{7,20}$/;
 
   // ──────────────────────────────────────────────────────────────────────────
-  // CONFIG VALIDARE — aliniat cu backend-ul routes/contact.js
+  // CONFIG VALIDARE — aliniat cu backend-ul routes/api.js (POST /api/messages)
   // ──────────────────────────────────────────────────────────────────────────
   const VALIDATORS = {
     name: {
@@ -267,11 +267,11 @@
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // SUBMIT — fetch API la /api/contact
+  // SUBMIT — fetch API la /api/messages
   // ──────────────────────────────────────────────────────────────────────────
 
   /**
-   * Trimite formularul prin fetch API la endpoint-ul /api/contact.
+   * Trimite formularul prin fetch API la endpoint-ul /api/messages.
    * @param {SubmitEvent} e
    */
   async function handleSubmit(e) {

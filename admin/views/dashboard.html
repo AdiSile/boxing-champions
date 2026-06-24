@@ -195,147 +195,221 @@
     <script nonce="%NONCE%">
         (function() {
             'use strict';
-            const SECTIONS = {
-                general: {
-                    label: 'Setări Generale', icon: 'fa-gear', apiBase: '/api/settings',
-                    fields: [
-                        { name: 'site_name', label: 'Nume Site', type: 'text', required: true },
-                        { name: 'site_email', label: 'Email Contact', type: 'email', required: true },
-                        { name: 'site_phone', label: 'Telefon', type: 'text', required: false },
-                        { name: 'site_address', label: 'Adresă', type: 'text', required: false },
-                        { name: 'facebook_url', label: 'URL Facebook', type: 'url', required: false },
-                        { name: 'instagram_url', label: 'URL Instagram', type: 'url', required: false }
-                    ],
-                    columns: ['Setare', 'Valoare'],
-                    rowRenderer: function(item) { return '<tr><td><strong>'+escapeHtml(item.key||item.name||'—')+'</strong></td><td>'+escapeHtml(String(item.value||item.val||'—'))+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id||item.key)+'" aria-label="Editează"><i class="fa-solid fa-pen"></i></button></div></td></tr>'; }
-                },
+
+            // ──────────────────────────────────────────────
+            // Secțiuni – API endpoint-uri aliniate la rutele
+            // reale din routes/api.js și câmpuri conforme cu
+            // schema bazei de date (db.js).
+            // ──────────────────────────────────────────────
+
+            // Setări generale – tratate special: răspunsul GET
+            // e un obiect {key: value}, iar PUT acceptă același
+            // obiect. În UI transformăm obiectul într-un array
+            // pentru afișare tabelară, iar la salvare trimitem
+            // întregul obiect îmbogățit cu valoarea editată.
+            var SETTINGS_ALLOWED_KEYS = [
+                'club_name', 'slogan', 'email', 'phone', 'address',
+                'facebook', 'instagram', 'tiktok', 'hero_badge', 'about_text'
+            ];
+
+            var SETTINGS_LABELS = {
+                club_name: 'Nume Club',
+                slogan: 'Slogan',
+                email: 'Email Contact',
+                phone: 'Telefon',
+                address: 'Adresă',
+                facebook: 'URL Facebook',
+                instagram: 'URL Instagram',
+                tiktok: 'URL TikTok',
+                hero_badge: 'Text Hero Badge',
+                about_text: 'Text Despre Noi'
+            };
+
+            var SECTIONS = {
                 antrenori: {
-                    label: 'Antrenori', icon: 'fa-user-tie', apiBase: '/api/antrenori',
+                    label: 'Antrenori', icon: 'fa-user-tie', apiBase: '/api/admin/coaches',
                     fields: [
-                        { name: 'nume', label: 'Nume', type: 'text', required: true },
-                        { name: 'prenume', label: 'Prenume', type: 'text', required: true },
-                        { name: 'specializare', label: 'Specializare', type: 'text', required: true },
-                        { name: 'email', label: 'Email', type: 'email', required: true },
-                        { name: 'telefon', label: 'Telefon', type: 'text', required: false },
-                        { name: 'descriere', label: 'Descriere', type: 'textarea', required: false },
-                        { name: 'poza_url', label: 'URL Poză', type: 'url', required: false }
+                        { name: 'name', label: 'Nume', type: 'text', required: true },
+                        { name: 'specialization', label: 'Specializare', type: 'text', required: false },
+                        { name: 'certifications', label: 'Certificări', type: 'textarea', required: false },
+                        { name: 'photo', label: 'URL Poză', type: 'url', required: false },
+                        { name: 'quote', label: 'Citat', type: 'textarea', required: false },
+                        { name: 'active', label: 'Activ', type: 'select', required: false, options: ['da','nu'] }
                     ],
-                    columns: ['Nume', 'Specializare', 'Email', 'Telefon'],
-                    rowRenderer: function(item) { return '<tr><td>'+escapeHtml(item.nume||'')+' '+escapeHtml(item.prenume||'')+'</td><td>'+escapeHtml(item.specializare||'—')+'</td><td>'+escapeHtml(item.email||'—')+'</td><td>'+escapeHtml(item.telefon||'—')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează antrenor"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge antrenor"><i class="fa-solid fa-trash"></i></button></div></td></tr>'; }
+                    columns: ['Nume', 'Specializare', 'Certificări', 'Activ'],
+                    rowRenderer: function(item) {
+                        return '<tr><td><strong>'+escapeHtml(item.name||'—')+'</strong></td><td>'+escapeHtml(item.specialization||'—')+'</td><td>'+escapeHtml((item.certifications||'').substring(0,50))+((item.certifications||'').length>50?'…':'')+'</td><td>'+escapeHtml(item.active?'da':'nu')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează antrenor"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge antrenor"><i class="fa-solid fa-trash"></i></button></div></td></tr>';
+                    },
+                    preSubmit: function(payload) {
+                        if (payload.active !== undefined) { payload.active = payload.active === 'da' ? true : false; }
+                        return payload;
+                    }
                 },
                 evenimente: {
-                    label: 'Evenimente', icon: 'fa-calendar-star', apiBase: '/api/evenimente',
+                    label: 'Evenimente', icon: 'fa-calendar-star', apiBase: '/api/admin/events',
                     fields: [
-                        { name: 'titlu', label: 'Titlu', type: 'text', required: true },
-                        { name: 'data', label: 'Data', type: 'date', required: true },
-                        { name: 'ora', label: 'Ora', type: 'time', required: false },
-                        { name: 'locatie', label: 'Locație', type: 'text', required: true },
-                        { name: 'descriere', label: 'Descriere', type: 'textarea', required: false },
-                        { name: 'imagine_url', label: 'URL Imagine', type: 'url', required: false },
-                        { name: 'status', label: 'Status', type: 'select', required: false, options: ['programat','in_desfasurare','finalizat','anulat'] }
+                        { name: 'title', label: 'Titlu', type: 'text', required: true },
+                        { name: 'event_date', label: 'Data', type: 'date', required: true },
+                        { name: 'location', label: 'Locație', type: 'text', required: false },
+                        { name: 'description', label: 'Descriere', type: 'textarea', required: false },
+                        { name: 'active', label: 'Activ', type: 'select', required: false, options: ['da','nu'] }
                     ],
-                    columns: ['Titlu', 'Data', 'Locație', 'Status'],
-                    rowRenderer: function(item) { return '<tr><td><strong>'+escapeHtml(item.titlu||'—')+'</strong></td><td>'+escapeHtml(item.data||'—')+'</td><td>'+escapeHtml(item.locatie||'—')+'</td><td>'+escapeHtml(item.status||'—')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează eveniment"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge eveniment"><i class="fa-solid fa-trash"></i></button></div></td></tr>'; }
+                    columns: ['Titlu', 'Data', 'Locație', 'Activ'],
+                    rowRenderer: function(item) {
+                        return '<tr><td><strong>'+escapeHtml(item.title||'—')+'</strong></td><td>'+escapeHtml(item.event_date||'—')+'</td><td>'+escapeHtml(item.location||'—')+'</td><td>'+escapeHtml(item.active?'da':'nu')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează eveniment"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge eveniment"><i class="fa-solid fa-trash"></i></button></div></td></tr>';
+                    },
+                    preSubmit: function(payload) {
+                        if (payload.active !== undefined) { payload.active = payload.active === 'da' ? true : false; }
+                        return payload;
+                    }
                 },
                 program: {
-                    label: 'Program', icon: 'fa-clock', apiBase: '/api/program',
+                    label: 'Program', icon: 'fa-clock', apiBase: '/api/admin/schedule',
                     fields: [
-                        { name: 'zi', label: 'Zi', type: 'select', required: true, options: ['Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă','Duminică'] },
-                        { name: 'ora_start', label: 'Ora Început', type: 'time', required: true },
-                        { name: 'ora_end', label: 'Ora Sfârșit', type: 'time', required: true },
-                        { name: 'tip_antrenament', label: 'Tip Antrenament', type: 'text', required: true },
-                        { name: 'antrenor_id', label: 'ID Antrenor', type: 'text', required: false },
-                        { name: 'sala', label: 'Sală', type: 'text', required: false }
+                        { name: 'day', label: 'Zi', type: 'select', required: true, options: ['Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă','Duminică'] },
+                        { name: 'start_time', label: 'Ora Început (HH:mm)', type: 'text', required: true, placeholder: '09:00' },
+                        { name: 'end_time', label: 'Ora Sfârșit (HH:mm)', type: 'text', required: true, placeholder: '10:30' },
+                        { name: 'category', label: 'Categorie', type: 'text', required: true },
+                        { name: 'gender', label: 'Sex', type: 'select', required: true, options: ['Masculin','Feminin','Mixt'] },
+                        { name: 'active', label: 'Activ', type: 'select', required: false, options: ['da','nu'] }
                     ],
-                    columns: ['Zi', 'Interval Orar', 'Tip Antrenament', 'Sală'],
-                    rowRenderer: function(item) { return '<tr><td>'+escapeHtml(item.zi||'—')+'</td><td>'+escapeHtml(item.ora_start||'')+' - '+escapeHtml(item.ora_end||'')+'</td><td>'+escapeHtml(item.tip_antrenament||'—')+'</td><td>'+escapeHtml(item.sala||'—')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează program"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge program"><i class="fa-solid fa-trash"></i></button></div></td></tr>'; }
+                    columns: ['Zi', 'Interval Orar', 'Categorie', 'Sex', 'Activ'],
+                    rowRenderer: function(item) {
+                        return '<tr><td>'+escapeHtml(item.day||'—')+'</td><td>'+escapeHtml(item.start_time||'')+' - '+escapeHtml(item.end_time||'')+'</td><td>'+escapeHtml(item.category||'—')+'</td><td>'+escapeHtml(item.gender||'—')+'</td><td>'+escapeHtml(item.active?'da':'nu')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează program"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge program"><i class="fa-solid fa-trash"></i></button></div></td></tr>';
+                    },
+                    preSubmit: function(payload) {
+                        if (payload.active !== undefined) { payload.active = payload.active === 'da' ? true : false; }
+                        return payload;
+                    }
                 },
                 abonamente: {
-                    label: 'Abonamente', icon: 'fa-id-card', apiBase: '/api/abonamente',
+                    label: 'Abonamente', icon: 'fa-id-card', apiBase: '/api/admin/subscriptions',
                     fields: [
-                        { name: 'tip', label: 'Tip Abonament', type: 'text', required: true },
-                        { name: 'durata_luni', label: 'Durată (luni)', type: 'number', required: true },
-                        { name: 'pret', label: 'Preț (RON)', type: 'number', required: true, step: '0.01' },
-                        { name: 'descriere', label: 'Descriere', type: 'textarea', required: false },
-                        { name: 'beneficii', label: 'Beneficii (separate prin virgulă)', type: 'textarea', required: false },
-                        { name: 'activ', label: 'Activ', type: 'select', required: false, options: ['da','nu'] }
+                        { name: 'name', label: 'Nume Abonament', type: 'text', required: true },
+                        { name: 'monthly_price', label: 'Preț Lunar (RON)', type: 'number', required: true, step: '0.01' },
+                        { name: 'yearly_price', label: 'Preț Anual (RON)', type: 'number', required: true, step: '0.01' },
+                        { name: 'benefits', label: 'Beneficii (JSON array)', type: 'textarea', required: false, placeholder: '["beneficiu 1","beneficiu 2"]' },
+                        { name: 'highlighted', label: 'Evidențiat', type: 'select', required: false, options: ['da','nu'] },
+                        { name: 'active', label: 'Activ', type: 'select', required: false, options: ['da','nu'] }
                     ],
-                    columns: ['Tip', 'Durată', 'Preț', 'Activ'],
-                    rowRenderer: function(item) { return '<tr><td><strong>'+escapeHtml(item.tip||'—')+'</strong></td><td>'+escapeHtml(String(item.durata_luni||'—'))+' luni</td><td>'+escapeHtml(String(item.pret||'—'))+' RON</td><td>'+escapeHtml(item.activ||'—')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează abonament"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge abonament"><i class="fa-solid fa-trash"></i></button></div></td></tr>'; }
+                    columns: ['Nume', 'Preț Lunar', 'Preț Anual', 'Evidențiat', 'Activ'],
+                    rowRenderer: function(item) {
+                        return '<tr><td><strong>'+escapeHtml(item.name||'—')+'</strong></td><td>'+escapeHtml(String(item.monthly_price||'—'))+' RON</td><td>'+escapeHtml(String(item.yearly_price||'—'))+' RON</td><td>'+escapeHtml(item.highlighted?'da':'nu')+'</td><td>'+escapeHtml(item.active?'da':'nu')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează abonament"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge abonament"><i class="fa-solid fa-trash"></i></button></div></td></tr>';
+                    },
+                    preSubmit: function(payload) {
+                        if (payload.highlighted !== undefined) { payload.highlighted = payload.highlighted === 'da' ? true : false; }
+                        if (payload.active !== undefined) { payload.active = payload.active === 'da' ? true : false; }
+                        // Parse benefits JSON if present; send as array, backend handles stringify
+                        if (payload.benefits && typeof payload.benefits === 'string' && payload.benefits.trim()) {
+                            try { payload.benefits = JSON.parse(payload.benefits); } catch(e) { /* keep as string */ }
+                        }
+                        return payload;
+                    }
                 },
                 produse: {
-                    label: 'Produse', icon: 'fa-box-open', apiBase: '/api/produse',
+                    label: 'Produse', icon: 'fa-box-open', apiBase: '/api/admin/products',
                     fields: [
-                        { name: 'nume', label: 'Nume Produs', type: 'text', required: true },
-                        { name: 'categorie', label: 'Categorie', type: 'text', required: true },
-                        { name: 'pret', label: 'Preț (RON)', type: 'number', required: true, step: '0.01' },
-                        { name: 'stoc', label: 'Stoc', type: 'number', required: true },
-                        { name: 'descriere', label: 'Descriere', type: 'textarea', required: false },
-                        { name: 'imagine_url', label: 'URL Imagine', type: 'url', required: false },
-                        { name: 'activ', label: 'Activ', type: 'select', required: false, options: ['da','nu'] }
+                        { name: 'name', label: 'Nume Produs', type: 'text', required: true },
+                        { name: 'description', label: 'Descriere', type: 'textarea', required: false },
+                        { name: 'price', label: 'Preț (RON)', type: 'number', required: true, step: '0.01' },
+                        { name: 'old_price', label: 'Preț Vechi (RON)', type: 'number', required: false, step: '0.01' },
+                        { name: 'discount_label', label: 'Etichetă Reducere', type: 'text', required: false },
+                        { name: 'contextual_label', label: 'Etichetă Contextuală', type: 'text', required: false },
+                        { name: 'category', label: 'Categorie', type: 'select', required: true, options: ['Îmbrăcăminte','Echipament','Accesorii','Nutriție'] },
+                        { name: 'image', label: 'URL Imagine', type: 'url', required: false },
+                        { name: 'stock', label: 'Stoc', type: 'number', required: true },
+                        { name: 'active', label: 'Activ', type: 'select', required: false, options: ['da','nu'] }
                     ],
                     columns: ['Nume', 'Categorie', 'Preț', 'Stoc', 'Activ'],
-                    rowRenderer: function(item) { return '<tr><td><strong>'+escapeHtml(item.nume||'—')+'</strong></td><td>'+escapeHtml(item.categorie||'—')+'</td><td>'+escapeHtml(String(item.pret||'—'))+' RON</td><td>'+escapeHtml(String(item.stoc||'—'))+'</td><td>'+escapeHtml(item.activ||'—')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează produs"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge produs"><i class="fa-solid fa-trash"></i></button></div></td></tr>'; }
+                    rowRenderer: function(item) {
+                        return '<tr><td><strong>'+escapeHtml(item.name||'—')+'</strong></td><td>'+escapeHtml(item.category||'—')+'</td><td>'+escapeHtml(String(item.price||'—'))+' RON</td><td>'+escapeHtml(String(item.stock||'—'))+'</td><td>'+escapeHtml(item.active?'da':'nu')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează produs"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge produs"><i class="fa-solid fa-trash"></i></button></div></td></tr>';
+                    },
+                    preSubmit: function(payload) {
+                        if (payload.active !== undefined) { payload.active = payload.active === 'da' ? true : false; }
+                        if (payload.old_price === '' || payload.old_price === null || payload.old_price === undefined) { payload.old_price = null; }
+                        return payload;
+                    }
                 },
                 comenzi: {
-                    label: 'Comenzi', icon: 'fa-truck-fast', apiBase: '/api/comenzi',
+                    label: 'Comenzi', icon: 'fa-truck-fast', apiBase: '/api/admin/orders',
                     fields: [
-                        { name: 'client_nume', label: 'Nume Client', type: 'text', required: true },
-                        { name: 'client_email', label: 'Email Client', type: 'email', required: true },
-                        { name: 'client_telefon', label: 'Telefon Client', type: 'text', required: false },
-                        { name: 'produse', label: 'Produse (JSON)', type: 'textarea', required: true },
+                        { name: 'customer_name', label: 'Nume Client', type: 'text', required: true },
+                        { name: 'customer_email', label: 'Email Client', type: 'email', required: true },
+                        { name: 'customer_phone', label: 'Telefon Client', type: 'text', required: false },
+                        { name: 'items', label: 'Produse (JSON)', type: 'textarea', required: true },
                         { name: 'total', label: 'Total (RON)', type: 'number', required: true, step: '0.01' },
-                        { name: 'status', label: 'Status', type: 'select', required: false, options: ['nouă','procesată','livrată','anulată'] }
+                        { name: 'status', label: 'Status', type: 'select', required: false, options: ['pending','confirmed','processing','shipped','delivered','cancelled'] }
                     ],
-                    columns: ['Client', 'Email', 'Total', 'Status'],
-                    rowRenderer: function(item) { return '<tr><td>'+escapeHtml(item.client_nume||'—')+'</td><td>'+escapeHtml(item.client_email||'—')+'</td><td>'+escapeHtml(String(item.total||'—'))+' RON</td><td>'+escapeHtml(item.status||'—')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează comandă"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge comandă"><i class="fa-solid fa-trash"></i></button></div></td></tr>'; }
+                    columns: ['Client', 'Email', 'Total', 'Status', 'Dată'],
+                    rowRenderer: function(item) {
+                        return '<tr><td>'+escapeHtml(item.customer_name||'—')+'</td><td>'+escapeHtml(item.customer_email||'—')+'</td><td>'+escapeHtml(String(item.total||'—'))+' RON</td><td>'+escapeHtml(item.status||'—')+'</td><td>'+escapeHtml(item.created_at||'—')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează comandă"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge comandă"><i class="fa-solid fa-trash"></i></button></div></td></tr>';
+                    },
+                    // Orders update uses PATCH /api/admin/orders/:id/status, not PUT.
+                    // PUT /api/admin/orders/:id does NOT exist.
+                    // We still allow opening the modal for viewing; on submit we only PATCH status.
+                    useStatusPatch: true
                 },
                 mesaje: {
-                    label: 'Mesaje', icon: 'fa-envelope', apiBase: '/api/mesaje',
+                    label: 'Mesaje', icon: 'fa-envelope', apiBase: '/api/admin/messages',
                     fields: [
-                        { name: 'nume', label: 'Nume', type: 'text', required: true },
+                        { name: 'name', label: 'Nume', type: 'text', required: true },
                         { name: 'email', label: 'Email', type: 'email', required: true },
-                        { name: 'subiect', label: 'Subiect', type: 'text', required: true },
-                        { name: 'mesaj', label: 'Mesaj', type: 'textarea', required: true },
-                        { name: 'status', label: 'Status', type: 'select', required: false, options: ['necăutat','căutat','rezolvat'] }
+                        { name: 'phone', label: 'Telefon', type: 'text', required: false },
+                        { name: 'subject', label: 'Subiect', type: 'text', required: true },
+                        { name: 'message', label: 'Mesaj', type: 'textarea', required: true },
+                        { name: 'is_read', label: 'Citit', type: 'select', required: false, options: ['nu','da'] }
                     ],
-                    columns: ['Nume', 'Email', 'Subiect', 'Data', 'Status'],
-                    rowRenderer: function(item) { return '<tr><td>'+escapeHtml(item.nume||'—')+'</td><td>'+escapeHtml(item.email||'—')+'</td><td><strong>'+escapeHtml(item.subiect||'—')+'</strong></td><td>'+escapeHtml(item.data_creare||item.created_at||'—')+'</td><td>'+escapeHtml(item.status||'—')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Vezi mesaj"><i class="fa-solid fa-eye"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge mesaj"><i class="fa-solid fa-trash"></i></button></div></td></tr>'; }
+                    columns: ['Nume', 'Email', 'Subiect', 'Data', 'Citit'],
+                    rowRenderer: function(item) {
+                        return '<tr><td>'+escapeHtml(item.name||'—')+'</td><td>'+escapeHtml(item.email||'—')+'</td><td><strong>'+escapeHtml(item.subject||'—')+'</strong></td><td>'+escapeHtml(item.created_at||'—')+'</td><td>'+escapeHtml(item.is_read?'da':'nu')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Vezi mesaj"><i class="fa-solid fa-eye"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge mesaj"><i class="fa-solid fa-trash"></i></button></div></td></tr>';
+                    },
+                    // Messages are read-only from admin (created by public form).
+                    // Edit button allows viewing + marking as read via PATCH /api/admin/messages/:id/read.
+                    preSubmit: function(payload) {
+                        if (payload.is_read !== undefined) { payload.is_read = payload.is_read === 'da' ? 1 : 0; }
+                        return payload;
+                    },
+                    useReadPatch: true
                 },
                 seo: {
-                    label: 'SEO', icon: 'fa-magnifying-glass-chart', apiBase: '/api/seo',
+                    label: 'SEO', icon: 'fa-magnifying-glass-chart', apiBase: '/api/admin/seo',
                     fields: [
-                        { name: 'page', label: 'Pagină', type: 'text', required: true },
-                        { name: 'meta_title', label: 'Meta Title', type: 'text', required: true },
-                        { name: 'meta_description', label: 'Meta Description', type: 'textarea', required: true },
-                        { name: 'meta_keywords', label: 'Meta Keywords', type: 'text', required: false },
-                        { name: 'og_title', label: 'OG Title', type: 'text', required: false },
-                        { name: 'og_description', label: 'OG Description', type: 'textarea', required: false },
+                        { name: 'page', label: 'Pagină', type: 'select', required: true, options: ['home','about','coaches','schedule','subscriptions','events','shop','contact'] },
+                        { name: 'title', label: 'Meta Title', type: 'text', required: true },
+                        { name: 'description', label: 'Meta Description', type: 'textarea', required: true },
+                        { name: 'keywords', label: 'Meta Keywords', type: 'text', required: false },
                         { name: 'og_image', label: 'OG Image URL', type: 'url', required: false }
                     ],
-                    columns: ['Pagină', 'Meta Title', 'Meta Description'],
-                    rowRenderer: function(item) { return '<tr><td><strong>'+escapeHtml(item.page||'—')+'</strong></td><td>'+escapeHtml((item.meta_title||'').substring(0,60))+((item.meta_title||'').length>60?'…':'')+'</td><td>'+escapeHtml((item.meta_description||'').substring(0,80))+((item.meta_description||'').length>80?'…':'')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează SEO"><i class="fa-solid fa-pen"></i></button></div></td></tr>'; }
+                    columns: ['Pagină', 'Title', 'Description'],
+                    rowRenderer: function(item) {
+                        return '<tr><td><strong>'+escapeHtml(item.page||'—')+'</strong></td><td>'+escapeHtml((item.title||'').substring(0,60))+((item.title||'').length>60?'…':'')+'</td><td>'+escapeHtml((item.description||'').substring(0,80))+((item.description||'').length>80?'…':'')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează SEO"><i class="fa-solid fa-pen"></i></button></div></td></tr>';
+                    },
+                    // SEO PUT expects an array of all pages. On submit we wrap
+                    // the single edited item in an array (merge with existing).
+                    // The backend PUT /api/admin/seo accepts Array.
+                    seoBatchMode: true
                 }
             };
-            let currentSection = 'general', editingId = null;
-            const mainPanel = document.getElementById('mainPanel');
-            const sidebar = document.getElementById('sidebar');
-            const sidebarNav = document.getElementById('sidebarNav');
-            const modalOverlay = document.getElementById('modalOverlay');
-            const modalTitleText = document.getElementById('modalTitleText');
-            const modalForm = document.getElementById('modalForm');
-            const closeModalBtn = document.getElementById('closeModal');
-            const toastContainer = document.getElementById('toastContainer');
-            const btnLogout = document.getElementById('btnLogout');
-            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-            const particleCanvas = document.getElementById('particle-canvas');
-            const authLoadingOverlay = document.getElementById('authLoadingOverlay');
 
-            function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+            var currentSection = 'general', editingId = null, currentSettingsCache = null;
+            var mainPanel = document.getElementById('mainPanel');
+            var sidebar = document.getElementById('sidebar');
+            var sidebarNav = document.getElementById('sidebarNav');
+            var modalOverlay = document.getElementById('modalOverlay');
+            var modalTitleText = document.getElementById('modalTitleText');
+            var modalForm = document.getElementById('modalForm');
+            var closeModalBtn = document.getElementById('closeModal');
+            var toastContainer = document.getElementById('toastContainer');
+            var btnLogout = document.getElementById('btnLogout');
+            var mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            var particleCanvas = document.getElementById('particle-canvas');
+            var authLoadingOverlay = document.getElementById('authLoadingOverlay');
+
+            function escapeHtml(str) { var d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
             function showToast(msg, type) {
                 type = type || 'success';
-                const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
-                const t = document.createElement('div');
+                var icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+                var t = document.createElement('div');
                 t.className = 'toast toast--' + type;
                 t.innerHTML = '<i class="fa-solid ' + (icons[type]||icons.info) + '"></i> ' + escapeHtml(msg);
                 toastContainer.appendChild(t);
@@ -349,9 +423,9 @@
                 opts.headers = Object.assign({}, opts.headers, { 'Content-Type': 'application/json', 'Accept': 'application/json' });
                 opts.credentials = 'include';
                 try {
-                    const resp = await fetch(url, opts);
+                    var resp = await fetch(url, opts);
                     if (resp.status === 401 || resp.status === 403) { window.location.replace('/admin'); throw new Error('Neautentificat'); }
-                    if (!resp.ok) { const ed = await resp.json().catch(function() { return {}; }); throw new Error(ed.message || ed.error || 'Eroare server (' + resp.status + ')'); }
+                    if (!resp.ok) { var ed = await resp.json().catch(function() { return {}; }); throw new Error(ed.message || ed.error || 'Eroare server (' + resp.status + ')'); }
                     return await resp.json();
                 } catch (err) {
                     if (err.message === 'Neautentificat') throw err;
@@ -359,23 +433,158 @@
                     throw err;
                 }
             }
+
+            // ──────────────────────────────────────────────
+            // Settings helpers (secțiunea `general`)
+            // ──────────────────────────────────────────────
+
+            /**
+             * Transformă obiectul {key:value} returnat de
+             * GET /api/admin/settings într-un array de obiecte
+             * {key, value} pentru afișare tabelară.
+             */
+            function settingsObjToArray(obj) {
+                if (!obj || typeof obj !== 'object') return [];
+                return SETTINGS_ALLOWED_KEYS.map(function(k) {
+                    return { key: k, value: obj[k] !== undefined ? String(obj[k]) : '' };
+                });
+            }
+
+            /**
+             * Încarcă secțiunea Setări Generale: GET /api/admin/settings
+             */
+            async function loadSettingsSection() {
+                mainPanel.innerHTML = '<div class="section-header"><h1><i class="fa-solid fa-gear"></i> Setări Generale</h1><button class="btn btn-gold" id="btnEditAllSettings" aria-label="Editează toate setările"><i class="fa-solid fa-pen-to-square"></i> Editează</button></div><div class="glass-table-wrap">'+renderSpinner()+'</div>';
+                document.getElementById('btnEditAllSettings').addEventListener('click', function() { openSettingsModal(); });
+                try {
+                    var data = await apiRequest('/api/admin/settings', { method: 'GET' });
+                    currentSettingsCache = data; // păstrează cache-ul pentru submit
+                    var items = settingsObjToArray(data);
+                    renderSettingsTable(items);
+                } catch (err) {
+                    if (err.message !== 'Neautentificat') {
+                        mainPanel.querySelector('.glass-table-wrap').innerHTML = '<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><p>Eroare la încărcarea setărilor. Verifică conexiunea.</p></div>';
+                    }
+                }
+            }
+
+            function renderSettingsTable(items) {
+                var wrap = mainPanel.querySelector('.glass-table-wrap');
+                if (!items || items.length === 0) {
+                    wrap.innerHTML = '<div class="empty-state" style="padding:40px;"><i class="fa-solid fa-gear"></i><p>Nicio setare disponibilă.</p></div>';
+                    return;
+                }
+                var h = '<table role="grid" aria-label="Setări Generale"><thead><tr><th scope="col">Setare</th><th scope="col">Valoare</th><th scope="col">Acțiuni</th></tr></thead><tbody>';
+                items.forEach(function(it) {
+                    var displayLabel = SETTINGS_LABELS[it.key] || it.key;
+                    h += '<tr><td><strong>'+escapeHtml(displayLabel)+'</strong></td><td>'+escapeHtml(String(it.value||'—'))+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit-setting" data-key="'+escapeHtml(it.key)+'" data-value="'+escapeHtml(String(it.value||''))+'\" aria-label="Editează '+escapeHtml(displayLabel)+'"><i class="fa-solid fa-pen"></i></button></div></td></tr>';
+                });
+                h += '</tbody></table>';
+                wrap.innerHTML = h;
+                wrap.querySelector('table').addEventListener('click', function(e) {
+                    var btn = e.target.closest('button'); if (!btn) return;
+                    var action = btn.getAttribute('data-action');
+                    if (action === 'edit-setting') {
+                        var key = btn.getAttribute('data-key');
+                        var value = btn.getAttribute('data-value');
+                        openSettingEditModal(key, value);
+                    }
+                });
+            }
+
+            function openSettingsModal() {
+                // Deschide modal cu TOATE setările pentru batch edit
+                if (!currentSettingsCache) { showToast('Setările nu au fost încărcate.', 'error'); return; }
+                editingId = '__all__';
+                modalTitleText.textContent = 'Editare Setări Generale';
+                var fh = '';
+                SETTINGS_ALLOWED_KEYS.forEach(function(key) {
+                    var v = currentSettingsCache[key] !== undefined ? String(currentSettingsCache[key]) : '';
+                    var label = SETTINGS_LABELS[key] || key;
+                    fh += '<div class="form-group"><label for="field_'+key+'">'+escapeHtml(label)+'</label>';
+                    if (key === 'about_text') {
+                        fh += '<textarea id="field_'+key+'" name="'+key+'">'+escapeHtml(v)+'</textarea>';
+                    } else {
+                        fh += '<input type="text" id="field_'+key+'" name="'+key+'" value="'+escapeHtml(v)+'">';
+                    }
+                    fh += '</div>';
+                });
+                fh += '<div class="form-actions"><button type="button" class="btn btn-outline" id="btnCancelModal">Anulează</button><button type="submit" class="btn btn-gold"><i class="fa-solid fa-floppy-disk"></i> Salvează</button></div>';
+                modalForm.innerHTML = fh; modalOverlay.classList.add('active'); modalOverlay.setAttribute('aria-hidden', 'false');
+                setTimeout(function() { var fi = modalForm.querySelector('input, textarea'); if (fi) fi.focus(); }, 150);
+                document.getElementById('btnCancelModal').addEventListener('click', closeModal);
+                modalForm.onsubmit = async function(e) { e.preventDefault(); await submitSettingsBatch(); };
+            }
+
+            function openSettingEditModal(key, value) {
+                editingId = key;
+                var label = SETTINGS_LABELS[key] || key;
+                modalTitleText.textContent = 'Editare: ' + label;
+                var fh = '<div class="form-group"><label for="field_value">'+escapeHtml(label)+'</label>';
+                if (key === 'about_text') {
+                    fh += '<textarea id="field_value" name="value">'+escapeHtml(value)+'</textarea>';
+                } else {
+                    fh += '<input type="text" id="field_value" name="value" value="'+escapeHtml(value)+'">';
+                }
+                fh += '</div>';
+                fh += '<div class="form-actions"><button type="button" class="btn btn-outline" id="btnCancelModal">Anulează</button><button type="submit" class="btn btn-gold"><i class="fa-solid fa-floppy-disk"></i> Salvează</button></div>';
+                modalForm.innerHTML = fh; modalOverlay.classList.add('active'); modalOverlay.setAttribute('aria-hidden', 'false');
+                setTimeout(function() { var fi = modalForm.querySelector('input, textarea'); if (fi) fi.focus(); }, 150);
+                document.getElementById('btnCancelModal').addEventListener('click', closeModal);
+                modalForm.onsubmit = async function(e) { e.preventDefault(); await submitSingleSetting(key); };
+            }
+
+            async function submitSettingsBatch() {
+                var fd = new FormData(modalForm);
+                var payload = {};
+                SETTINGS_ALLOWED_KEYS.forEach(function(k) { payload[k] = fd.get(k) || ''; });
+                try {
+                    await apiRequest('/api/admin/settings', { method: 'PUT', body: JSON.stringify(payload) });
+                    showToast('Setări actualizate cu succes!', 'success');
+                    closeModal();
+                    // Reîncarcă secțiunea
+                    currentSettingsCache = payload;
+                    loadSettingsSection();
+                } catch (err) {}
+            }
+
+            async function submitSingleSetting(key) {
+                var fd = new FormData(modalForm);
+                var newValue = fd.get('value') || '';
+                // Trimite tot obiectul settings cu cheia modificată
+                var payload = Object.assign({}, currentSettingsCache || {});
+                payload[key] = newValue;
+                try {
+                    await apiRequest('/api/admin/settings', { method: 'PUT', body: JSON.stringify(payload) });
+                    showToast('Setare actualizată cu succes!', 'success');
+                    closeModal();
+                    currentSettingsCache = payload;
+                    loadSettingsSection();
+                } catch (err) {}
+            }
+
+            // ──────────────────────────────────────────────
+            // Generic section loading (pentru `antrenori`,
+            // `evenimente`, etc.)
+            // ──────────────────────────────────────────────
+
             function renderSpinner() { return '<div class="empty-state"><div class="spinner"></div><p style="margin-top:12px;">Se încarcă…</p></div>'; }
 
             function initParticles() {
-                const ctx = particleCanvas.getContext('2d');
-                let particles = [];
-                const COUNT = 65;
-                const PALETTE = ['rgba(212,175,55,0.22)','rgba(240,192,64,0.18)','rgba(184,148,31,0.24)','rgba(230,180,50,0.16)','rgba(200,160,40,0.20)'];
+                var ctx = particleCanvas.getContext('2d');
+                var particles = [];
+                var COUNT = 65;
+                var PALETTE = ['rgba(212,175,55,0.22)','rgba(240,192,64,0.18)','rgba(184,148,31,0.24)','rgba(230,180,50,0.16)','rgba(200,160,40,0.20)'];
                 function resize() { particleCanvas.width = window.innerWidth; particleCanvas.height = window.innerHeight; }
                 window.addEventListener('resize', resize); resize();
                 function mk() { return { x: Math.random()*particleCanvas.width, y: Math.random()*particleCanvas.height, radius: Math.random()*2.8+0.8, speedX: (Math.random()-0.5)*0.35, speedY: (Math.random()-0.5)*0.35, color: PALETTE[Math.floor(Math.random()*PALETTE.length)], opacity: Math.random()*0.6+0.2, pulse: Math.random()*Math.PI*2, pulseSpeed: Math.random()*0.015+0.005 }; }
-                for (let i = 0; i < COUNT; i++) particles.push(mk());
+                for (var i = 0; i < COUNT; i++) particles.push(mk());
                 function animate() {
                     ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
-                    for (let i = 0; i < particles.length; i++) {
-                        const p = particles[i];
+                    for (var i = 0; i < particles.length; i++) {
+                        var p = particles[i];
                         p.x += p.speedX; p.y += p.speedY; p.pulse += p.pulseSpeed;
-                        const o = p.opacity + Math.sin(p.pulse) * 0.12;
+                        var o = p.opacity + Math.sin(p.pulse) * 0.12;
                         if (p.x < -10) p.x = particleCanvas.width + 10;
                         if (p.x > particleCanvas.width + 10) p.x = -10;
                         if (p.y < -10) p.y = particleCanvas.height + 10;
@@ -384,10 +593,10 @@
                         ctx.fillStyle = p.color.replace(/[\d.]+\)$/, Math.max(0.04, Math.min(0.5, o)) + ')');
                         ctx.fill();
                     }
-                    for (let i = 0; i < particles.length; i++) {
-                        for (let j = i + 1; j < particles.length; j++) {
-                            const dx = particles[i].x - particles[j].x, dy = particles[i].y - particles[j].y;
-                            const dist = Math.sqrt(dx*dx + dy*dy);
+                    for (var i = 0; i < particles.length; i++) {
+                        for (var j = i + 1; j < particles.length; j++) {
+                            var dx = particles[i].x - particles[j].x, dy = particles[i].y - particles[j].y;
+                            var dist = Math.sqrt(dx*dx + dy*dy);
                             if (dist < 100) { ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.strokeStyle = 'rgba(212,175,55,' + (0.06*(1 - dist/100)) + ')'; ctx.lineWidth = 0.5; ctx.stroke(); }
                         }
                     }
@@ -396,15 +605,8 @@
                 animate();
             }
 
-            /**
-             * Afișează starea de eroare pe overlay-ul de loading și redirecționează
-             * după o scurtă pauză pentru a da feedback vizual utilizatorului.
-             * @param {string} [msg] Mesaj opțional de eroare.
-             * @returns {boolean} întotdeauna false (pentru a putea fi folosit ca return).
-             */
             function failAuthAndRedirect(msg) {
                 if (authLoadingOverlay) {
-                    // Înlocuim spinner-ul și textul cu mesaj de eroare
                     var spinner = authLoadingOverlay.querySelector('.auth-spinner');
                     var textEl = authLoadingOverlay.querySelector('.auth-text');
                     var iconEl = authLoadingOverlay.querySelector('.auth-icon i');
@@ -415,64 +617,30 @@
                         textEl.style.color = 'var(--red-light)';
                     }
                 }
-                // Pauză scurtă pentru ca utilizatorul să vadă feedback-ul, apoi redirect
-                setTimeout(function() {
-                    window.location.replace('/admin');
-                }, 800);
+                setTimeout(function() { window.location.replace('/admin'); }, 800);
                 return false;
             }
 
-            /**
-             * Verificare autentificare la încărcare prin GET /api/auth/check.
-             * Folosește AbortController cu timeout de 8 secunde pentru a evita blocarea.
-             * Dacă utilizatorul nu este autentificat, se face redirecționare către /admin.
-             * Se folosește window.location.replace pentru a preveni întoarcerea cu back.
-             * @returns {Promise<boolean>} true dacă autentificat, altfel redirect și false.
-             */
             async function checkAuth() {
-                var controller;
-                var timeoutId;
+                var controller, timeoutId;
                 try {
                     controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-                    if (controller) {
-                        timeoutId = setTimeout(function() { controller.abort(); }, 8000);
-                    }
-                    var fetchOpts = {
-                        method: 'GET',
-                        credentials: 'include',
-                        headers: { 'Accept': 'application/json' }
-                    };
+                    if (controller) { timeoutId = setTimeout(function() { controller.abort(); }, 8000); }
+                    var fetchOpts = { method: 'GET', credentials: 'include', headers: { 'Accept': 'application/json' } };
                     if (controller) { fetchOpts.signal = controller.signal; }
                     var r = await fetch('/api/auth/check', fetchOpts);
                     if (timeoutId) clearTimeout(timeoutId);
-                    // Tratează 401 (Unauthorized) și 403 (Forbidden) – redirecționare imediată
-                    if (r.status === 401 || r.status === 403) {
-                        return failAuthAndRedirect();
-                    }
-                    // Încearcă parsarea JSON; dacă răspunsul nu e JSON valid, redirecționează
+                    if (r.status === 401 || r.status === 403) { return failAuthAndRedirect(); }
                     var d;
-                    try {
-                        d = await r.json();
-                    } catch (parseErr) {
-                        // Răspunsul nu este JSON valid – sesiune invalidă
-                        return failAuthAndRedirect();
-                    }
-                    // Tratează corect răspunsul { authenticated: false } (status 200)
-                    // Verifică și cazul în care d este null/undefined sau authenticated nu e explicit true
-                    if (!d || d.authenticated === false || d.authenticated !== true) {
-                        return failAuthAndRedirect();
-                    }
+                    try { d = await r.json(); } catch (parseErr) { return failAuthAndRedirect(); }
+                    if (!d || d.authenticated === false || d.authenticated !== true) { return failAuthAndRedirect(); }
                     return true;
                 } catch (e) {
                     if (timeoutId) clearTimeout(timeoutId);
-                    // Orice eroare de rețea, timeout sau AbortError duce la redirecționare
                     return failAuthAndRedirect(e.name === 'AbortError' ? 'Timpul de verificare a expirat. Redirecționare…' : null);
                 }
             }
 
-            /**
-             * Elimină overlay-ul de loading și inițializează particulele + UI-ul.
-             */
             function removeAuthLoadingAndBootstrap() {
                 if (authLoadingOverlay && authLoadingOverlay.parentNode) {
                     authLoadingOverlay.parentNode.removeChild(authLoadingOverlay);
@@ -480,48 +648,81 @@
                 initParticles();
             }
 
+            /**
+             * Încarcă o secțiune generică (non-settings).
+             */
             async function loadSection(sk) {
-                const sec = SECTIONS[sk]; if (!sec) return;
+                var sec = SECTIONS[sk]; if (!sec) return;
                 mainPanel.innerHTML = '<div class="section-header"><h1><i class="fa-solid '+sec.icon+'"></i> '+sec.label+'</h1><button class="btn btn-gold" id="btnAddNew" aria-label="Adaugă nou în '+sec.label+'"><i class="fa-solid fa-plus"></i> Adaugă</button></div><div class="glass-table-wrap">'+renderSpinner()+'</div>';
                 document.getElementById('btnAddNew').addEventListener('click', function() { openModal(sk, null); });
                 try {
-                    const data = await apiRequest(sec.apiBase, { method: 'GET' });
-                    const items = Array.isArray(data) ? data : (data.data || data.items || data.results || []);
+                    var data = await apiRequest(sec.apiBase, { method: 'GET' });
+                    var items = Array.isArray(data) ? data : (data.data || data.items || data.results || []);
                     renderTable(sk, items);
-                } catch (err) { if (err.message !== 'Neautentificat') { mainPanel.querySelector('.glass-table-wrap').innerHTML = '<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><p>Eroare la încărcarea datelor. Verifică conexiunea.</p></div>'; } }
+                } catch (err) {
+                    if (err.message !== 'Neautentificat') {
+                        mainPanel.querySelector('.glass-table-wrap').innerHTML = '<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><p>Eroare la încărcarea datelor. Verifică conexiunea.</p></div>';
+                    }
+                }
             }
 
             function renderTable(sk, items) {
-                const sec = SECTIONS[sk], wrap = mainPanel.querySelector('.glass-table-wrap');
-                if (!items || items.length === 0) { wrap.innerHTML = '<div class="empty-state" style="padding:40px;"><i class="fa-solid '+sec.icon+'"></i><p>Nu există înregistrări în '+sec.label.toLowerCase()+'.</p><p style="font-size:0.85rem;margin-top:6px;">Apasă butonul <strong>Adaugă</strong> pentru a crea prima înregistrare.</p></div>'; return; }
-                let h = '<table role="grid" aria-label="'+escapeHtml(sec.label)+'"><thead><tr>';
+                var sec = SECTIONS[sk], wrap = mainPanel.querySelector('.glass-table-wrap');
+                if (!items || items.length === 0) {
+                    wrap.innerHTML = '<div class="empty-state" style="padding:40px;"><i class="fa-solid '+sec.icon+'"></i><p>Nu există înregistrări în '+sec.label.toLowerCase()+'.</p><p style="font-size:0.85rem;margin-top:6px;">Apasă butonul <strong>Adaugă</strong> pentru a crea prima înregistrare.</p></div>';
+                    return;
+                }
+                var h = '<table role="grid" aria-label="'+escapeHtml(sec.label)+'"><thead><tr>';
                 sec.columns.forEach(function(c) { h += '<th scope="col">'+escapeHtml(c)+'</th>'; });
                 h += '<th scope="col">Acțiuni</th></tr></thead><tbody>';
                 items.forEach(function(it) { h += sec.rowRenderer(it); });
                 h += '</tbody></table>'; wrap.innerHTML = h;
                 wrap.querySelector('table').addEventListener('click', function(e) {
-                    const btn = e.target.closest('button'); if (!btn) return;
-                    const action = btn.getAttribute('data-action'), id = btn.getAttribute('data-id');
-                    if (action === 'edit') { const it = items.find(function(x) { return String(x.id) === String(id); }); openModal(sk, it || null); }
+                    var btn = e.target.closest('button'); if (!btn) return;
+                    var action = btn.getAttribute('data-action'), id = btn.getAttribute('data-id');
+                    if (action === 'edit') { var it = items.find(function(x) { return String(x.id) === String(id); }); openModal(sk, it || null); }
                     else if (action === 'delete') { confirmDelete(sk, id); }
                 });
             }
 
+            /**
+             * Deschide modalul pentru o secțiune generică.
+             * Pentru secțiuni cu `active` (0/1) se face
+             * conversia la string 'da'/'nu' pentru select.
+             */
             function openModal(sk, item) {
-                const sec = SECTIONS[sk]; editingId = item ? item.id : null;
+                var sec = SECTIONS[sk]; editingId = item ? item.id : null;
                 modalTitleText.textContent = item ? 'Editare ' + sec.label : 'Adaugă ' + sec.label;
-                let fh = '';
+                var fh = '';
                 sec.fields.forEach(function(f) {
-                    const v = item ? (item[f.name] || '') : '';
+                    var raw = item ? (item[f.name] !== undefined ? item[f.name] : '') : '';
+                    var v = raw;
+                    // Conversie boolean 0/1 → 'da'/'nu' pentru select-ul de active
+                    if (f.name === 'active' || f.name === 'highlighted') {
+                        if (raw === 1 || raw === true) v = 'da';
+                        else if (raw === 0 || raw === false) v = 'nu';
+                        else v = String(raw);
+                    } else if (f.name === 'is_read') {
+                        v = raw === 1 ? 'da' : 'nu';
+                    } else {
+                        v = String(raw);
+                    }
                     fh += '<div class="form-group"><label for="field_'+f.name+'">'+escapeHtml(f.label)+(f.required?' <span style="color:var(--red-light);">*</span>':'')+'</label>';
-                    if (f.type === 'textarea') { fh += '<textarea id="field_'+f.name+'" name="'+f.name+'" '+(f.required?'required':'')+'>'+escapeHtml(v)+'</textarea>'; }
-                    else if (f.type === 'select' && f.options) { fh += '<select id="field_'+f.name+'" name="'+f.name+'" '+(f.required?'required':'')+'>'; f.options.forEach(function(o) { fh += '<option value="'+escapeHtml(o)+'"'+(String(v)===String(o)?' selected':'')+'>'+escapeHtml(o)+'</option>'; }); fh += '</select>'; }
-                    else { const it = f.type || 'text', st = f.step ? ' step="'+f.step+'"' : ''; fh += '<input type="'+it+'" id="field_'+f.name+'" name="'+f.name+'" value="'+escapeHtml(v)+'" '+(f.required?'required':'')+st+'>'; }
+                    if (f.type === 'textarea') {
+                        fh += '<textarea id="field_'+f.name+'" name="'+f.name+'" '+(f.required?'required':'')+(f.placeholder?' placeholder="'+escapeHtml(f.placeholder)+'"':'')+'>'+escapeHtml(v)+'</textarea>';
+                    } else if (f.type === 'select' && f.options) {
+                        fh += '<select id="field_'+f.name+'" name="'+f.name+'" '+(f.required?'required':'')+'>';
+                        f.options.forEach(function(o) { fh += '<option value="'+escapeHtml(o)+'"'+(String(v)===String(o)?' selected':'')+'>'+escapeHtml(o)+'</option>'; });
+                        fh += '</select>';
+                    } else {
+                        var it = f.type || 'text', st = f.step ? ' step="'+f.step+'"' : '';
+                        fh += '<input type="'+it+'" id="field_'+f.name+'" name="'+f.name+'" value="'+escapeHtml(v)+'" '+(f.required?'required':'')+(f.placeholder?' placeholder="'+escapeHtml(f.placeholder)+'"':'')+st+'>';
+                    }
                     fh += '</div>';
                 });
                 fh += '<div class="form-actions"><button type="button" class="btn btn-outline" id="btnCancelModal">Anulează</button><button type="submit" class="btn btn-gold"><i class="fa-solid fa-floppy-disk"></i> Salvează</button></div>';
                 modalForm.innerHTML = fh; modalOverlay.classList.add('active'); modalOverlay.setAttribute('aria-hidden', 'false');
-                setTimeout(function() { const fi = modalForm.querySelector('input, select, textarea'); if (fi) fi.focus(); }, 150);
+                setTimeout(function() { var fi = modalForm.querySelector('input, select, textarea'); if (fi) fi.focus(); }, 150);
                 document.getElementById('btnCancelModal').addEventListener('click', closeModal);
                 modalForm.onsubmit = async function(e) { e.preventDefault(); await submitForm(sk); };
             }
@@ -529,30 +730,78 @@
             function closeModal() { modalOverlay.classList.remove('active'); modalOverlay.setAttribute('aria-hidden', 'true'); modalForm.innerHTML = ''; editingId = null; }
 
             async function submitForm(sk) {
-                const sec = SECTIONS[sk], fd = new FormData(modalForm), payload = {};
-                sec.fields.forEach(function(f) { let v = fd.get(f.name) || ''; if (f.type === 'number') v = v === '' ? null : parseFloat(v); payload[f.name] = v; });
+                var sec = SECTIONS[sk], fd = new FormData(modalForm), payload = {};
+                sec.fields.forEach(function(f) {
+                    var v = fd.get(f.name);
+                    if (v === null || v === '') { payload[f.name] = (f.type === 'number') ? null : ''; return; }
+                    if (f.type === 'number') { payload[f.name] = parseFloat(v); if (isNaN(payload[f.name])) payload[f.name] = null; }
+                    else { payload[f.name] = v; }
+                });
+                // Aplică preSubmit (conversii boolean etc.)
+                if (sec.preSubmit) { payload = sec.preSubmit(payload); }
+
                 try {
-                    const url = editingId ? sec.apiBase + '/' + editingId : sec.apiBase;
-                    await apiRequest(url, { method: editingId ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+                    var url, method;
+
+                    // Comenzi: doar PATCH status (nu există PUT /api/admin/orders/:id)
+                    if (sec.useStatusPatch && editingId) {
+                        url = sec.apiBase + '/' + editingId + '/status';
+                        method = 'PATCH';
+                        var statusPayload = { status: payload.status };
+                        await apiRequest(url, { method: method, body: JSON.stringify(statusPayload) });
+                        showToast('Status comandă actualizat!', 'success');
+                        closeModal(); loadSection(sk);
+                        return;
+                    }
+
+                    // Mesaje: PATCH /api/admin/messages/:id/read pentru marcare citit
+                    if (sec.useReadPatch && editingId && payload.is_read === 1) {
+                        url = sec.apiBase + '/' + editingId + '/read';
+                        method = 'PATCH';
+                        await apiRequest(url, { method: method, body: JSON.stringify({}) });
+                        showToast('Mesaj marcat ca citit!', 'success');
+                        closeModal(); loadSection(sk);
+                        return;
+                    }
+
+                    // SEO batch: PUT /api/admin/seo cu array
+                    if (sec.seoBatchMode) {
+                        url = sec.apiBase;
+                        method = 'PUT';
+                        var seoArray = [payload];
+                        await apiRequest(url, { method: method, body: JSON.stringify(seoArray) });
+                        showToast('Setări SEO actualizate!', 'success');
+                        closeModal(); loadSection(sk);
+                        return;
+                    }
+
+                    // Caz standard: POST pentru create, PUT pentru update
+                    url = editingId ? sec.apiBase + '/' + editingId : sec.apiBase;
+                    method = editingId ? 'PUT' : 'POST';
+                    await apiRequest(url, { method: method, body: JSON.stringify(payload) });
                     showToast(editingId ? 'Înregistrare actualizată cu succes!' : 'Înregistrare adăugată cu succes!', 'success');
                     closeModal(); loadSection(sk);
                 } catch (err) {}
             }
 
             async function confirmDelete(sk, id) {
-                const sec = SECTIONS[sk];
+                var sec = SECTIONS[sk];
                 if (!confirm('Ești sigur că vrei să ștergi această înregistrare din ' + sec.label.toLowerCase() + '? Această acțiune este ireversibilă.')) return;
                 try { await apiRequest(sec.apiBase + '/' + id, { method: 'DELETE' }); showToast('Înregistrare ștearsă cu succes!', 'success'); loadSection(sk); } catch (err) {}
             }
 
-            sidebarNav.addEventListener('click', function(e) { const ni = e.target.closest('.nav-item'); if (!ni) return; const sk = ni.getAttribute('data-section'); if (sk) switchSection(sk); });
-            sidebarNav.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { const ni = e.target.closest('.nav-item'); if (!ni) return; e.preventDefault(); const sk = ni.getAttribute('data-section'); if (sk) switchSection(sk); } });
+            sidebarNav.addEventListener('click', function(e) { var ni = e.target.closest('.nav-item'); if (!ni) return; var sk = ni.getAttribute('data-section'); if (sk) switchSection(sk); });
+            sidebarNav.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { var ni = e.target.closest('.nav-item'); if (!ni) return; e.preventDefault(); var sk = ni.getAttribute('data-section'); if (sk) switchSection(sk); } });
 
             function switchSection(sk) {
                 currentSection = sk;
                 sidebarNav.querySelectorAll('.nav-item').forEach(function(it) { it.classList.remove('active'); it.removeAttribute('aria-current'); });
-                const ai = sidebarNav.querySelector('[data-section="'+sk+'"]'); if (ai) { ai.classList.add('active'); ai.setAttribute('aria-current', 'page'); }
-                loadSection(sk);
+                var ai = sidebarNav.querySelector('[data-section="'+sk+'"]'); if (ai) { ai.classList.add('active'); ai.setAttribute('aria-current', 'page'); }
+                if (sk === 'general') {
+                    loadSettingsSection();
+                } else {
+                    loadSection(sk);
+                }
                 if (window.innerWidth <= 768) sidebar.classList.remove('open');
             }
 
@@ -567,23 +816,16 @@
             });
 
             mobileMenuToggle.addEventListener('click', function() { sidebar.classList.toggle('open'); });
-            document.addEventListener('click', function(e) { if (window.innerWidth <= 768 && !sidebar.contains(e.target) && e.target !== mobileMenuToggle && !mobileMenuToggle.contains(e.target)) sidebar.classList.remove('open'); });
+            document.addEventListener('click', function(e) {
+                if (window.innerWidth <= 768 && !sidebar.contains(e.target) && e.target !== mobileMenuToggle && !mobileMenuToggle.contains(e.target)) sidebar.classList.remove('open');
+            });
 
-            /**
-             * Flux de inițializare:
-             * 1. Se afișează overlay-ul de loading pentru verificarea autentificării.
-             * 2. Se apelează GET /api/auth/check.
-             * 3. Dacă autentificarea e validă, se elimină overlay-ul, se inițializează particulele
-             *    și se încarcă secțiunea curentă.
-             * 4. Dacă NU este autentificat, se redirecționează la /admin (replace).
-             */
             async function init() {
-                // Overlay-ul de loading este deja vizibil din HTML
-                const auth = await checkAuth();
-                if (!auth) return; // checkAuth face deja redirect
-                // Autentificare confirmată – eliminăm overlay-ul și pornim dashboard-ul
+                var auth = await checkAuth();
+                if (!auth) return;
                 removeAuthLoadingAndBootstrap();
-                loadSection(currentSection);
+                // Secțiunea implicită e `general`
+                loadSettingsSection();
                 showToast('Bine ai venit în panoul de administrare!', 'info');
             }
             init();

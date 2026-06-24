@@ -239,7 +239,7 @@
               </div>
               <div class="contact-info-text">
                 <h4>Adresă</h4>
-                <p>Strada Sportului nr. 10<br>Sector 1, București<br>România, 010123</p>
+                <p data-contact="address">Strada Sportului nr. 10<br>Sector 1, București<br>România, 010123</p>
               </div>
             </div>
 
@@ -250,7 +250,9 @@
               <div class="contact-info-text">
                 <h4>Telefon</h4>
                 <p>
-                  <a href="tel:+40721234567" style="color: var(--color-gray-300); text-decoration: none; transition: color var(--transition-fast);">
+                  <a href="tel:+40721234567"
+                     data-contact="phone"
+                     style="color: var(--color-gray-300); text-decoration: none; transition: color var(--transition-fast);">
                     +40 721 234 567
                   </a>
                 </p>
@@ -264,7 +266,9 @@
               <div class="contact-info-text">
                 <h4>Email</h4>
                 <p>
-                  <a href="mailto:contact@boxing-champions.com" style="color: var(--color-gray-300); text-decoration: none; transition: color var(--transition-fast);">
+                  <a href="mailto:contact@boxing-champions.com"
+                     data-contact="email"
+                     style="color: var(--color-gray-300); text-decoration: none; transition: color var(--transition-fast);">
                     contact@boxing-champions.com
                   </a>
                 </p>
@@ -277,7 +281,7 @@
               </div>
               <div class="contact-info-text">
                 <h4>Program</h4>
-                <p>Luni – Vineri: 08:00 – 21:00<br>Sâmbătă: 09:00 – 14:00<br>Duminică: Închis</p>
+                <p data-contact="program">Luni – Vineri: 08:00 – 21:00<br>Sâmbătă: 09:00 – 14:00<br>Duminică: Închis</p>
               </div>
             </div>
 
@@ -453,5 +457,139 @@
        ======================================================================= -->
   <script src="js/main.js"></script>
   <script src="js/contact.js"></script>
+
+  <!-- =======================================================================
+       INLINE SCRIPT — Contact Settings Loader
+       Încarcă datele de contact din GET /api/settings și populează
+       elementele [data-contact], cu fallback la datele hardcodate din HTML.
+       De asemenea, actualizează href-urile pentru telefon și email.
+       ======================================================================= -->
+  <script>
+    (function () {
+      'use strict';
+
+      // ──────────────────────────────────────────────────────────────────────
+      // Date de fallback — valori hardcodate identice cu HTML-ul static
+      // ──────────────────────────────────────────────────────────────────────
+      var FALLBACK_CONTACT = {
+        address: 'Strada Sportului nr. 10\nSector 1, București\nRomânia, 010123',
+        phone: '+40 721 234 567',
+        email: 'contact@boxing-champions.com',
+        program: 'Luni – Vineri: 08:00 – 21:00\nSâmbătă: 09:00 – 14:00\nDuminică: Închis'
+      };
+
+      // ──────────────────────────────────────────────────────────────────────
+      // Escape HTML — polyfill simplu
+      // ──────────────────────────────────────────────────────────────────────
+      function escapeHtml(str) {
+        if (typeof str !== 'string') return '';
+        var map = {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        };
+        return str.replace(/[&<>"']/g, function (m) { return map[m]; });
+      }
+
+      // ──────────────────────────────────────────────────────────────────────
+      // Populează elementele [data-contact] din obiectul de setări
+      // ──────────────────────────────────────────────────────────────────────
+      function populateContactInfo(settings) {
+        var elements = document.querySelectorAll('[data-contact]');
+        if (!elements.length) return;
+
+        for (var i = 0; i < elements.length; i++) {
+          var el = elements[i];
+          var key = el.getAttribute('data-contact');
+          if (!key) continue;
+
+          // Determină valoarea: API sau fallback
+          var apiValue = (settings && typeof settings[key] === 'string' && settings[key].trim())
+            ? settings[key].trim()
+            : null;
+
+          var value = apiValue || FALLBACK_CONTACT[key] || '';
+
+          if (!value) continue;
+
+          var tagName = el.tagName.toUpperCase();
+
+          if (tagName === 'A') {
+            // Element link — actualizează textul și href
+            el.textContent = value;
+
+            if (key === 'phone') {
+              // Formatează numărul pentru href tel:
+              var cleanPhone = value.replace(/[\s\-\(\)\.]/g, '');
+              // Asigură prefixul + dacă lipsește și începe cu cifră
+              if (cleanPhone.indexOf('+') !== 0 && /^\d/.test(cleanPhone)) {
+                cleanPhone = '+' + cleanPhone;
+              }
+              el.setAttribute('href', 'tel:' + cleanPhone);
+            } else if (key === 'email') {
+              el.setAttribute('href', 'mailto:' + value.toLowerCase().trim());
+            }
+          } else {
+            // Element text — păstrează <br> pentru newline-uri
+            el.innerHTML = escapeHtml(value).replace(/\n/g, '<br>');
+          }
+        }
+      }
+
+      // ──────────────────────────────────────────────────────────────────────
+      // Fetch settings de la API
+      // ──────────────────────────────────────────────────────────────────────
+      function fetchContactSettings() {
+        var endpoint = '/api/settings';
+
+        // Folosește fetch cu timeout
+        var controller;
+        var timeoutId;
+
+        if (typeof AbortController !== 'undefined') {
+          controller = new AbortController();
+          timeoutId = setTimeout(function () {
+            controller.abort();
+          }, 5000);
+        }
+
+        var fetchOpts = {
+          headers: { 'Accept': 'application/json' }
+        };
+
+        if (controller) {
+          fetchOpts.signal = controller.signal;
+        }
+
+        fetch(endpoint, fetchOpts)
+          .then(function (response) {
+            if (timeoutId) clearTimeout(timeoutId);
+            if (!response.ok) {
+              throw new Error('HTTP ' + response.status);
+            }
+            return response.json();
+          })
+          .then(function (settings) {
+            populateContactInfo(settings);
+          })
+          .catch(function (err) {
+            if (timeoutId) clearTimeout(timeoutId);
+            console.warn('[Contact] Setările API nu au putut fi încărcate, se folosesc datele hardcodate:', err.message);
+            populateContactInfo(null); // fallback
+          });
+      }
+
+      // ──────────────────────────────────────────────────────────────────────
+      // Inițializare la DOM ready
+      // ──────────────────────────────────────────────────────────────────────
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fetchContactSettings);
+      } else {
+        fetchContactSettings();
+      }
+    })();
+  </script>
 </body>
 </html>

@@ -25,8 +25,6 @@ const db = require('./db');
 // ---------------------------------------------------------------------------
 const authRoutes = require('./routes/auth');
 const apiRoutes = require('./routes/api');
-const contactRoutes = require('./routes/contact');
-const settingsRoutes = require('./routes/settings');
 
 // ---------------------------------------------------------------------------
 // Aplicația Express
@@ -165,14 +163,8 @@ app.use('/admin/images', express.static(path.join(__dirname, 'admin', 'images'),
 // Auth routes (login, check, logout)
 app.use('/api/auth', authLimiter, authRoutes);
 
-// API public + admin
+// API public + admin (include /api/settings, /api/admin/settings, etc.)
 app.use('/api', apiLimiter, apiRoutes);
-
-// Contact
-app.use('/api/contact', apiLimiter, contactRoutes);
-
-// Settings (public GET + admin PUT)
-app.use('/api', apiLimiter, settingsRoutes);
 
 // ---------------------------------------------------------------------------
 // Admin Panel — pagini HTML

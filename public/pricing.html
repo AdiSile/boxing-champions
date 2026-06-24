@@ -496,5 +496,230 @@
       });
     })();
   </script>
+
+  <!-- =======================================================================
+       DYNAMIC PRICING CARDS — fetch /api/subscriptions
+       ======================================================================= -->
+  <script nonce="%NONCE%">
+    (function() {
+      const cards = document.querySelectorAll('.pricing-card');
+      if (!cards || cards.length === 0) return;
+
+      // ── Fallback hardcodat (identic cu HTML-ul static) ──────────────
+      var FALLBACK_PLANS = [
+        {
+          id: "incepator",
+          name: "Începător",
+          desc: "Perfect pentru cei care descoperă boxul",
+          icon: "fa-person-walking",
+          iconExtraClass: "",
+          monthly: "150",
+          yearly: "1440",
+          monthlyEquiv: "120 RON/lună",
+          periodMonthly: "/lună",
+          periodYearly: "/an",
+          popular: false,
+          popularBadge: "",
+          btnClass: "btn-outline",
+          features: [
+            { text: "3 antrenamente / săptămână", enabled: true },
+            { text: "Acces sală în orele de program", enabled: true },
+            { text: "Evaluare fizică inițială", enabled: true },
+            { text: "Program flexibil Luni–Vineri", enabled: true },
+            { text: "Acces vestiare și dușuri", enabled: true },
+            { text: "Antrenor personal", enabled: false },
+            { text: "Acces prioritar evenimente", enabled: false },
+            { text: "Reducere magazin", enabled: false }
+          ]
+        },
+        {
+          id: "avansati",
+          name: "Avansați",
+          desc: "Pentru sportivii ambițioși care vor progres",
+          icon: "fa-fire",
+          iconExtraClass: "pricing-icon-popular",
+          monthly: "250",
+          yearly: "2400",
+          monthlyEquiv: "200 RON/lună",
+          periodMonthly: "/lună",
+          periodYearly: "/an",
+          popular: true,
+          popularBadge: '<i class="fa-solid fa-star"></i> Cel mai popular',
+          btnClass: "btn-primary",
+          features: [
+            { text: "Antrenamente <strong>nelimitate</strong>", enabled: true },
+            { text: "Acces sală program extins", enabled: true },
+            { text: "Evaluare fizică lunară", enabled: true },
+            { text: "2 sesiuni 1-la-1 / lună", enabled: true },
+            { text: "Acces prioritar la evenimente", enabled: true },
+            { text: "Program flexibil complet", enabled: true },
+            { text: "Reducere 10% magazin", enabled: true },
+            { text: "Antrenor personal dedicat", enabled: false }
+          ]
+        },
+        {
+          id: "campioni",
+          name: "Campioni",
+          desc: "Experiența supremă pentru adevărații luptători",
+          icon: "fa-crown",
+          iconExtraClass: "pricing-icon-champion",
+          monthly: "400",
+          yearly: "3840",
+          monthlyEquiv: "320 RON/lună",
+          periodMonthly: "/lună",
+          periodYearly: "/an",
+          popular: false,
+          popularBadge: "",
+          btnClass: "btn-outline",
+          features: [
+            { text: "Antrenamente <strong>nelimitate</strong>", enabled: true },
+            { text: "Acces sală <strong>24/7</strong>", enabled: true },
+            { text: "Antrenor personal dedicat", enabled: true },
+            { text: "Plan nutrițional personalizat", enabled: true },
+            { text: "Evaluare fizică săptămânală", enabled: true },
+            { text: "Participare gratuită la competiții", enabled: true },
+            { text: "Echipament complet inclus", enabled: true },
+            { text: "Reducere 20% magazin", enabled: true }
+          ]
+        }
+      ];
+
+      // ── Funcție care populează un card pe baza unui obiect plan ────
+      function populateCard(cardEl, plan, index) {
+        // Nume plan
+        var nameEl = cardEl.querySelector('.pricing-plan-name');
+        if (nameEl) nameEl.textContent = plan.name;
+
+        // Descriere
+        var descEl = cardEl.querySelector('.pricing-plan-desc');
+        if (descEl) descEl.textContent = plan.desc;
+
+        // Icon
+        var iconEl = cardEl.querySelector('.pricing-icon');
+        if (iconEl) {
+          iconEl.className = 'pricing-icon';
+          if (plan.iconExtraClass) {
+            iconEl.classList.add(plan.iconExtraClass);
+          }
+          var iEl = iconEl.querySelector('i');
+          if (iEl) {
+            iEl.className = 'fa-solid ' + plan.icon;
+          }
+        }
+
+        // Badge "Cel mai popular"
+        var existingBadge = cardEl.querySelector('.pricing-popular-badge');
+        if (plan.popular) {
+          if (!existingBadge) {
+            var badge = document.createElement('span');
+            badge.className = 'pricing-popular-badge';
+            badge.innerHTML = plan.popularBadge;
+            var inner = cardEl.querySelector('.tilt-card-inner');
+            if (inner) inner.insertBefore(badge, inner.firstChild);
+          }
+          // Adaugă clasă pe card
+          cardEl.classList.add('pricing-card-popular');
+        } else {
+          if (existingBadge) existingBadge.remove();
+          cardEl.classList.remove('pricing-card-popular');
+        }
+
+        // Preț
+        var priceEl = cardEl.querySelector('.pricing-price');
+        if (priceEl) {
+          priceEl.setAttribute('data-monthly', plan.monthly);
+          priceEl.setAttribute('data-yearly', plan.yearly);
+          // Respectă toggle-ul curent
+          var toggleEl = document.getElementById('pricing-toggle');
+          var isYearly = toggleEl && toggleEl.getAttribute('aria-checked') === 'true';
+          priceEl.textContent = isYearly ? plan.yearly : plan.monthly;
+        }
+
+        // Perioadă
+        var periodEl = cardEl.querySelector('.pricing-period');
+        if (periodEl) {
+          periodEl.setAttribute('data-monthly', plan.periodMonthly);
+          periodEl.setAttribute('data-yearly', plan.periodYearly);
+          var toggleEl2 = document.getElementById('pricing-toggle');
+          var isYearly2 = toggleEl2 && toggleEl2.getAttribute('aria-checked') === 'true';
+          periodEl.textContent = isYearly2 ? plan.periodYearly : plan.periodMonthly;
+        }
+
+        // Echivalent lunar (afișat doar pe yearly)
+        var equivEl = cardEl.querySelector('.pricing-monthly-equiv');
+        if (equivEl) {
+          equivEl.textContent = plan.monthlyEquiv;
+        }
+
+        // Features
+        var featuresList = cardEl.querySelector('.pricing-features');
+        if (featuresList) {
+          featuresList.innerHTML = '';
+          plan.features.forEach(function(f) {
+            var li = document.createElement('li');
+            if (f.enabled) {
+              li.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + f.text;
+            } else {
+              li.className = 'feature-disabled';
+              li.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> ' + f.text;
+            }
+            featuresList.appendChild(li);
+          });
+        }
+
+        // Buton CTA
+        var btn = cardEl.querySelector('.pricing-card-footer .btn');
+        if (btn) {
+          btn.className = 'btn ' + plan.btnClass + ' btn-block';
+        }
+      }
+
+      // ── Populare din API sau fallback ──────────────────────────────
+      function populateFromData(plans) {
+        for (var i = 0; i < cards.length && i < plans.length; i++) {
+          populateCard(cards[i], plans[i], i);
+        }
+      }
+
+      fetch('/api/subscriptions')
+        .then(function(res) {
+          if (!res.ok) throw new Error('API status ' + res.status);
+          return res.json();
+        })
+        .then(function(data) {
+          if (Array.isArray(data) && data.length > 0) {
+            // Normalizare date API → format intern
+            var apiPlans = data.map(function(item, idx) {
+              return {
+                id: item.id || ('plan-' + idx),
+                name: item.name || FALLBACK_PLANS[idx].name,
+                desc: item.description || item.desc || FALLBACK_PLANS[idx].desc,
+                icon: item.icon || FALLBACK_PLANS[idx].icon,
+                iconExtraClass: item.icon_extra_class || item.iconExtraClass || FALLBACK_PLANS[idx].iconExtraClass,
+                monthly: String(item.price_monthly || item.monthly || FALLBACK_PLANS[idx].monthly),
+                yearly: String(item.price_yearly || item.yearly || FALLBACK_PLANS[idx].yearly),
+                monthlyEquiv: item.monthly_equivalent || item.monthlyEquiv || FALLBACK_PLANS[idx].monthlyEquiv,
+                periodMonthly: item.period_monthly || item.periodMonthly || FALLBACK_PLANS[idx].periodMonthly,
+                periodYearly: item.period_yearly || item.periodYearly || FALLBACK_PLANS[idx].periodYearly,
+                popular: typeof item.popular === 'boolean' ? item.popular : FALLBACK_PLANS[idx].popular,
+                popularBadge: item.popular_badge || item.popularBadge || FALLBACK_PLANS[idx].popularBadge,
+                btnClass: item.btn_class || item.btnClass || FALLBACK_PLANS[idx].btnClass,
+                features: Array.isArray(item.features) ? item.features.map(function(f) {
+                  if (typeof f === 'string') return { text: f, enabled: true };
+                  return { text: f.text || f.name || '', enabled: f.enabled !== false };
+                }) : FALLBACK_PLANS[idx].features
+              };
+            });
+            populateFromData(apiPlans);
+          } else {
+            populateFromData(FALLBACK_PLANS);
+          }
+        })
+        .catch(function(err) {
+          console.warn('[pricing] API /api/subscriptions indisponibil, utilizare date hardcodate. (' + err.message + ')');
+          populateFromData(FALLBACK_PLANS);
+        });
+    })();
+  </script>
 </body>
 </html>

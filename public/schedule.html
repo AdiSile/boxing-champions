@@ -334,5 +334,141 @@
   </footer>
 
   <script src="js/main.js"></script>
+
+  <!-- =======================================================================
+       INLINE SCRIPT — Populare dinamică tabel program (fetch + fallback)
+       ======================================================================= -->
+  <script>
+  (function () {
+    'use strict';
+
+    // ── Date hardcodate de fallback ──────────────────────────────────────
+    var HARDCODED_SCHEDULE = [
+      // Luni
+      { day: 'Luni', start_time: '08:00', end_time: '09:00', category: 'Box Fitness', gender: 'Mixt' },
+      { day: 'Luni', start_time: '10:00', end_time: '11:30', category: 'Tehnică Avansată', gender: 'Masculin' },
+      { day: 'Luni', start_time: '16:00', end_time: '17:00', category: 'Inițiere Copii', gender: 'Copii' },
+      { day: 'Luni', start_time: '18:00', end_time: '19:30', category: 'Box Fitness', gender: 'Feminin' },
+      // Marți
+      { day: 'Marți', start_time: '08:00', end_time: '09:00', category: 'Circuit Training', gender: 'Mixt' },
+      { day: 'Marți', start_time: '10:00', end_time: '11:30', category: 'Sparring Controlat', gender: 'Masculin' },
+      { day: 'Marți', start_time: '16:00', end_time: '17:00', category: 'Jocuri de Box', gender: 'Copii' },
+      { day: 'Marți', start_time: '18:00', end_time: '19:30', category: 'Autoapărare', gender: 'Feminin' },
+      // Miercuri
+      { day: 'Miercuri', start_time: '08:00', end_time: '09:00', category: 'Box Fitness', gender: 'Mixt' },
+      { day: 'Miercuri', start_time: '10:00', end_time: '11:30', category: 'Tehnică Avansată', gender: 'Masculin' },
+      { day: 'Miercuri', start_time: '16:00', end_time: '17:00', category: 'Inițiere Copii', gender: 'Copii' },
+      { day: 'Miercuri', start_time: '18:00', end_time: '19:30', category: 'Box Fitness', gender: 'Feminin' },
+      // Joi
+      { day: 'Joi', start_time: '08:00', end_time: '09:00', category: 'Circuit Training', gender: 'Mixt' },
+      { day: 'Joi', start_time: '10:00', end_time: '11:30', category: 'Sparring Controlat', gender: 'Masculin' },
+      { day: 'Joi', start_time: '16:00', end_time: '17:00', category: 'Jocuri de Box', gender: 'Copii' },
+      { day: 'Joi', start_time: '18:00', end_time: '19:30', category: 'Autoapărare', gender: 'Feminin' },
+      // Vineri
+      { day: 'Vineri', start_time: '08:00', end_time: '09:00', category: 'Box Fitness', gender: 'Mixt' },
+      { day: 'Vineri', start_time: '10:00', end_time: '11:30', category: 'Tehnică Avansată', gender: 'Masculin' },
+      { day: 'Vineri', start_time: '16:00', end_time: '17:00', category: 'Open Gym', gender: 'Mixt' },
+      { day: 'Vineri', start_time: '18:00', end_time: '19:30', category: 'Box Fitness', gender: 'Feminin' }
+    ];
+
+    // Expune fallback-ul pentru main.js (fetchSchedule existent)
+    if (window.FALLBACK_DATA && window.FALLBACK_DATA.schedule !== undefined) {
+      window.FALLBACK_DATA.schedule = HARDCODED_SCHEDULE;
+    }
+
+    // ── Funcție helper: clasă tag CSS ────────────────────────────────────
+    function getTagClass(slot) {
+      var category = (slot.category || '').toLowerCase();
+      var gender = (slot.gender || '').toLowerCase();
+      if (category.indexOf('copii') !== -1 || category.indexOf('copil') !== -1 || gender === 'copii') {
+        return 'tag-kids';
+      }
+      if (gender === 'feminin' || category.indexOf('feminin') !== -1) {
+        return 'tag-women';
+      }
+      if (gender === 'masculin') {
+        return 'tag-men';
+      }
+      return 'tag-mixed';
+    }
+
+    // ── Funcție helper: construiește HTML tabel din array de sloturi ─────
+    function buildTableHTML(schedule) {
+      var days = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
+      var grouped = {};
+      days.forEach(function (d) { grouped[d] = []; });
+      schedule.forEach(function (s) {
+        if (grouped[s.day]) grouped[s.day].push(s);
+      });
+
+      var activeDays = days.filter(function (d) { return grouped[d].length > 0; });
+
+      var html = '<div class="schedule-table-wrap"><table class="schedule-table" aria-label="Program săptămânal Boxing Champions"><thead><tr>';
+      html += '<th scope="col">Zi</th><th scope="col">Interval Orar</th><th scope="col">Categorie</th><th scope="col">Gen</th>';
+      html += '</tr></thead><tbody>';
+
+      activeDays.forEach(function (day) {
+        grouped[day].forEach(function (slot, idx) {
+          var rowspan = idx === 0 ? ' rowspan="' + grouped[day].length + '"' : '';
+          var tagClass = getTagClass(slot);
+
+          html += '<tr class="fade-in">';
+          if (idx === 0) {
+            html += '<td' + rowspan + ' style="font-weight: 700; color: var(--color-gold); font-family: var(--font-display); font-size: 1.1rem;">' + escapeHtml(day) + '</td>';
+          }
+          html += '<td>' + escapeHtml(slot.start_time) + ' – ' + escapeHtml(slot.end_time) + '</td>';
+          html += '<td>' + escapeHtml(slot.category) + '</td>';
+          html += '<td><span class="tag ' + tagClass + '">' + escapeHtml(slot.gender) + '</span></td>';
+          html += '</tr>';
+        });
+      });
+
+      html += '</tbody></table></div>';
+      return html;
+    }
+
+    // ── Populează containerul ────────────────────────────────────────────
+    function populateTable(data) {
+      var container = document.querySelector('[data-content="schedule"]');
+      if (!container) return;
+      container.innerHTML = buildTableHTML(data);
+    }
+
+    // Refolosește escapeHtml din main.js (definit în scope global)
+    var escapeHtml = window.escapeHtml || function (str) {
+      if (typeof str !== 'string') return '';
+      var map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return str.replace(/[&<>"']/g, function (m) { return map[m]; });
+    };
+
+    // Expune escapeHtml în window dacă nu există deja
+    if (!window.escapeHtml) window.escapeHtml = escapeHtml;
+
+    // ── Execuție principală ──────────────────────────────────────────────
+    var container = document.querySelector('[data-content="schedule"]');
+    if (!container) return;
+
+    // Marcăm că am început încărcarea pentru a evita dublări
+    if (container.dataset.loading === 'true') return;
+    container.dataset.loading = 'true';
+
+    fetch('/api/schedule')
+      .then(function (response) {
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.json();
+      })
+      .then(function (data) {
+        if (data && Array.isArray(data) && data.length > 0) {
+          populateTable(data);
+        } else {
+          populateTable(HARDCODED_SCHEDULE);
+        }
+      })
+      .catch(function (err) {
+        console.warn('[Schedule] Fetch /api/schedule a eșuat — se folosește fallback hardcodat:', err.message);
+        populateTable(HARDCODED_SCHEDULE);
+      });
+  })();
+  </script>
 </body>
 </html>
