@@ -3,472 +3,1235 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Boxing Champions — Program săptămânal complet Luni–Vineri. Antrenamente pentru copii, feminin, masculin și mixt. Alege categoria potrivită!">
+  <meta name="description" content="Boxing Champions — Program săptămânal de antrenamente. Vezi orele, antrenorii și categoriile disponibile.">
   <meta name="theme-color" content="#0a0a0a">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Program — Boxing Champions</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <meta name="robots" content="index, follow">
+  <link rel="icon" type="image/png" href="/images/badge.png">
+  <link rel="apple-touch-icon" href="/images/badge.png">
+
+  <title>Program Săptămânal | Boxing Champions</title>
+
+  <!-- CSS principal -->
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- SEO / Open Graph -->
+  <meta property="og:title" content="Program Săptămânal | Boxing Champions">
+  <meta property="og:description" content="Programul săptămânal de antrenamente — vezi orele, antrenorii și categoriile disponibile.">
+  <meta property="og:image" content="/images/badge.png">
+  <meta property="og:url" content="">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SportsClub",
+    "name": "Boxing Champions",
+    "description": "Program săptămânal de antrenamente de box.",
+    "image": "/images/badge.png",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "București",
+      "addressCountry": "RO"
+    },
+    "sport": "Boxing"
+  }
+  </script>
+
+  <style>
+    /* ============================================================
+       SCHEDULE PAGE SPECIFIC STYLES
+       ============================================================ */
+
+    /* ---- Page Header ---- */
+    .schedule-page-header {
+      position: relative;
+      min-height: 42vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: var(--black-deep);
+    }
+
+    .schedule-page-header__bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .schedule-page-header__bg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.28);
+    }
+
+    .schedule-page-header__overlay {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 50%, rgba(212,168,67,0.06) 0%, transparent 60%),
+        linear-gradient(to top, var(--black-deep) 0%, transparent 50%);
+      z-index: 1;
+    }
+
+    .schedule-page-header__content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      max-width: 800px;
+      padding: 3rem 2rem 2rem;
+    }
+
+    .schedule-page-header__badge {
+      display: inline-block;
+      font-family: var(--font-heading);
+      font-size: clamp(0.75rem, 1.3vw, 0.9rem);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--gold-primary);
+      border: 1px solid var(--gold-primary);
+      padding: 0.45em 1.4em;
+      border-radius: 50px;
+      margin-bottom: 1.4rem;
+      backdrop-filter: blur(6px);
+      background: rgba(10,10,10,0.35);
+    }
+
+    .schedule-page-header__title {
+      font-family: var(--font-display);
+      font-size: clamp(2.4rem, 6vw, 5rem);
+      line-height: 1;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.3em;
+    }
+
+    .schedule-page-header__title .gold {
+      background: var(--gold-metallic);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    .schedule-page-header__subtitle {
+      font-family: var(--font-body);
+      font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+      color: var(--gray-smoke);
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    /* ---- Day Filter Tabs ---- */
+    .schedule-filters {
+      background: var(--black-rich);
+      border-bottom: 1px solid rgba(212,168,67,0.1);
+      padding: 1.2rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .schedule-filters--scrolled {
+      background: rgba(17,17,17,0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(212,168,67,0.2);
+    }
+
+    .schedule-filters__inner {
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding: 0 clamp(1rem, 4vw, 3rem);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .schedule-filters__tabs {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+
+    .schedule-filters__tab {
+      font-family: var(--font-heading);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.5em 1em;
+      border: 1px solid var(--glass-border);
+      background: transparent;
+      color: var(--gray-smoke);
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all var(--dur-normal) var(--ease-smooth);
+      white-space: nowrap;
+    }
+
+    .schedule-filters__tab:hover {
+      border-color: var(--gold-primary);
+      color: var(--gold-primary);
+      background: rgba(212,168,67,0.06);
+    }
+
+    .schedule-filters__tab--active {
+      border-color: var(--gold-primary);
+      color: var(--black-deep);
+      background: var(--gold-metallic);
+      font-weight: 700;
+    }
+
+    /* ---- Schedule Main ---- */
+    .schedule-main {
+      background: var(--black-deep);
+      padding-top: clamp(2rem, 4vw, 3rem);
+      padding-bottom: var(--section-pad);
+    }
+
+    /* ---- Day Section ---- */
+    .schedule-day {
+      margin-bottom: clamp(2rem, 4vw, 3rem);
+    }
+
+    .schedule-day:last-child {
+      margin-bottom: 0;
+    }
+
+    .schedule-day__header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 2px solid rgba(212,168,67,0.2);
+    }
+
+    .schedule-day__icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      color: var(--black-deep);
+      flex-shrink: 0;
+    }
+
+    .schedule-day__icon--sun { background: var(--gold-metallic); }
+    .schedule-day__icon--mon { background: #2196f3; color: #fff; }
+    .schedule-day__icon--tue { background: #ff9800; color: #000; }
+    .schedule-day__icon--wed { background: #9c27b0; color: #fff; }
+    .schedule-day__icon--thu { background: #4caf50; color: #000; }
+    .schedule-day__icon--fri { background: #e53935; color: #fff; }
+    .schedule-day__icon--sat { background: #00bcd4; color: #000; }
+
+    .schedule-day__name {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      letter-spacing: 0.04em;
+      color: var(--white-soft);
+      margin: 0;
+    }
+
+    .schedule-day__count {
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      color: var(--gray-smoke);
+      margin-left: auto;
+    }
+
+    /* ---- Schedule Table ---- */
+    .schedule__table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 16px;
+      border: 1px solid var(--glass-border);
+    }
+
+    .schedule__table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+      font-size: 0.9rem;
+    }
+
+    .schedule__table thead th {
+      font-family: var(--font-heading);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: rgba(212,168,67,0.1);
+      padding: 0.9rem 1.2rem;
+      text-align: left;
+      border-bottom: 2px solid var(--gold-primary);
+      color: var(--gold-primary);
+      white-space: nowrap;
+    }
+
+    .schedule__table tbody td {
+      padding: 0.85rem 1.2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      vertical-align: middle;
+    }
+
+    .schedule__table tbody tr {
+      transition: background var(--dur-normal);
+    }
+
+    .schedule__table tbody tr:hover {
+      background: rgba(212,168,67,0.06);
+    }
+
+    .schedule__table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .schedule__time {
+      font-family: var(--font-heading);
+      font-weight: 600;
+      color: var(--gold-primary);
+      white-space: nowrap;
+    }
+
+    .schedule__title {
+      font-weight: 600;
+      color: var(--white-soft);
+    }
+
+    .schedule__coach {
+      color: var(--gray-smoke);
+      font-size: 0.85rem;
+    }
+
+    .schedule__location {
+      color: var(--gray-smoke);
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3em;
+    }
+
+    /* ---- Category Badges ---- */
+    .schedule__cat {
+      display: inline-block;
+      padding: 0.3em 1em;
+      border-radius: 50px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    .schedule__cat--kids     { background: #4caf50; color: #000; }
+    .schedule__cat--beginner { background: #2196f3; color: #fff; }
+    .schedule__cat--advanced { background: #ff9800; color: #000; }
+    .schedule__cat--pro      { background: #c62828; color: #fff; }
+    .schedule__cat--fitness  { background: #9c27b0; color: #fff; }
+
+    /* ---- Legend ---- */
+    .schedule-legend {
+      background: var(--black-card);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: clamp(1.2rem, 2.5vw, 1.8rem) clamp(1.4rem, 3vw, 2.5rem);
+      margin-top: 2.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.2rem 2rem;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .schedule-legend__title {
+      font-family: var(--font-heading);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--gold-primary);
+      margin-right: 0.5rem;
+      white-space: nowrap;
+    }
+
+    .schedule-legend__items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem 1.2rem;
+      align-items: center;
+    }
+
+    .schedule-legend__item {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-size: 0.82rem;
+      color: var(--gray-smoke);
+    }
+
+    .schedule-legend__swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .schedule-legend__swatch--kids     { background: #4caf50; }
+    .schedule-legend__swatch--beginner { background: #2196f3; }
+    .schedule-legend__swatch--advanced { background: #ff9800; }
+    .schedule-legend__swatch--pro      { background: #c62828; }
+    .schedule-legend__swatch--fitness  { background: #9c27b0; }
+
+    /* ---- Empty State ---- */
+    .schedule-empty {
+      text-align: center;
+      padding: clamp(3rem, 6vw, 5rem) 2rem;
+    }
+
+    .schedule-empty__icon {
+      font-size: 4rem;
+      margin-bottom: 1.4rem;
+      opacity: 0.6;
+    }
+
+    .schedule-empty__title {
+      font-family: var(--font-heading);
+      font-size: clamp(1.4rem, 2.5vw, 2rem);
+      color: var(--gold-primary);
+      margin-bottom: 0.6rem;
+    }
+
+    .schedule-empty__text {
+      color: var(--gray-smoke);
+      max-width: 440px;
+      margin: 0 auto 2rem;
+      font-size: 0.95rem;
+    }
+
+    /* ---- Loading skeleton ---- */
+    .schedule-skeleton {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .schedule-skeleton__row {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .schedule-skeleton__line {
+      height: 16px;
+      border-radius: 4px;
+      background: var(--black-card);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .schedule-skeleton__line::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+      animation: shimmer 1.6s infinite;
+    }
+
+    .schedule-skeleton__line--s { width: 18%; }
+    .schedule-skeleton__line--m { width: 32%; }
+    .schedule-skeleton__line--l { width: 22%; }
+    .schedule-skeleton__line--xl { width: 14%; }
+    .schedule-skeleton__line--xs { width: 12%; }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 768px) {
+      .schedule-page-header {
+        min-height: 30vh;
+      }
+
+      .schedule-filters__inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .schedule-filters__tabs {
+        gap: 0.25rem;
+      }
+
+      .schedule-filters__tab {
+        font-size: 0.68rem;
+        padding: 0.4em 0.8em;
+      }
+
+      .schedule__table {
+        min-width: 560px;
+        font-size: 0.78rem;
+      }
+
+      .schedule__table thead th,
+      .schedule__table tbody td {
+        padding: 0.6rem 0.7rem;
+      }
+
+      .schedule-day__icon {
+        width: 38px;
+        height: 38px;
+        font-size: 1rem;
+      }
+
+      .schedule-day__name {
+        font-size: 1.3rem;
+      }
+
+      .schedule-legend {
+        gap: 0.8rem 1.2rem;
+        padding: 1rem 1.2rem;
+      }
+
+      .schedule-legend__item {
+        font-size: 0.72rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .schedule-page-header {
+        min-height: 26vh;
+      }
+
+      .schedule-filters__tabs {
+        gap: 0.2rem;
+      }
+
+      .schedule-filters__tab {
+        font-size: 0.65rem;
+        padding: 0.35em 0.65em;
+      }
+
+      .schedule__table {
+        min-width: 480px;
+        font-size: 0.7rem;
+      }
+
+      .schedule__table thead th,
+      .schedule__table tbody td {
+        padding: 0.5rem 0.5rem;
+      }
+
+      .schedule__cat {
+        font-size: 0.65rem;
+        padding: 0.2em 0.6em;
+      }
+
+      .schedule-day__header {
+        gap: 0.6rem;
+      }
+
+      .schedule-day__icon {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
+      }
+
+      .schedule-day__name {
+        font-size: 1.1rem;
+      }
+
+      .schedule-legend {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.6rem;
+      }
+    }
+  </style>
 </head>
 <body>
 
-  <!-- =======================================================================
+  <!-- ============================================================
+       PRELOADER
+  ============================================================ -->
+  <div id="preloader" aria-hidden="true">
+    <div class="preloader__inner">
+      <div class="preloader__glove">
+        <img src="/images/gloves.jpg" alt="" aria-hidden="true">
+      </div>
+      <p class="preloader__text">BOXING CHAMPIONS</p>
+      <div class="preloader__bar">
+        <div class="preloader__bar-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
        PARTICLES CANVAS
-       ======================================================================= -->
-  <canvas id="particles-canvas"></canvas>
+  ============================================================ -->
+  <canvas id="particles-canvas" aria-hidden="true"></canvas>
 
-  <!-- =======================================================================
-       CUSTOM CURSOR
-       ======================================================================= -->
-  <div class="cursor-dot"></div>
-  <div class="cursor-ring"></div>
-
-  <!-- =======================================================================
-       NAVBAR
-       ======================================================================= -->
-  <nav class="navbar z-content">
-    <div class="container">
-      <a href="/" class="nav-logo" aria-label="Boxing Champions — Acasă">
-        <i class="fa-solid fa-glove"></i> BOXING CHAMPIONS
+  <!-- ============================================================
+       NAVIGATION
+  ============================================================ -->
+  <nav class="nav" aria-label="Navigare principală">
+    <div class="nav__inner">
+      <a href="/" class="nav__logo" aria-label="Boxing Champions — Acasă">
+        <img src="/images/badge.png" alt="Boxing Champions Badge" width="48" height="48" loading="eager">
+        BOXING <span>CHAMPIONS</span>
       </a>
-      <button class="nav-toggle" aria-label="Deschide meniul" aria-expanded="false">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-      <ul class="nav-links" role="menubar">
-        <li role="none"><a href="/" role="menuitem">Acasă</a></li>
-        <li role="none"><a href="/events" role="menuitem">Evenimente</a></li>
-        <li role="none"><a href="/schedule" role="menuitem" class="active">Program</a></li>
-        <li role="none"><a href="/pricing" role="menuitem">Abonamente</a></li>
-        <li role="none"><a href="/shop" role="menuitem">Magazin</a></li>
-        <li role="none"><a href="/contact" role="menuitem">Contact</a></li>
+
+      <ul class="nav__links" role="menubar">
+        <li role="none"><a href="/#despre" class="nav__link" role="menuitem">Despre</a></li>
+        <li role="none"><a href="/#antrenori" class="nav__link" role="menuitem">Antrenori</a></li>
+        <li role="none"><a href="/schedule.html" class="nav__link nav__link--active" role="menuitem">Program</a></li>
+        <li role="none"><a href="/events.html" class="nav__link" role="menuitem">Evenimente</a></li>
+        <li role="none"><a href="/#abonamente" class="nav__link" role="menuitem">Abonamente</a></li>
+        <li role="none"><a href="/#contact" class="nav__link" role="menuitem">Contact</a></li>
       </ul>
+
+      <button class="nav__toggle" aria-label="Deschide meniul" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </nav>
 
-  <!-- =======================================================================
-       PAGE HERO — PROGRAM
-       ======================================================================= -->
-  <section class="hero" id="schedule-hero" style="min-height: 50vh;">
-    <div style="position: absolute; inset: 0; z-index: -1;" aria-hidden="true">
-      <img src="images/event-gala.jpg" alt="" loading="lazy"
-           style="width: 100%; height: 100%; object-fit: cover; opacity: 0.25; filter: brightness(0.4);"
-           aria-hidden="true">
+  <!-- ============================================================
+       PAGE HEADER
+  ============================================================ -->
+  <section class="schedule-page-header" aria-labelledby="schedule-header-title">
+    <div class="schedule-page-header__bg">
+      <img src="/images/schedule-bg.jpg" alt="" aria-hidden="true" loading="eager">
     </div>
-    <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,0.9) 0%, rgba(10,10,10,0.6) 50%, rgba(10,10,10,0.95) 100%); z-index: -1;" aria-hidden="true"></div>
-    <div class="hero-content z-content" style="padding-top: 6rem;">
-      <span class="hero-badge">
-        <i class="fa-solid fa-clock" style="margin-right: 0.4rem;"></i> Săptămânal
-      </span>
-      <h1 class="hero-title" style="font-size: clamp(2.4rem, 5vw, 4.5rem);">
+    <div class="schedule-page-header__overlay" aria-hidden="true"></div>
+
+    <div class="schedule-page-header__content reveal">
+      <div class="schedule-page-header__badge">
+        Antrenamente Săptămânale
+      </div>
+      <h1 class="schedule-page-header__title" id="schedule-header-title">
         PRO<span class="gold">GRAM</span>
       </h1>
-      <p class="hero-subtitle">
-        Antrenamente Luni–Vineri pentru toate vârstele și nivelurile. Alege categoria potrivită ție și intră în ring!
+      <p class="schedule-page-header__subtitle">
+        Alege ziua și ora perfectă pentru antrenamentul tău. De la începători la profesioniști — avem un loc pentru tine în ring.
       </p>
-      <div class="btn-group" style="justify-content: center;">
-        <a href="/pricing" class="btn btn-primary btn-lg">
-          <i class="fa-solid fa-ticket"></i> Vezi Abonamente
-        </a>
-        <a href="/contact" class="btn btn-outline btn-lg">
-          <i class="fa-solid fa-calendar-check"></i> Înscrie-te Acum
-        </a>
-      </div>
     </div>
   </section>
 
-  <!-- =======================================================================
-       SCHEDULE FULL TABLE SECTION
-       ======================================================================= -->
-  <section class="section" id="schedule-full" style="padding-top: var(--space-3xl);">
+  <!-- ============================================================
+       DAY FILTER TABS
+  ============================================================ -->
+  <div class="schedule-filters" id="schedule-filters" aria-label="Filtre zile">
+    <div class="schedule-filters__inner">
+      <div class="schedule-filters__tabs" role="tablist" aria-label="Filtru zi">
+        <button class="schedule-filters__tab schedule-filters__tab--active" role="tab" aria-selected="true" data-day="all">Toate Zilele</button>
+        <button class="schedule-filters__tab" role="tab" aria-selected="false" data-day="1">Luni</button>
+        <button class="schedule-filters__tab" role="tab" aria-selected="false" data-day="2">Marți</button>
+        <button class="schedule-filters__tab" role="tab" aria-selected="false" data-day="3">Miercuri</button>
+        <button class="schedule-filters__tab" role="tab" aria-selected="false" data-day="4">Joi</button>
+        <button class="schedule-filters__tab" role="tab" aria-selected="false" data-day="5">Vineri</button>
+        <button class="schedule-filters__tab" role="tab" aria-selected="false" data-day="6">Sâmbătă</button>
+        <button class="schedule-filters__tab" role="tab" aria-selected="false" data-day="0">Duminică</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCHEDULE CONTENT
+  ============================================================ -->
+  <section class="schedule-main" aria-labelledby="schedule-content-title">
     <div class="container">
-      <span class="section-label fade-in">Săptămânal</span>
-      <h2 class="text-center fade-in">Program <span class="text-gold">Complet</span></h2>
-      <span class="gold-separator fade-in"></span>
-      <p class="text-center text-gray fade-in" style="max-width: 620px; margin-left: auto; margin-right: auto; margin-bottom: var(--space-3xl);">
-        Tabelul de mai jos acoperă toate antrenamentele săptămânale. Program flexibil Luni–Vineri, pentru copii, feminin, masculin și mixt.
-      </p>
+      <h2 id="schedule-content-title" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Program săptămânal</h2>
 
-      <!-- Container populat dinamic de main.js — loadSchedule() -->
-      <div data-content="schedule" class="slide-up">
-        <!-- Schelet loading — înlocuit la încărcarea datelor -->
-        <div class="schedule-table-wrap">
-          <table class="schedule-table" aria-label="Program săptămânal Boxing Champions">
-            <thead>
-              <tr>
-                <th scope="col">Zi</th>
-                <th scope="col">Interval Orar</th>
-                <th scope="col">Categorie</th>
-                <th scope="col">Gen</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- LUNI schelet -->
-              <tr><td rowspan="4" style="font-weight: 700; color: var(--color-gold); font-family: var(--font-display); font-size: 1.1rem;">Luni</td><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <!-- MARȚI schelet -->
-              <tr><td rowspan="4" style="font-weight: 700; color: var(--color-gold); font-family: var(--font-display); font-size: 1.1rem;">Marți</td><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <!-- MIERCURI schelet -->
-              <tr><td rowspan="4" style="font-weight: 700; color: var(--color-gold); font-family: var(--font-display); font-size: 1.1rem;">Miercuri</td><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <!-- JOI schelet -->
-              <tr><td rowspan="4" style="font-weight: 700; color: var(--color-gold); font-family: var(--font-display); font-size: 1.1rem;">Joi</td><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <!-- VINERI schelet -->
-              <tr><td rowspan="4" style="font-weight: 700; color: var(--color-gold); font-family: var(--font-display); font-size: 1.1rem;">Vineri</td><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-              <tr><td><span class="skeleton skeleton-text" style="width: 70%;"></span></td><td><span class="skeleton skeleton-text" style="width: 75%;"></span></td><td><span class="skeleton skeleton-text" style="width: 55%;"></span></td></tr>
-            </tbody>
-          </table>
+      <!-- Loading State -->
+      <div id="schedule-content">
+        <div class="schedule-skeleton glass" aria-hidden="true">
+          <div class="schedule-skeleton__row">
+            <div class="schedule-skeleton__line schedule-skeleton__line--s"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--m"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--l"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--xl"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--xs"></div>
+          </div>
+          <div class="schedule-skeleton__row">
+            <div class="schedule-skeleton__line schedule-skeleton__line--s"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--m"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--l"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--xl"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--xs"></div>
+          </div>
+          <div class="schedule-skeleton__row">
+            <div class="schedule-skeleton__line schedule-skeleton__line--s"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--m"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--l"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--xl"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--xs"></div>
+          </div>
+          <div class="schedule-skeleton__row">
+            <div class="schedule-skeleton__line schedule-skeleton__line--s"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--m"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--l"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--xl"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--xs"></div>
+          </div>
+          <div class="schedule-skeleton__row">
+            <div class="schedule-skeleton__line schedule-skeleton__line--s"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--m"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--l"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--xl"></div>
+            <div class="schedule-skeleton__line schedule-skeleton__line--xs"></div>
+          </div>
         </div>
       </div>
 
-      <!-- Legendă categorii -->
-      <div class="schedule-legend slide-up delay-200" style="margin-top: var(--space-2xl);">
-        <div class="legend-title">
-          <i class="fa-solid fa-palette" style="color: var(--color-gold); margin-right: 0.4rem;"></i> Legendă Categorii
-        </div>
-        <div class="legend-items">
-          <div class="legend-item fade-in delay-300">
-            <span class="tag tag-kids">Copii</span>
-            <span>6–12 ani · Antrenamente dedicate celor mici</span>
+      <!-- Legend -->
+      <div class="schedule-legend glass" id="schedule-legend" aria-label="Legendă categorii">
+        <span class="schedule-legend__title">Legendă:</span>
+        <div class="schedule-legend__items">
+          <div class="schedule-legend__item">
+            <span class="schedule-legend__swatch schedule-legend__swatch--kids" aria-hidden="true"></span>
+            Copii / Juniori
           </div>
-          <div class="legend-item fade-in delay-400">
-            <span class="tag tag-women">Feminin</span>
-            <span>Antrenamente exclusive pentru doamne și domnișoare</span>
+          <div class="schedule-legend__item">
+            <span class="schedule-legend__swatch schedule-legend__swatch--beginner" aria-hidden="true"></span>
+            Începători
           </div>
-          <div class="legend-item fade-in delay-500">
-            <span class="tag tag-men">Masculin</span>
-            <span>Antrenamente pentru bărbați, toate nivelurile</span>
+          <div class="schedule-legend__item">
+            <span class="schedule-legend__swatch schedule-legend__swatch--advanced" aria-hidden="true"></span>
+            Avansați
           </div>
-          <div class="legend-item fade-in delay-600">
-            <span class="tag tag-mixed">Mixt</span>
-            <span>Antrenamente comune, deschise tuturor</span>
+          <div class="schedule-legend__item">
+            <span class="schedule-legend__swatch schedule-legend__swatch--pro" aria-hidden="true"></span>
+            Profesioniști
+          </div>
+          <div class="schedule-legend__item">
+            <span class="schedule-legend__swatch schedule-legend__swatch--fitness" aria-hidden="true"></span>
+            Fitness / Condiție
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- =======================================================================
-       SCHEDULE INFO CARDS SECTION
-       ======================================================================= -->
-  <section class="section" id="schedule-info" style="padding-top: 0; background: rgba(212, 175, 55, 0.02);">
-    <div class="container">
-      <div class="info-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-xl);">
-        <!-- Card informativ 1 -->
-        <div class="glass-card tilt-card fade-in">
-          <div class="tilt-card-inner">
-            <div class="tilt-card-glow"></div>
-            <div class="tilt-card-shine"></div>
-            <div style="text-align: center; margin-bottom: var(--space-md);">
-              <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.25); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-md);">
-                <i class="fa-solid fa-child-reaching" style="font-size: 1.3rem; color: var(--color-gold-light);"></i>
-              </div>
-              <h4 style="font-family: var(--font-heading); margin-bottom: var(--space-xs);">Copii (6–12 ani)</h4>
-              <p style="font-size: 0.9rem; color: var(--color-gray-200); margin-bottom: 0;">
-                Antrenamente adaptate vârstei, jocuri și tehnici de bază într-un mediu sigur și distractiv. Dezvoltăm disciplina și încrederea în sine.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Card informativ 2 -->
-        <div class="glass-card tilt-card fade-in delay-100">
-          <div class="tilt-card-inner">
-            <div class="tilt-card-glow"></div>
-            <div class="tilt-card-shine"></div>
-            <div style="text-align: center; margin-bottom: var(--space-md);">
-              <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(198, 40, 40, 0.1); border: 1px solid rgba(198, 40, 40, 0.25); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-md);">
-                <i class="fa-solid fa-person-dress" style="font-size: 1.3rem; color: var(--color-red-bright);"></i>
-              </div>
-              <h4 style="font-family: var(--font-heading); margin-bottom: var(--space-xs);">Feminin</h4>
-              <p style="font-size: 0.9rem; color: var(--color-gray-200); margin-bottom: 0;">
-                Antrenamente dedicate doamnelor și domnișoarelor, de la fitness box la tehnică avansată, într-un mediu prietenos și motivant.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Card informativ 3 -->
-        <div class="glass-card tilt-card fade-in delay-200">
-          <div class="tilt-card-inner">
-            <div class="tilt-card-glow"></div>
-            <div class="tilt-card-shine"></div>
-            <div style="text-align: center; margin-bottom: var(--space-md);">
-              <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(100, 140, 200, 0.1); border: 1px solid rgba(100, 140, 200, 0.25); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-md);">
-                <i class="fa-solid fa-person" style="font-size: 1.3rem; color: #8bb4f0;"></i>
-              </div>
-              <h4 style="font-family: var(--font-heading); margin-bottom: var(--space-xs);">Masculin</h4>
-              <p style="font-size: 0.9rem; color: var(--color-gray-200); margin-bottom: 0;">
-                De la începători la avansați, antrenamentele pentru bărbați acoperă tehnică, forță, condiție fizică și sparring controlat.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Card informativ 4 -->
-        <div class="glass-card tilt-card fade-in delay-300">
-          <div class="tilt-card-inner">
-            <div class="tilt-card-glow"></div>
-            <div class="tilt-card-shine"></div>
-            <div style="text-align: center; margin-bottom: var(--space-md);">
-              <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(160, 120, 200, 0.1); border: 1px solid rgba(160, 120, 200, 0.25); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-md);">
-                <i class="fa-solid fa-people-group" style="font-size: 1.3rem; color: #b898d8;"></i>
-              </div>
-              <h4 style="font-family: var(--font-heading); margin-bottom: var(--space-xs);">Mixt</h4>
-              <p style="font-size: 0.9rem; color: var(--color-gray-200); margin-bottom: 0;">
-                Antrenamente deschise tuturor — condiție fizică, circuit training și open gym. Indiferent de vârstă sau sex, toți sunt bineveniți.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- =======================================================================
-       CALL TO ACTION — ÎNSCRIE-TE
-       ======================================================================= -->
-  <section class="section" id="schedule-cta" style="position: relative; overflow: hidden;">
-    <div style="position: absolute; inset: 0; z-index: 0;" aria-hidden="true">
-      <img src="images/cta-bg.jpg" alt="" loading="lazy"
-           style="width: 100%; height: 100%; object-fit: cover; opacity: 0.2; filter: brightness(0.5);"
-           aria-hidden="true">
-    </div>
-    <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.65) 40%, rgba(10,10,10,0.65) 60%, rgba(10,10,10,0.95) 100%); z-index: 0;" aria-hidden="true"></div>
-    <div class="container" style="position: relative; z-index: 1;">
-      <div class="text-center fade-in">
-        <span class="section-label">Nu aștepta</span>
-        <h2>Primul Antrenament este <span class="text-gold">Gratuit</span></h2>
-        <span class="gold-separator"></span>
-        <p class="text-gray" style="max-width: 600px; margin-left: auto; margin-right: auto; margin-bottom: var(--space-2xl); font-size: 1.05rem;">
-          Vino să descoperi ce înseamnă adevărata disciplină, forță și determinare. Boxing Champions te așteaptă cu ușile deschise!
-        </p>
-        <div class="btn-group" style="justify-content: center;">
-          <a href="/contact" class="btn btn-primary btn-xl">
-            <i class="fa-solid fa-fire"></i> Înscrie-te Acum
-          </a>
-          <a href="/pricing" class="btn btn-outline btn-xl">
-            <i class="fa-solid fa-crown"></i> Vezi Abonamentele
-          </a>
-        </div>
-        <p style="margin-top: var(--space-xl); font-size: 0.85rem; color: var(--color-gray-300);">
-          <i class="fa-solid fa-phone" style="margin-right: 0.4rem; color: var(--color-gold);"></i>
-          <span data-contact="phone">+40 721 234 567</span>
-          &nbsp;&nbsp;|&nbsp;&nbsp;
-          <i class="fa-solid fa-envelope" style="margin-right: 0.4rem; color: var(--color-gold);"></i>
-          <span data-contact="email">contact@boxing-champions.com</span>
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- =======================================================================
+  <!-- ============================================================
        FOOTER
-       ======================================================================= -->
-  <footer class="footer">
+  ============================================================ -->
+  <footer class="footer" role="contentinfo">
     <div class="container">
-      <div class="footer-grid">
+      <div class="footer__grid">
         <div>
-          <p class="footer-brand"><i class="fa-solid fa-glove" style="margin-right: 0.4rem;"></i> BOXING CHAMPIONS</p>
-          <p class="footer-about" data-setting="about_text">
-            Cel mai bun club de box din România. Tradiție, disciplină și excelență din 1998.
-          </p>
-          <div style="margin-top: var(--space-lg); display: flex; gap: var(--space-md);">
-            <a href="https://facebook.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-facebook-f"></i>
-            </a>
-            <a href="https://instagram.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-instagram"></i>
-            </a>
-            <a href="https://tiktok.com/@boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="TikTok" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-tiktok"></i>
-            </a>
+          <div class="footer__brand">
+            BOXING <span>CHAMPIONS</span>
           </div>
+          <p class="footer__desc">
+            Club de box de elită — forjăm campioni din 2013. Antrenamente, competiții și o comunitate unită prin pasiunea pentru box.
+          </p>
         </div>
+
         <div>
-          <h4>Navigare</h4>
-          <ul class="footer-links">
-            <li><a href="/">Acasă</a></li>
-            <li><a href="/events">Evenimente</a></li>
-            <li><a href="/schedule">Program</a></li>
-            <li><a href="/pricing">Abonamente</a></li>
-            <li><a href="/shop">Magazin</a></li>
-            <li><a href="/contact">Contact</a></li>
+          <h4 class="footer__heading">Link-uri Rapide</h4>
+          <ul class="footer__links">
+            <li><a href="/#despre">Despre Noi</a></li>
+            <li><a href="/#antrenori">Antrenori</a></li>
+            <li><a href="/schedule.html">Program</a></li>
+            <li><a href="/events.html">Evenimente</a></li>
+            <li><a href="/pricing.html">Abonamente</a></li>
+            <li><a href="/shop.html">Shop</a></li>
           </ul>
         </div>
+
         <div>
-          <h4>Legal</h4>
-          <ul class="footer-links">
+          <h4 class="footer__heading">Utile</h4>
+          <ul class="footer__links">
+            <li><a href="/#contact">Contact</a></li>
             <li><a href="#">Termeni &amp; Condiții</a></li>
-            <li><a href="#">Politica de Confidențialitate</a></li>
+            <li><a href="#">Confidențialitate</a></li>
             <li><a href="#">GDPR</a></li>
-            <li><a href="#">ANPC</a></li>
+            <li><a href="#">FAQ</a></li>
           </ul>
         </div>
+
         <div>
-          <h4>Contact</h4>
-          <ul class="footer-links">
-            <li><i class="fa-solid fa-location-dot text-gold" style="margin-right: 0.4rem;"></i> <span data-contact="address">Strada Sportului nr. 10, București</span></li>
-            <li><i class="fa-solid fa-phone text-gold" style="margin-right: 0.4rem;"></i> <span data-contact="phone">+40 721 234 567</span></li>
-            <li><i class="fa-solid fa-envelope text-gold" style="margin-right: 0.4rem;"></i> <span data-contact="email">contact@boxing-champions.com</span></li>
+          <h4 class="footer__heading">Urmărește-ne</h4>
+          <ul class="footer__links">
+            <li><a href="#" target="_blank" rel="noopener noreferrer">Instagram</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">Facebook</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">YouTube</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">X / Twitter</a></li>
           </ul>
         </div>
       </div>
-      <div class="footer-bottom">
-        <p>&copy; 2026 Boxing Champions. Toate drepturile rezervate. <span style="color: var(--color-gold);">#BoxingChampions</span></p>
+
+      <div class="footer__bottom">
+        <p>&copy; <span id="current-year">2025</span> Boxing Champions. Toate drepturile rezervate. | Construit cu pasiune.</p>
       </div>
     </div>
   </footer>
 
-  <script src="js/main.js"></script>
+  <!-- ============================================================
+       SCRIPTS
+  ============================================================ -->
+  <script src="/js/shared.js"></script>
 
-  <!-- =======================================================================
-       INLINE SCRIPT — Populare dinamică tabel program (fetch + fallback)
-       ======================================================================= -->
   <script>
   (function () {
     'use strict';
 
-    // ── Date hardcodate de fallback ──────────────────────────────────────
-    var HARDCODED_SCHEDULE = [
-      // Luni
-      { day: 'Luni', start_time: '08:00', end_time: '09:00', category: 'Box Fitness', gender: 'Mixt' },
-      { day: 'Luni', start_time: '10:00', end_time: '11:30', category: 'Tehnică Avansată', gender: 'Masculin' },
-      { day: 'Luni', start_time: '16:00', end_time: '17:00', category: 'Inițiere Copii', gender: 'Copii' },
-      { day: 'Luni', start_time: '18:00', end_time: '19:30', category: 'Box Fitness', gender: 'Feminin' },
-      // Marți
-      { day: 'Marți', start_time: '08:00', end_time: '09:00', category: 'Circuit Training', gender: 'Mixt' },
-      { day: 'Marți', start_time: '10:00', end_time: '11:30', category: 'Sparring Controlat', gender: 'Masculin' },
-      { day: 'Marți', start_time: '16:00', end_time: '17:00', category: 'Jocuri de Box', gender: 'Copii' },
-      { day: 'Marți', start_time: '18:00', end_time: '19:30', category: 'Autoapărare', gender: 'Feminin' },
-      // Miercuri
-      { day: 'Miercuri', start_time: '08:00', end_time: '09:00', category: 'Box Fitness', gender: 'Mixt' },
-      { day: 'Miercuri', start_time: '10:00', end_time: '11:30', category: 'Tehnică Avansată', gender: 'Masculin' },
-      { day: 'Miercuri', start_time: '16:00', end_time: '17:00', category: 'Inițiere Copii', gender: 'Copii' },
-      { day: 'Miercuri', start_time: '18:00', end_time: '19:30', category: 'Box Fitness', gender: 'Feminin' },
-      // Joi
-      { day: 'Joi', start_time: '08:00', end_time: '09:00', category: 'Circuit Training', gender: 'Mixt' },
-      { day: 'Joi', start_time: '10:00', end_time: '11:30', category: 'Sparring Controlat', gender: 'Masculin' },
-      { day: 'Joi', start_time: '16:00', end_time: '17:00', category: 'Jocuri de Box', gender: 'Copii' },
-      { day: 'Joi', start_time: '18:00', end_time: '19:30', category: 'Autoapărare', gender: 'Feminin' },
-      // Vineri
-      { day: 'Vineri', start_time: '08:00', end_time: '09:00', category: 'Box Fitness', gender: 'Mixt' },
-      { day: 'Vineri', start_time: '10:00', end_time: '11:30', category: 'Tehnică Avansată', gender: 'Masculin' },
-      { day: 'Vineri', start_time: '16:00', end_time: '17:00', category: 'Open Gym', gender: 'Mixt' },
-      { day: 'Vineri', start_time: '18:00', end_time: '19:30', category: 'Box Fitness', gender: 'Feminin' }
-    ];
-
-    // Expune fallback-ul pentru main.js (fetchSchedule existent)
-    if (window.FALLBACK_DATA && window.FALLBACK_DATA.schedule !== undefined) {
-      window.FALLBACK_DATA.schedule = HARDCODED_SCHEDULE;
-    }
-
-    // ── Funcție helper: clasă tag CSS ────────────────────────────────────
-    function getTagClass(slot) {
-      var category = (slot.category || '').toLowerCase();
-      var gender = (slot.gender || '').toLowerCase();
-      if (category.indexOf('copii') !== -1 || category.indexOf('copil') !== -1 || gender === 'copii') {
-        return 'tag-kids';
+    /* ==================================================================
+       DOM Ready
+       ================================================================== */
+    function domReady(fn) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fn);
+      } else {
+        fn();
       }
-      if (gender === 'feminin' || category.indexOf('feminin') !== -1) {
-        return 'tag-women';
+    }
+
+    /* ==================================================================
+       HELPERS
+       ================================================================== */
+    var BC = window.BoxingChampions || {};
+    var fetchJSON = BC.fetchJSON;
+    var showToast = BC.showToast;
+    var refreshScrollReveal = BC.refreshScrollReveal;
+
+    async function safeFetch(url, opts) {
+      if (typeof fetchJSON === 'function') {
+        return fetchJSON(url, opts);
       }
-      if (gender === 'masculin') {
-        return 'tag-men';
-      }
-      return 'tag-mixed';
+      var res = await fetch(url, opts || {});
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
     }
 
-    // ── Funcție helper: construiește HTML tabel din array de sloturi ─────
-    function buildTableHTML(schedule) {
-      var days = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
-      var grouped = {};
-      days.forEach(function (d) { grouped[d] = []; });
-      schedule.forEach(function (s) {
-        if (grouped[s.day]) grouped[s.day].push(s);
-      });
-
-      var activeDays = days.filter(function (d) { return grouped[d].length > 0; });
-
-      var html = '<div class="schedule-table-wrap"><table class="schedule-table" aria-label="Program săptămânal Boxing Champions"><thead><tr>';
-      html += '<th scope="col">Zi</th><th scope="col">Interval Orar</th><th scope="col">Categorie</th><th scope="col">Gen</th>';
-      html += '</tr></thead><tbody>';
-
-      activeDays.forEach(function (day) {
-        grouped[day].forEach(function (slot, idx) {
-          var rowspan = idx === 0 ? ' rowspan="' + grouped[day].length + '"' : '';
-          var tagClass = getTagClass(slot);
-
-          html += '<tr class="fade-in">';
-          if (idx === 0) {
-            html += '<td' + rowspan + ' style="font-weight: 700; color: var(--color-gold); font-family: var(--font-display); font-size: 1.1rem;">' + escapeHtml(day) + '</td>';
-          }
-          html += '<td>' + escapeHtml(slot.start_time) + ' – ' + escapeHtml(slot.end_time) + '</td>';
-          html += '<td>' + escapeHtml(slot.category) + '</td>';
-          html += '<td><span class="tag ' + tagClass + '">' + escapeHtml(slot.gender) + '</span></td>';
-          html += '</tr>';
-        });
-      });
-
-      html += '</tbody></table></div>';
-      return html;
-    }
-
-    // ── Populează containerul ────────────────────────────────────────────
-    function populateTable(data) {
-      var container = document.querySelector('[data-content="schedule"]');
-      if (!container) return;
-      container.innerHTML = buildTableHTML(data);
-    }
-
-    // Refolosește escapeHtml din main.js (definit în scope global)
-    var escapeHtml = window.escapeHtml || function (str) {
-      if (typeof str !== 'string') return '';
-      var map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-      return str.replace(/[&<>"']/g, function (m) { return map[m]; });
+    /* ==================================================================
+       STATE
+       ================================================================== */
+    var state = {
+      schedule: [],
+      grouped: {},
+      currentDay: 'all',
+      categoriesUsed: []
     };
 
-    // Expune escapeHtml în window dacă nu există deja
-    if (!window.escapeHtml) window.escapeHtml = escapeHtml;
+    /* ==================================================================
+       DAY NAMES & ICONS
+       ================================================================== */
+    var DAY_NAMES_RO = [
+      'Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'
+    ];
 
-    // ── Execuție principală ──────────────────────────────────────────────
-    var container = document.querySelector('[data-content="schedule"]');
-    if (!container) return;
+    var DAY_ICON_CLASSES = [
+      'schedule-day__icon--sun', // 0 = Sunday
+      'schedule-day__icon--mon',
+      'schedule-day__icon--tue',
+      'schedule-day__icon--wed',
+      'schedule-day__icon--thu',
+      'schedule-day__icon--fri',
+      'schedule-day__icon--sat'  // 6 = Saturday
+    ];
 
-    // Marcăm că am început încărcarea pentru a evita dublări
-    if (container.dataset.loading === 'true') return;
-    container.dataset.loading = 'true';
+    var DAY_SHORT = ['Du', 'Lu', 'Ma', 'Mi', 'Jo', 'Vi', 'Sa'];
 
-    fetch('/api/schedule')
-      .then(function (response) {
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        return response.json();
-      })
-      .then(function (data) {
-        if (data && Array.isArray(data) && data.length > 0) {
-          populateTable(data);
-        } else {
-          populateTable(HARDCODED_SCHEDULE);
+    /* ==================================================================
+       HARDCODED FALLBACK DATA
+       ================================================================== */
+    var FALLBACK_SCHEDULE = [
+      { id: 1,  coach_id: 1,  title: 'Box pentru Copii (6-12 ani)',   day_of_week: 1, start_time: '09:00', end_time: '10:00', location: 'Sala Principală', max_participants: 20, is_active: true, coach_name: 'Mihai Popescu',    coach_title: 'Antrenor Copii' },
+      { id: 2,  coach_id: 2,  title: 'Tehnică de Bază Începători',    day_of_week: 1, start_time: '10:30', end_time: '12:00', location: 'Sala Principală', max_participants: 25, is_active: true, coach_name: 'Cristian Ionescu', coach_title: 'Antrenor Principal' },
+      { id: 3,  coach_id: 3,  title: 'Pregătire Fizică & Condiție',   day_of_week: 1, start_time: '17:00', end_time: '18:30', location: 'Sala de Forță',  max_participants: 20, is_active: true, coach_name: 'Adrian Vasilescu', coach_title: 'Antrenor Fitness' },
+      { id: 4,  coach_id: 2,  title: 'Sparring Avansați',              day_of_week: 1, start_time: '19:00', end_time: '21:00', location: 'Ring Principal',  max_participants: 16, is_active: true, coach_name: 'Cristian Ionescu', coach_title: 'Antrenor Principal' },
+      { id: 5,  coach_id: 1,  title: 'Box pentru Copii (6-12 ani)',    day_of_week: 2, start_time: '09:00', end_time: '10:00', location: 'Sala Principală', max_participants: 20, is_active: true, coach_name: 'Mihai Popescu',    coach_title: 'Antrenor Copii' },
+      { id: 6,  coach_id: 4,  title: 'Tehnici Avansate de Atac',       day_of_week: 2, start_time: '11:00', end_time: '12:30', location: 'Ring Principal',  max_participants: 12, is_active: true, coach_name: 'Andrei Dumitrescu', coach_title: 'Antrenor Avansați' },
+      { id: 7,  coach_id: 3,  title: 'Box Fitness & Cardio',           day_of_week: 2, start_time: '18:00', end_time: '19:00', location: 'Sala de Forță',  max_participants: 30, is_active: true, coach_name: 'Adrian Vasilescu', coach_title: 'Antrenor Fitness' },
+      { id: 8,  coach_id: 2,  title: 'Antrenament Profesioniști',      day_of_week: 2, start_time: '19:30', end_time: '21:30', location: 'Ring Principal',  max_participants: 10, is_active: true, coach_name: 'Cristian Ionescu', coach_title: 'Antrenor Principal' },
+      { id: 9,  coach_id: 1,  title: 'Inițiere în Box',                day_of_week: 3, start_time: '10:00', end_time: '11:30', location: 'Sala Principală', max_participants: 25, is_active: true, coach_name: 'Mihai Popescu',    coach_title: 'Antrenor Copii' },
+      { id: 10, coach_id: 4,  title: 'Tehnică Intermediari',           day_of_week: 3, start_time: '17:00', end_time: '18:30', location: 'Sala Principală', max_participants: 18, is_active: true, coach_name: 'Andrei Dumitrescu', coach_title: 'Antrenor Avansați' },
+      { id: 11, coach_id: 2,  title: 'Sparring & Strategie',           day_of_week: 3, start_time: '19:00', end_time: '21:00', location: 'Ring Principal',  max_participants: 14, is_active: true, coach_name: 'Cristian Ionescu', coach_title: 'Antrenor Principal' },
+      { id: 12, coach_id: 3,  title: 'Stretching & Recuperare',        day_of_week: 4, start_time: '08:00', end_time: '09:00', location: 'Sala de Forță',  max_participants: 25, is_active: true, coach_name: 'Adrian Vasilescu', coach_title: 'Antrenor Fitness' },
+      { id: 13, coach_id: 2,  title: 'Antrenament Începători',         day_of_week: 4, start_time: '11:00', end_time: '12:30', location: 'Sala Principală', max_participants: 25, is_active: true, coach_name: 'Cristian Ionescu', coach_title: 'Antrenor Principal' },
+      { id: 14, coach_id: 4,  title: 'Tehnici de Apărare Avansate',    day_of_week: 4, start_time: '17:00', end_time: '18:30', location: 'Ring Principal',  max_participants: 12, is_active: true, coach_name: 'Andrei Dumitrescu', coach_title: 'Antrenor Avansați' },
+      { id: 15, coach_id: 1,  title: 'Box pentru Cadeți (13-17 ani)',  day_of_week: 4, start_time: '18:30', end_time: '20:00', location: 'Sala Principală', max_participants: 18, is_active: true, coach_name: 'Mihai Popescu',    coach_title: 'Antrenor Copii' },
+      { id: 16, coach_id: 3,  title: 'Forță Explozivă & Agility',      day_of_week: 5, start_time: '08:00', end_time: '09:30', location: 'Sala de Forță',  max_participants: 20, is_active: true, coach_name: 'Adrian Vasilescu', coach_title: 'Antrenor Fitness' },
+      { id: 17, coach_id: 2,  title: 'Tehnică & Combinații',           day_of_week: 5, start_time: '10:00', end_time: '12:00', location: 'Sala Principală', max_participants: 22, is_active: true, coach_name: 'Cristian Ionescu', coach_title: 'Antrenor Principal' },
+      { id: 18, coach_id: 4,  title: 'Pregătire Competițională',       day_of_week: 5, start_time: '17:00', end_time: '19:00', location: 'Ring Principal',  max_participants: 10, is_active: true, coach_name: 'Andrei Dumitrescu', coach_title: 'Antrenor Avansați' },
+      { id: 19, coach_id: 2,  title: 'Open Gym (Toți Membrii)',        day_of_week: 5, start_time: '19:00', end_time: '21:00', location: 'Sala Principală', max_participants: 30, is_active: true, coach_name: 'Cristian Ionescu', coach_title: 'Antrenor Principal' },
+      { id: 20, coach_id: 1,  title: 'Box pentru Copii (6-12 ani)',    day_of_week: 6, start_time: '09:00', end_time: '10:00', location: 'Sala Principală', max_participants: 20, is_active: true, coach_name: 'Mihai Popescu',    coach_title: 'Antrenor Copii' },
+      { id: 21, coach_id: 2,  title: 'Tehnică Toate Nivelurile',       day_of_week: 6, start_time: '10:30', end_time: '12:00', location: 'Sala Principală', max_participants: 28, is_active: true, coach_name: 'Cristian Ionescu', coach_title: 'Antrenor Principal' },
+      { id: 22, coach_id: 4,  title: 'Sparring Liber',                 day_of_week: 6, start_time: '12:30', end_time: '14:00', location: 'Ring Principal',  max_participants: 16, is_active: true, coach_name: 'Andrei Dumitrescu', coach_title: 'Antrenor Avansați' },
+      { id: 23, coach_id: 6,  title: 'Yoga pentru Boxeri',             day_of_week: 0, start_time: '10:00', end_time: '11:00', location: 'Sala de Forță',  max_participants: 20, is_active: true, coach_name: 'Elena Marinescu',   coach_title: 'Antrenor Fitness' }
+    ];
+
+    /* ==================================================================
+       CATEGORY DETECTION
+       ================================================================== */
+    function detectCategory(title) {
+      if (!title) return { cls: 'schedule__cat--beginner', label: 'Începători' };
+
+      var t = title.toLowerCase();
+
+      // Kids / Junior
+      if (/\b(copii|copil|kids|junior|cadeți|cadet|adolescenți)\b/i.test(t)) {
+        return { cls: 'schedule__cat--kids', label: 'Copii' };
+      }
+
+      // Pro / Elite / Competition
+      if (/\b(pro|profesionist|profesioniști|elite|competiție|competition|pregătire competițională)\b/i.test(t)) {
+        return { cls: 'schedule__cat--pro', label: 'Pro' };
+      }
+
+      // Advanced
+      if (/\b(avansat|avansați|advanced|intermediar|sparring|strategie|apărare avansate)\b/i.test(t)) {
+        return { cls: 'schedule__cat--advanced', label: 'Avansați' };
+      }
+
+      // Fitness / Cardio / Strength
+      if (/\b(fitness|cardio|condiție|conditie|forță|forta|stretching|recuperare|yoga|agility|exploziv|pregătire fizică)\b/i.test(t)) {
+        return { cls: 'schedule__cat--fitness', label: 'Fitness' };
+      }
+
+      // Beginner (default)
+      return { cls: 'schedule__cat--beginner', label: 'Începători' };
+    }
+
+    /* ==================================================================
+       BUILD TABLE ROW
+       ================================================================== */
+    function buildTableRow(entry) {
+      var cat = detectCategory(entry.title);
+      var start = entry.start_time || '—';
+      var end = entry.end_time || '—';
+      var title = escapeHTML(entry.title);
+      var coach = escapeHTML(entry.coach_name || 'TBA');
+      var location = escapeHTML(entry.location || 'Sala Principală');
+
+      return '<tr>' +
+        '<td><span class="schedule__time">' + start + ' – ' + end + '</span></td>' +
+        '<td><span class="schedule__title">' + title + '</span></td>' +
+        '<td><span class="schedule__coach">' + coach + '</span></td>' +
+        '<td><span class="schedule__location">📍 ' + location + '</span></td>' +
+        '<td><span class="schedule__cat ' + cat.cls + '">' + cat.label + '</span></td>' +
+      '</tr>';
+    }
+
+    /* ==================================================================
+       BUILD DAY SECTION
+       ================================================================== */
+    function buildDaySection(dayIndex, entries) {
+      if (!entries || entries.length === 0) return '';
+
+      var dayName = DAY_NAMES_RO[dayIndex];
+      var iconClass = DAY_ICON_CLASSES[dayIndex];
+      var countText = entries.length === 1 ? '1 antrenament' : entries.length + ' antrenamente';
+
+      var rowsHTML = entries.map(function (entry) {
+        return buildTableRow(entry);
+      }).join('');
+
+      return '<div class="schedule-day reveal" data-day="' + dayIndex + '">' +
+        '<div class="schedule-day__header">' +
+          '<div class="schedule-day__icon ' + iconClass + '" aria-hidden="true">' + DAY_SHORT[dayIndex] + '</div>' +
+          '<h3 class="schedule-day__name">' + dayName + '</h3>' +
+          '<span class="schedule-day__count">' + countText + '</span>' +
+        '</div>' +
+        '<div class="schedule__table-wrap glass">' +
+          '<table class="schedule__table" aria-label="Program ' + dayName + '">' +
+            '<thead>' +
+              '<tr>' +
+                '<th scope="col">Ora</th>' +
+                '<th scope="col">Antrenament</th>' +
+                '<th scope="col">Antrenor</th>' +
+                '<th scope="col">Locație</th>' +
+                '<th scope="col">Categorie</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + rowsHTML + '</tbody>' +
+          '</table>' +
+        '</div>' +
+      '</div>';
+    }
+
+    /* ==================================================================
+       BUILD LEGEND (dynamic, based on actual categories present)
+       ================================================================== */
+    function buildLegend(categoriesUsed) {
+      var legend = document.getElementById('schedule-legend');
+      if (!legend) return;
+
+      var allCategories = [
+        { cls: 'kids',     label: 'Copii / Juniori',   swatch: 'schedule-legend__swatch--kids' },
+        { cls: 'beginner', label: 'Începători',          swatch: 'schedule-legend__swatch--beginner' },
+        { cls: 'advanced', label: 'Avansați',            swatch: 'schedule-legend__swatch--advanced' },
+        { cls: 'pro',      label: 'Profesioniști',       swatch: 'schedule-legend__swatch--pro' },
+        { cls: 'fitness',  label: 'Fitness / Condiție',  swatch: 'schedule-legend__swatch--fitness' }
+      ];
+
+      // If we have categories from data, show only those; otherwise show all
+      var filtered;
+      if (categoriesUsed && categoriesUsed.length > 0) {
+        var usedSet = {};
+        categoriesUsed.forEach(function (c) { usedSet[c] = true; });
+        filtered = allCategories.filter(function (cat) { return usedSet[cat.cls]; });
+      } else {
+        filtered = allCategories;
+      }
+
+      var itemsHTML = filtered.map(function (cat) {
+        return '<div class="schedule-legend__item">' +
+          '<span class="schedule-legend__swatch ' + cat.swatch + '" aria-hidden="true"></span>' +
+          cat.label +
+        '</div>';
+      }).join('');
+
+      legend.innerHTML =
+        '<span class="schedule-legend__title">Legendă:</span>' +
+        '<div class="schedule-legend__items">' + itemsHTML + '</div>';
+    }
+
+    /* ==================================================================
+       BUILD EMPTY STATE
+       ================================================================== */
+    function buildEmptyState(message) {
+      return '<div class="schedule-empty glass reveal">' +
+        '<div class="schedule-empty__icon" aria-hidden="true">🥊</div>' +
+        '<h3 class="schedule-empty__title">Niciun antrenament găsit</h3>' +
+        '<p class="schedule-empty__text">' + escapeHTML(message || 'Momentan nu sunt antrenamente programate. Revino în curând!') + '</p>' +
+        '<button class="btn btn--outline" id="schedule-reset-filter">Vezi toate zilele</button>' +
+      '</div>';
+    }
+
+    /* ==================================================================
+       BUILD ENTIRE SCHEDULE CONTENT
+       ================================================================== */
+    function buildScheduleContent(grouped, filterDay) {
+      var container = document.getElementById('schedule-content');
+      if (!container) return;
+
+      var categoriesUsed = [];
+
+      // Determine which days to render
+      var daysToRender = [];
+      if (filterDay === 'all') {
+        daysToRender = [1, 2, 3, 4, 5, 6, 0]; // Monday through Sunday
+      } else {
+        daysToRender = [parseInt(filterDay, 10)];
+      }
+
+      var htmlParts = [];
+
+      for (var i = 0; i < daysToRender.length; i++) {
+        var dayIdx = daysToRender[i];
+        var entries = grouped[dayIdx] || [];
+        if (entries.length > 0) {
+          htmlParts.push(buildDaySection(dayIdx, entries));
+
+          // Track categories used
+          entries.forEach(function (entry) {
+            var cat = detectCategory(entry.title);
+            var catKey = cat.cls.replace('schedule__cat--', '');
+            if (categoriesUsed.indexOf(catKey) === -1) {
+              categoriesUsed.push(catKey);
+            }
+          });
         }
-      })
-      .catch(function (err) {
-        console.warn('[Schedule] Fetch /api/schedule a eșuat — se folosește fallback hardcodat:', err.message);
-        populateTable(HARDCODED_SCHEDULE);
+      }
+
+      if (htmlParts.length === 0) {
+        container.innerHTML = buildEmptyState(
+          filterDay !== 'all'
+            ? 'Nu există antrenamente programate în ziua selectată.'
+            : 'Momentan nu sunt antrenamente programate. Revino în curând!'
+        );
+      } else {
+        container.innerHTML = htmlParts.join('');
+      }
+
+      // Build legend based on actual categories
+      buildLegend(categoriesUsed);
+
+      // Re-bind reset button if exists
+      var resetBtn = document.getElementById('schedule-reset-filter');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+          setActiveFilterTab('all');
+          state.currentDay = 'all';
+          buildScheduleContent(state.grouped, 'all');
+        });
+      }
+
+      if (typeof refreshScrollReveal === 'function') refreshScrollReveal();
+    }
+
+    /* ==================================================================
+       LOAD SCHEDULE FROM API
+       ================================================================== */
+    async function loadSchedule() {
+      var container = document.getElementById('schedule-content');
+      if (!container) return;
+
+      try {
+        var response = await safeFetch('/api/schedule?sort=day_of_week');
+        var schedule = response.data || [];
+        var grouped = response.grouped || {};
+
+        // If empty, try without is_active filter
+        if (schedule.length === 0) {
+          try {
+            var responseAll = await safeFetch('/api/schedule?is_active=false&sort=day_of_week');
+            schedule = responseAll.data || [];
+            grouped = responseAll.grouped || {};
+          } catch (_) { /* use fallback */ }
+        }
+
+        // If still empty or API error, use fallback
+        if (schedule.length === 0) {
+          schedule = FALLBACK_SCHEDULE;
+          grouped = groupByDay(FALLBACK_SCHEDULE);
+        }
+
+        state.schedule = schedule;
+        state.grouped = grouped;
+
+        buildScheduleContent(grouped, state.currentDay);
+      } catch (err) {
+        console.error('[schedule] API error:', err);
+
+        // Use fallback data
+        var fallbackGrouped = groupByDay(FALLBACK_SCHEDULE);
+        state.schedule = FALLBACK_SCHEDULE;
+        state.grouped = fallbackGrouped;
+
+        buildScheduleContent(fallbackGrouped, state.currentDay);
+
+        if (typeof showToast === 'function') {
+          showToast('Se afișează datele offline. Conectează-te la server pentru programul actualizat.', 'info', 4000);
+        }
+      }
+    }
+
+    /* ==================================================================
+       GROUP BY DAY HELPER (for fallback)
+       ================================================================== */
+    function groupByDay(entries) {
+      var grouped = {};
+      for (var d = 0; d <= 6; d++) {
+        grouped[d] = [];
+      }
+      entries.forEach(function (entry) {
+        var day = entry.day_of_week;
+        if (grouped[day]) {
+          grouped[day].push(entry);
+        }
       });
+      // Sort entries within each day by start_time
+      for (var dayIdx = 0; dayIdx <= 6; dayIdx++) {
+        grouped[dayIdx].sort(function (a, b) {
+          return (a.start_time || '').localeCompare(b.start_time || '');
+        });
+      }
+      return grouped;
+    }
+
+    /* ==================================================================
+       INIT FILTERS
+       ================================================================== */
+    function initFilters() {
+      var tabs = document.querySelectorAll('.schedule-filters__tab');
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          var day = this.getAttribute('data-day');
+
+          // Update active state
+          setActiveFilterTab(day);
+
+          // Update state and rebuild
+          state.currentDay = day;
+          buildScheduleContent(state.grouped, day);
+
+          // Scroll to content
+          var content = document.getElementById('schedule-content');
+          if (content) {
+            content.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      });
+    }
+
+    function setActiveFilterTab(day) {
+      var tabs = document.querySelectorAll('.schedule-filters__tab');
+      tabs.forEach(function (t) {
+        t.classList.remove('schedule-filters__tab--active');
+        t.setAttribute('aria-selected', 'false');
+        if (t.getAttribute('data-day') === day) {
+          t.classList.add('schedule-filters__tab--active');
+          t.setAttribute('aria-selected', 'true');
+        }
+      });
+    }
+
+    /* ==================================================================
+       STICKY FILTERS BAR
+       ================================================================== */
+    function initStickyFilters() {
+      var filtersBar = document.getElementById('schedule-filters');
+      if (!filtersBar) return;
+
+      var ticking = false;
+
+      window.addEventListener('scroll', function () {
+        if (!ticking) {
+          requestAnimationFrame(function () {
+            var scrollY = window.scrollY || window.pageYOffset;
+            if (scrollY > 120) {
+              filtersBar.classList.add('schedule-filters--scrolled');
+            } else {
+              filtersBar.classList.remove('schedule-filters--scrolled');
+            }
+            ticking = false;
+          });
+          ticking = true;
+        }
+      }, { passive: true });
+    }
+
+    /* ==================================================================
+       UTILS
+       ================================================================== */
+    function escapeHTML(str) {
+      if (!str) return '';
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+
+    /* ==================================================================
+       SET CURRENT YEAR
+       ================================================================== */
+    function setCurrentYear() {
+      var el = document.getElementById('current-year');
+      if (el) el.textContent = new Date().getFullYear();
+    }
+
+    /* ==================================================================
+       INIT ALL
+       ================================================================== */
+    function init() {
+      setCurrentYear();
+      initFilters();
+      initStickyFilters();
+      loadSchedule();
+    }
+
+    domReady(init);
   })();
   </script>
+
+</body>
+</html>
+  })();
+  </script>
+
 </body>
 </html>

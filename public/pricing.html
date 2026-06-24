@@ -3,723 +3,1158 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Boxing Champions — Abonamente. Alege planul potrivit: Începător, Avansați sau Campioni. Prețuri flexibile lunar/anual cu beneficii excelente.">
+  <meta name="description" content="Boxing Champions — Abonamente flexibile pentru toate nivelurile. Alege planul potrivit și începe-ți călătoria de campion.">
   <meta name="theme-color" content="#0a0a0a">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Abonamente — Boxing Champions</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <meta name="robots" content="index, follow">
+  <link rel="icon" type="image/png" href="/images/badge.png">
+  <link rel="apple-touch-icon" href="/images/badge.png">
+
+  <title>Abonamente | Boxing Champions</title>
+
+  <!-- CSS principal -->
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- SEO / Open Graph -->
+  <meta property="og:title" content="Abonamente | Boxing Champions">
+  <meta property="og:description" content="Abonamente flexibile pentru toate nivelurile. Alege planul potrivit și începe-ți călătoria de campion.">
+  <meta property="og:image" content="/images/badge.png">
+  <meta property="og:url" content="">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SportsClub",
+    "name": "Boxing Champions",
+    "description": "Abonamente flexibile pentru toate nivelurile de box.",
+    "image": "/images/badge.png",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "București",
+      "addressCountry": "RO"
+    },
+    "sport": "Boxing"
+  }
+  </script>
+
+  <style>
+    /* ============================================================
+       PRICING PAGE SPECIFIC STYLES
+       ============================================================ */
+
+    /* ---- Page Header ---- */
+    .pricing-page-header {
+      position: relative;
+      min-height: 42vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: var(--black-deep);
+    }
+
+    .pricing-page-header__bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .pricing-page-header__bg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.28);
+    }
+
+    .pricing-page-header__overlay {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 50%, rgba(212,168,67,0.06) 0%, transparent 60%),
+        linear-gradient(to top, var(--black-deep) 0%, transparent 50%);
+      z-index: 1;
+    }
+
+    .pricing-page-header__content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      max-width: 800px;
+      padding: 3rem 2rem 2rem;
+    }
+
+    .pricing-page-header__badge {
+      display: inline-block;
+      font-family: var(--font-heading);
+      font-size: clamp(0.75rem, 1.3vw, 0.9rem);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--gold-primary);
+      border: 1px solid var(--gold-primary);
+      padding: 0.45em 1.4em;
+      border-radius: 50px;
+      margin-bottom: 1.4rem;
+      backdrop-filter: blur(6px);
+      background: rgba(10,10,10,0.35);
+    }
+
+    .pricing-page-header__title {
+      font-family: var(--font-display);
+      font-size: clamp(2.4rem, 6vw, 5rem);
+      line-height: 1;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.3em;
+    }
+
+    .pricing-page-header__title .gold {
+      background: var(--gold-metallic);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    .pricing-page-header__subtitle {
+      font-family: var(--font-body);
+      font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+      color: var(--gray-smoke);
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    /* ---- Pricing Main ---- */
+    .pricing-main {
+      background: var(--black-deep);
+      padding-top: clamp(2rem, 4vw, 3rem);
+      padding-bottom: var(--section-pad);
+    }
+
+    /* ---- Toggle Enhanced ---- */
+    .pricing__toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 2.8rem;
+      flex-wrap: wrap;
+    }
+
+    .pricing__toggle-label {
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--gray-smoke);
+      transition: color var(--dur-normal);
+      cursor: pointer;
+      user-select: none;
+      padding: 0.3em 0;
+    }
+
+    .pricing__toggle-label--active {
+      color: var(--gold-primary);
+      font-weight: 700;
+    }
+
+    .pricing__toggle-switch {
+      width: 54px;
+      height: 28px;
+      background: var(--gray-dark);
+      border-radius: 14px;
+      position: relative;
+      cursor: pointer;
+      border: 1px solid var(--glass-border);
+      transition: background var(--dur-normal);
+      flex-shrink: 0;
+    }
+
+    .pricing__toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: var(--gold-primary);
+      border-radius: 50%;
+      transition: transform var(--dur-normal) var(--ease-out-expo);
+    }
+
+    .pricing__toggle-switch--yearly {
+      background: var(--gold-primary);
+    }
+
+    .pricing__toggle-switch--yearly::after {
+      transform: translateX(26px);
+      background: var(--black-deep);
+    }
+
+    .pricing__toggle-save {
+      font-family: var(--font-heading);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      background: var(--red-vivid);
+      color: #fff;
+      padding: 0.3em 0.9em;
+      border-radius: 50px;
+      white-space: nowrap;
+      animation: pulseSave 2s ease-in-out infinite;
+    }
+
+    @keyframes pulseSave {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.75; }
+    }
+
+    /* ---- Pricing Grid ---- */
+    .pricing__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+      gap: clamp(1.4rem, 3vw, 2rem);
+      align-items: stretch;
+    }
+
+    /* ---- Plan Card ---- */
+    .plan-card {
+      display: flex;
+      flex-direction: column;
+      text-align: center;
+      position: relative;
+    }
+
+    .plan-card--popular {
+      border-color: var(--gold-primary);
+      transform: scale(1.03);
+      box-shadow: 0 12px 40px rgba(212,168,67,0.2);
+      z-index: 2;
+    }
+
+    .plan-card--popular:hover {
+      transform: scale(1.03) translateY(-6px);
+    }
+
+    .plan-card__badge {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--gold-metallic);
+      color: var(--black-deep);
+      font-family: var(--font-heading);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 0.35em 1.5em;
+      border-radius: 50px;
+      font-weight: 700;
+      white-space: nowrap;
+      z-index: 3;
+    }
+
+    .plan-card__name {
+      font-size: clamp(1.1rem, 1.8vw, 1.5rem);
+      margin-bottom: 0.8rem;
+    }
+
+    .plan-card__description {
+      font-size: 0.85rem;
+      color: var(--gray-smoke);
+      margin-bottom: 1rem;
+      min-height: 2.5em;
+    }
+
+    .plan-card__price {
+      font-family: var(--font-display);
+      font-size: clamp(2.2rem, 4vw, 3.2rem);
+      line-height: 1;
+      margin-bottom: 0.1em;
+    }
+
+    .plan-card__price .currency {
+      font-size: 0.5em;
+      vertical-align: super;
+    }
+
+    .plan-card__period {
+      font-size: 0.8rem;
+      color: var(--gray-smoke);
+      margin-bottom: 1.4rem;
+    }
+
+    .plan-card__price--old {
+      font-size: 0.9rem;
+      color: var(--gray-smoke);
+      text-decoration: line-through;
+      margin-bottom: 0.2rem;
+      opacity: 0.6;
+    }
+
+    .plan-card__features {
+      flex: 1;
+      margin-bottom: 1.6rem;
+    }
+
+    .plan-card__features li {
+      padding: 0.45em 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+
+    .plan-card__features li:last-child { border: none; }
+
+    .plan-card__cta {
+      margin-top: auto;
+    }
+
+    /* ---- Ribbon / Corner badge ---- */
+    .plan-card__ribbon {
+      position: absolute;
+      top: 18px;
+      right: -6px;
+      background: var(--red-vivid);
+      color: #fff;
+      font-family: var(--font-heading);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.25em 1em;
+      border-radius: 4px 0 0 4px;
+      z-index: 3;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .plan-card__ribbon::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      right: 0;
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-top: 6px solid var(--red-deep);
+    }
+
+    /* ---- FAQ Teaser ---- */
+    .pricing-faq-teaser {
+      text-align: center;
+      margin-top: clamp(2.5rem, 5vw, 4rem);
+      padding: clamp(1.5rem, 3vw, 2.5rem);
+    }
+
+    .pricing-faq-teaser__title {
+      font-family: var(--font-heading);
+      font-size: clamp(1.2rem, 2vw, 1.8rem);
+      color: var(--gold-primary);
+      margin-bottom: 0.6rem;
+    }
+
+    .pricing-faq-teaser__text {
+      color: var(--gray-smoke);
+      max-width: 520px;
+      margin: 0 auto 1.5rem;
+      font-size: 0.95rem;
+    }
+
+    /* ---- Guarantee Badge ---- */
+    .pricing-guarantee {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.8rem;
+      margin-bottom: 1.2rem;
+      color: var(--gold-primary);
+      font-family: var(--font-heading);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.85;
+    }
+
+    .pricing-guarantee__icon {
+      font-size: 1.5rem;
+    }
+
+    /* ---- Loading skeleton ---- */
+    .plan-card-skeleton {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: clamp(1.4rem, 3vw, 2.5rem);
+    }
+
+    .plan-card-skeleton__line {
+      height: 16px;
+      border-radius: 4px;
+      background: var(--black-card);
+      margin-bottom: 0.7rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .plan-card-skeleton__line::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+      animation: shimmer 1.6s infinite;
+    }
+
+    .plan-card-skeleton__line--lg {
+      width: 70%;
+      height: 48px;
+      margin-bottom: 0.5rem;
+      border-radius: 8px;
+    }
+
+    .plan-card-skeleton__line--md { width: 50%; }
+    .plan-card-skeleton__line--sm { width: 80%; }
+    .plan-card-skeleton__line--xs { width: 65%; }
+
+    .plan-card-skeleton__circle {
+      width: 64px;
+      height: 24px;
+      border-radius: 50px;
+      background: var(--black-card);
+      margin-bottom: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .plan-card-skeleton__circle::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+      animation: shimmer 1.6s infinite;
+    }
+
+    /* ---- Empty State ---- */
+    .pricing-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: clamp(3rem, 6vw, 5rem) 2rem;
+    }
+
+    .pricing-empty__icon {
+      font-size: 4rem;
+      margin-bottom: 1.4rem;
+      opacity: 0.6;
+    }
+
+    .pricing-empty__title {
+      font-family: var(--font-heading);
+      font-size: clamp(1.4rem, 2.5vw, 2rem);
+      color: var(--gold-primary);
+      margin-bottom: 0.6rem;
+    }
+
+    .pricing-empty__text {
+      color: var(--gray-smoke);
+      max-width: 440px;
+      margin: 0 auto 2rem;
+      font-size: 0.95rem;
+    }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 768px) {
+      .pricing-page-header {
+        min-height: 30vh;
+      }
+
+      .pricing__grid {
+        grid-template-columns: 1fr;
+        max-width: 420px;
+        margin: 0 auto;
+      }
+
+      .plan-card--popular {
+        transform: none;
+      }
+
+      .plan-card--popular:hover {
+        transform: translateY(-6px);
+      }
+
+      .pricing__toggle {
+        gap: 0.6rem;
+      }
+
+      .pricing__toggle-label {
+        font-size: 0.75rem;
+      }
+
+      .pricing__toggle-save {
+        font-size: 0.65rem;
+        padding: 0.25em 0.7em;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .pricing-page-header {
+        min-height: 26vh;
+      }
+
+      .pricing__toggle {
+        gap: 0.4rem;
+      }
+
+      .pricing__toggle-label {
+        font-size: 0.7rem;
+      }
+
+      .plan-card__badge {
+        font-size: 0.65rem;
+        padding: 0.3em 1em;
+        top: -12px;
+      }
+
+      .pricing-guarantee {
+        font-size: 0.72rem;
+        gap: 0.5rem;
+      }
+
+      .pricing-faq-teaser__title {
+        font-size: 1rem;
+      }
+
+      .pricing-faq-teaser__text {
+        font-size: 0.82rem;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .pricing__grid {
+        max-width: 100%;
+      }
+
+      .plan-card {
+        padding: 1.2rem;
+      }
+
+      .pricing__toggle-save {
+        width: 100%;
+        text-align: center;
+        margin-top: 0.3rem;
+      }
+    }
+  </style>
 </head>
 <body>
 
-  <!-- =======================================================================
+  <!-- ============================================================
+       PRELOADER
+  ============================================================ -->
+  <div id="preloader" aria-hidden="true">
+    <div class="preloader__inner">
+      <div class="preloader__glove">
+        <img src="/images/gloves.jpg" alt="" aria-hidden="true">
+      </div>
+      <p class="preloader__text">BOXING CHAMPIONS</p>
+      <div class="preloader__bar">
+        <div class="preloader__bar-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
        PARTICLES CANVAS
-       ======================================================================= -->
-  <canvas id="particles-canvas"></canvas>
+  ============================================================ -->
+  <canvas id="particles-canvas" aria-hidden="true"></canvas>
 
-  <!-- =======================================================================
-       CUSTOM CURSOR
-       ======================================================================= -->
-  <div class="cursor-dot"></div>
-  <div class="cursor-ring"></div>
-
-  <!-- =======================================================================
-       NAVBAR
-       ======================================================================= -->
-  <nav class="navbar z-content">
-    <div class="container">
-      <a href="/" class="nav-logo" aria-label="Boxing Champions — Acasă">
-        <i class="fa-solid fa-glove"></i> BOXING CHAMPIONS
+  <!-- ============================================================
+       NAVIGATION
+  ============================================================ -->
+  <nav class="nav" aria-label="Navigare principală">
+    <div class="nav__inner">
+      <a href="/" class="nav__logo" aria-label="Boxing Champions — Acasă">
+        <img src="/images/badge.png" alt="Boxing Champions Badge" width="48" height="48" loading="eager">
+        BOXING <span>CHAMPIONS</span>
       </a>
-      <button class="nav-toggle" aria-label="Deschide meniul" aria-expanded="false">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-      <ul class="nav-links" role="menubar">
-        <li role="none"><a href="/" role="menuitem">Acasă</a></li>
-        <li role="none"><a href="/events" role="menuitem">Evenimente</a></li>
-        <li role="none"><a href="/schedule" role="menuitem">Program</a></li>
-        <li role="none"><a href="/pricing" role="menuitem" class="active">Abonamente</a></li>
-        <li role="none"><a href="/shop" role="menuitem">Magazin</a></li>
-        <li role="none"><a href="/contact" role="menuitem">Contact</a></li>
+
+      <ul class="nav__links" role="menubar">
+        <li role="none"><a href="/#despre" class="nav__link" role="menuitem">Despre</a></li>
+        <li role="none"><a href="/#antrenori" class="nav__link" role="menuitem">Antrenori</a></li>
+        <li role="none"><a href="/schedule.html" class="nav__link" role="menuitem">Program</a></li>
+        <li role="none"><a href="/events.html" class="nav__link" role="menuitem">Evenimente</a></li>
+        <li role="none"><a href="/pricing.html" class="nav__link nav__link--active" role="menuitem">Abonamente</a></li>
+        <li role="none"><a href="/shop.html" class="nav__link" role="menuitem">Shop</a></li>
+        <li role="none"><a href="/#contact" class="nav__link" role="menuitem">Contact</a></li>
       </ul>
+
+      <button class="nav__toggle" aria-label="Deschide meniul" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </nav>
 
-  <!-- =======================================================================
-       PAGE HERO — ABONAMENTE
-       ======================================================================= -->
-  <section class="hero" id="pricing-hero" style="min-height: 50vh;">
-    <div style="position: absolute; inset: 0; z-index: -1;" aria-hidden="true">
-      <img src="images/pricing-hero.jpg" alt="" loading="lazy"
-           style="width: 100%; height: 100%; object-fit: cover; opacity: 0.25; filter: brightness(0.4);"
-           aria-hidden="true">
+  <!-- ============================================================
+       PAGE HEADER
+  ============================================================ -->
+  <section class="pricing-page-header" aria-labelledby="pricing-header-title">
+    <div class="pricing-page-header__bg">
+      <img src="/images/pricing-bg.jpg" alt="" aria-hidden="true" loading="eager">
     </div>
-    <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,0.9) 0%, rgba(10,10,10,0.6) 50%, rgba(10,10,10,0.95) 100%); z-index: -1;" aria-hidden="true"></div>
-    <div class="hero-content z-content" style="padding-top: 6rem;">
-      <span class="hero-badge">
-        <i class="fa-solid fa-crown" style="margin-right: 0.4rem;"></i> Planuri Flexibile
-      </span>
-      <h1 class="hero-title" style="font-size: clamp(2.4rem, 5vw, 4.5rem);">
-        ABONA<span class="gold">MENTE</span>
+    <div class="pricing-page-header__overlay" aria-hidden="true"></div>
+
+    <div class="pricing-page-header__content reveal">
+      <div class="pricing-page-header__badge">
+        Prețuri &amp; Abonamente
+      </div>
+      <h1 class="pricing-page-header__title" id="pricing-header-title">
+        ABON<span class="gold">AMENTE</span>
       </h1>
-      <p class="hero-subtitle">
-        Alege planul care ți se potrivește și începe călătoria către măreție. Primul antrenament este gratuit!
+      <p class="pricing-page-header__subtitle">
+        Alege planul care ți se potrivește. De la începător la campion — avem abonamentul perfect pentru tine.
       </p>
-      <div class="btn-group" style="justify-content: center;">
-        <a href="#pricing-plans" class="btn btn-primary btn-lg">
-          <i class="fa-solid fa-angles-down"></i> Vezi Planurile
-        </a>
-        <a href="/contact" class="btn btn-outline btn-lg">
-          <i class="fa-solid fa-calendar-check"></i> Înscrie-te Acum
-        </a>
-      </div>
     </div>
   </section>
 
-  <!-- =======================================================================
-       PRICING PLANS SECTION
-       ======================================================================= -->
-  <section class="section" id="pricing-plans" style="padding-top: var(--space-3xl);">
+  <!-- ============================================================
+       PRICING MAIN
+  ============================================================ -->
+  <section class="pricing-main" aria-labelledby="pricing-content-title">
     <div class="container">
-      <span class="section-label fade-in">Abonamente</span>
-      <h2 class="text-center fade-in">Alege <span class="text-gold">Planul</span> Tău</h2>
-      <span class="gold-separator fade-in"></span>
-      <p class="text-center text-gray fade-in" style="max-width: 600px; margin-left: auto; margin-right: auto; margin-bottom: var(--space-lg);">
-        Toate planurile includ acces la vestiare, dușuri și echipament de bază. Prețurile sunt afișate în RON și includ TVA.
-      </p>
+      <h2 id="pricing-content-title" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Planuri de abonament</h2>
 
-      <!-- ============================================================
-           TOGGLE LUNAR / ANUAL
-           ============================================================ -->
-      <div class="pricing-toggle-wrap fade-in delay-100">
-        <span class="pricing-toggle-label" id="toggle-monthly-label">Lunar</span>
-        <button class="pricing-toggle-track" id="pricing-toggle" type="button"
-                role="switch" aria-checked="false" aria-label="Comută între prețuri lunare și anuale"
-                aria-labelledby="toggle-monthly-label toggle-yearly-label">
-          <span class="pricing-toggle-thumb"></span>
-        </button>
-        <span class="pricing-toggle-label" id="toggle-yearly-label">Anual</span>
-        <span class="pricing-save-badge">Economisești până la 20%</span>
+      <!-- Toggle Monthly / Yearly -->
+      <div class="pricing__toggle" role="radiogroup" aria-label="Alege perioada de facturare">
+        <span class="pricing__toggle-label pricing__toggle-label--active" id="label-monthly" role="radio" aria-checked="true" tabindex="0">Lunar</span>
+
+        <div class="pricing__toggle-switch" id="toggle-switch" role="switch" aria-checked="false" aria-label="Comută între facturare lunară și anuală" tabindex="0"></div>
+
+        <span class="pricing__toggle-label" id="label-yearly" role="radio" aria-checked="false" tabindex="0">Anual</span>
+
+        <span class="pricing__toggle-save" id="toggle-save-badge" style="display:none;">Economisești 20%</span>
       </div>
 
-      <!-- ============================================================
-           PLANS GRID
-           ============================================================ -->
-      <div class="pricing-grid">
-
-        <!-- Plan 1: ÎNCEPĂTOR -->
-        <div class="pricing-card glass-card tilt-card fade-in delay-150">
-          <div class="tilt-card-inner">
-            <div class="tilt-card-glow"></div>
-            <div class="tilt-card-shine"></div>
-            <div class="pricing-card-header">
-              <div class="pricing-icon">
-                <i class="fa-solid fa-person-walking"></i>
-              </div>
-              <h3 class="pricing-plan-name">Începător</h3>
-              <p class="pricing-plan-desc">Perfect pentru cei care descoperă boxul</p>
-            </div>
-            <div class="pricing-amount">
-              <span class="pricing-currency">RON</span>
-              <span class="pricing-price" data-monthly="150" data-yearly="1440">150</span>
-              <span class="pricing-period" data-monthly="/lună" data-yearly="/an">/lună</span>
-            </div>
-            <div class="pricing-yearly-info" style="display:none;">
-              <span class="pricing-monthly-equiv">120 RON/lună</span>
-            </div>
-            <ul class="pricing-features">
-              <li><i class="fa-solid fa-circle-check"></i> 3 antrenamente / săptămână</li>
-              <li><i class="fa-solid fa-circle-check"></i> Acces sală în orele de program</li>
-              <li><i class="fa-solid fa-circle-check"></i> Evaluare fizică inițială</li>
-              <li><i class="fa-solid fa-circle-check"></i> Program flexibil Luni–Vineri</li>
-              <li><i class="fa-solid fa-circle-check"></i> Acces vestiare și dușuri</li>
-              <li class="feature-disabled"><i class="fa-solid fa-circle-xmark"></i> Antrenor personal</li>
-              <li class="feature-disabled"><i class="fa-solid fa-circle-xmark"></i> Acces prioritar evenimente</li>
-              <li class="feature-disabled"><i class="fa-solid fa-circle-xmark"></i> Reducere magazin</li>
-            </ul>
-            <div class="pricing-card-footer">
-              <a href="/contact" class="btn btn-outline btn-block">
-                <i class="fa-solid fa-paper-plane"></i> Înscrie-te
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <!-- Plan 2: AVANSAȚI (Cel mai popular) -->
-        <div class="pricing-card pricing-card-popular glass-card tilt-card fade-in delay-250">
-          <div class="tilt-card-inner">
-            <div class="tilt-card-glow"></div>
-            <div class="tilt-card-shine"></div>
-            <span class="pricing-popular-badge">
-              <i class="fa-solid fa-star"></i> Cel mai popular
-            </span>
-            <div class="pricing-card-header">
-              <div class="pricing-icon pricing-icon-popular">
-                <i class="fa-solid fa-fire"></i>
-              </div>
-              <h3 class="pricing-plan-name">Avansați</h3>
-              <p class="pricing-plan-desc">Pentru sportivii ambițioși care vor progres</p>
-            </div>
-            <div class="pricing-amount">
-              <span class="pricing-currency">RON</span>
-              <span class="pricing-price" data-monthly="250" data-yearly="2400">250</span>
-              <span class="pricing-period" data-monthly="/lună" data-yearly="/an">/lună</span>
-            </div>
-            <div class="pricing-yearly-info" style="display:none;">
-              <span class="pricing-monthly-equiv">200 RON/lună</span>
-            </div>
-            <ul class="pricing-features">
-              <li><i class="fa-solid fa-circle-check"></i> Antrenamente <strong>nelimitate</strong></li>
-              <li><i class="fa-solid fa-circle-check"></i> Acces sală program extins</li>
-              <li><i class="fa-solid fa-circle-check"></i> Evaluare fizică lunară</li>
-              <li><i class="fa-solid fa-circle-check"></i> 2 sesiuni 1-la-1 / lună</li>
-              <li><i class="fa-solid fa-circle-check"></i> Acces prioritar la evenimente</li>
-              <li><i class="fa-solid fa-circle-check"></i> Program flexibil complet</li>
-              <li><i class="fa-solid fa-circle-check"></i> Reducere 10% magazin</li>
-              <li class="feature-disabled"><i class="fa-solid fa-circle-xmark"></i> Antrenor personal dedicat</li>
-            </ul>
-            <div class="pricing-card-footer">
-              <a href="/contact" class="btn btn-primary btn-block">
-                <i class="fa-solid fa-paper-plane"></i> Înscrie-te
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <!-- Plan 3: CAMPIONI -->
-        <div class="pricing-card glass-card tilt-card fade-in delay-350">
-          <div class="tilt-card-inner">
-            <div class="tilt-card-glow"></div>
-            <div class="tilt-card-shine"></div>
-            <div class="pricing-card-header">
-              <div class="pricing-icon pricing-icon-champion">
-                <i class="fa-solid fa-crown"></i>
-              </div>
-              <h3 class="pricing-plan-name">Campioni</h3>
-              <p class="pricing-plan-desc">Experiența supremă pentru adevărații luptători</p>
-            </div>
-            <div class="pricing-amount">
-              <span class="pricing-currency">RON</span>
-              <span class="pricing-price" data-monthly="400" data-yearly="3840">400</span>
-              <span class="pricing-period" data-monthly="/lună" data-yearly="/an">/lună</span>
-            </div>
-            <div class="pricing-yearly-info" style="display:none;">
-              <span class="pricing-monthly-equiv">320 RON/lună</span>
-            </div>
-            <ul class="pricing-features">
-              <li><i class="fa-solid fa-circle-check"></i> Antrenamente <strong>nelimitate</strong></li>
-              <li><i class="fa-solid fa-circle-check"></i> Acces sală <strong>24/7</strong></li>
-              <li><i class="fa-solid fa-circle-check"></i> Antrenor personal dedicat</li>
-              <li><i class="fa-solid fa-circle-check"></i> Plan nutrițional personalizat</li>
-              <li><i class="fa-solid fa-circle-check"></i> Evaluare fizică săptămânală</li>
-              <li><i class="fa-solid fa-circle-check"></i> Participare gratuită la competiții</li>
-              <li><i class="fa-solid fa-circle-check"></i> Echipament complet inclus</li>
-              <li><i class="fa-solid fa-circle-check"></i> Reducere 20% magazin</li>
-            </ul>
-            <div class="pricing-card-footer">
-              <a href="/contact" class="btn btn-outline btn-block">
-                <i class="fa-solid fa-paper-plane"></i> Înscrie-te
-              </a>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /pricing-grid -->
-
-      <!-- ============================================================
-           NOTE SUB PLANURI
-           ============================================================ -->
-      <p class="text-center text-gray fade-in delay-400" style="margin-top: var(--space-2xl); font-size: 0.85rem; max-width: 620px; margin-left: auto; margin-right: auto;">
-        <i class="fa-solid fa-shield-halved" style="color: var(--color-gold); margin-right: 0.35rem;"></i>
-        Toate abonamentele beneficiază de perioada legală de retragere de 14 zile. Prețurile includ TVA.
-        Pentru abonamente corporate sau de grup, <a href="/contact" style="color: var(--color-gold); text-decoration: underline;">contactați-ne</a>.
-      </p>
-    </div>
-  </section>
-
-  <!-- =======================================================================
-       COMPARISON TABLE SECTION
-       ======================================================================= -->
-  <section class="section" id="pricing-compare" style="background: rgba(212, 175, 55, 0.02);">
-    <div class="container">
-      <span class="section-label fade-in">Comparație</span>
-      <h2 class="text-center fade-in">Compară <span class="text-gold">Beneficiile</span></h2>
-      <span class="gold-separator fade-in"></span>
-      <p class="text-center text-gray fade-in" style="max-width: 560px; margin-left: auto; margin-right: auto; margin-bottom: var(--space-3xl);">
-        Vezi exact ce include fiecare plan și alege-l pe cel care se potrivește cel mai bine obiectivelor tale.
-      </p>
-
-      <div class="pricing-compare-table-wrap slide-up">
-        <table class="pricing-compare-table" aria-label="Comparație planuri de abonament Boxing Champions">
-          <thead>
-            <tr>
-              <th scope="col">Beneficiu</th>
-              <th scope="col">Începător</th>
-              <th scope="col" class="th-popular">Avansați</th>
-              <th scope="col">Campioni</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>Antrenamente / săptămână</td><td>3</td><td>Nelimitat</td><td>Nelimitat</td></tr>
-            <tr><td>Acces sală</td><td>Program normal</td><td>Program extins</td><td>24/7</td></tr>
-            <tr><td>Evaluare fizică</td><td>Inițială</td><td>Lunară</td><td>Săptămânală</td></tr>
-            <tr><td>Sesiuni 1-la-1</td><td><i class="fa-solid fa-minus text-gray"></i></td><td>2 / lună</td><td>Nelimit</td></tr>
-            <tr><td>Antrenor personal dedicat</td><td><i class="fa-solid fa-minus text-gray"></i></td><td><i class="fa-solid fa-minus text-gray"></i></td><td><i class="fa-solid fa-circle-check" style="color: var(--color-gold-light);"></i></td></tr>
-            <tr><td>Plan nutrițional</td><td><i class="fa-solid fa-minus text-gray"></i></td><td><i class="fa-solid fa-minus text-gray"></i></td><td><i class="fa-solid fa-circle-check" style="color: var(--color-gold-light);"></i></td></tr>
-            <tr><td>Acces evenimente</td><td>Standard</td><td>Prioritar</td><td>Gratuit</td></tr>
-            <tr><td>Echipament inclus</td><td><i class="fa-solid fa-minus text-gray"></i></td><td><i class="fa-solid fa-minus text-gray"></i></td><td><i class="fa-solid fa-circle-check" style="color: var(--color-gold-light);"></i></td></tr>
-            <tr><td>Reducere magazin</td><td><i class="fa-solid fa-minus text-gray"></i></td><td>10%</td><td>20%</td></tr>
-            <tr><td>Suport prioritar</td><td><i class="fa-solid fa-minus text-gray"></i></td><td><i class="fa-solid fa-circle-check" style="color: var(--color-gold-light);"></i></td><td><i class="fa-solid fa-circle-check" style="color: var(--color-gold-light);"></i></td></tr>
-          </tbody>
-        </table>
+      <!-- Guarantee -->
+      <div class="pricing-guarantee">
+        <span class="pricing-guarantee__icon" aria-hidden="true">🛡️</span>
+        <span>Primul antrenament GRATUIT — Fără riscuri</span>
       </div>
-    </div>
-  </section>
 
-  <!-- =======================================================================
-       FAQ SECTION
-       ======================================================================= -->
-  <section class="section" id="pricing-faq">
-    <div class="container">
-      <span class="section-label fade-in">Întrebări</span>
-      <h2 class="text-center fade-in">Ai <span class="text-gold">Nelămuriri</span>?</h2>
-      <span class="gold-separator fade-in"></span>
-      <p class="text-center text-gray fade-in" style="max-width: 500px; margin-left: auto; margin-right: auto; margin-bottom: var(--space-3xl);">
-        Am adunat cele mai frecvente întrebări pentru a te ajuta să iei cea mai bună decizie.
-      </p>
-
-      <div class="faq-list" style="max-width: 760px; margin: 0 auto;">
-        <!-- FAQ 1 -->
-        <div class="faq-item glass-card fade-in">
-          <button class="faq-question" aria-expanded="false">
-            <span>Pot schimba planul după înscriere?</span>
-            <i class="fa-solid fa-chevron-down"></i>
-          </button>
-          <div class="faq-answer" hidden>
-            <p>Da, poți face upgrade oricând, iar diferența se va calcula proporțional cu perioada rămasă. Downgrade-ul este posibil doar la reînnoirea abonamentului.</p>
-          </div>
+      <!-- Plans Grid -->
+      <div class="pricing__grid" id="pricing-grid">
+        <!-- Skeleton loading cards -->
+        <div class="plan-card-skeleton glass glass--card" aria-hidden="true">
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--md"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--lg"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--sm"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--xs"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--sm"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--xs"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--sm"></div>
+          <div class="plan-card-skeleton__circle"></div>
         </div>
-        <!-- FAQ 2 -->
-        <div class="faq-item glass-card fade-in delay-100">
-          <button class="faq-question" aria-expanded="false">
-            <span>Primul antrenament este chiar gratuit?</span>
-            <i class="fa-solid fa-chevron-down"></i>
-          </button>
-          <div class="faq-answer" hidden>
-            <p>Absolut! Poți participa la un antrenament gratuit fără nicio obligație. Vino să vezi cum e atmosfera, să cunoști antrenorii și să simți energia sălii.</p>
-          </div>
+        <div class="plan-card-skeleton glass glass--card" aria-hidden="true">
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--md"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--lg"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--sm"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--xs"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--sm"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--xs"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--sm"></div>
+          <div class="plan-card-skeleton__circle"></div>
         </div>
-        <!-- FAQ 3 -->
-        <div class="faq-item glass-card fade-in delay-200">
-          <button class="faq-question" aria-expanded="false">
-            <span>Care e diferența între plata lunară și cea anuală?</span>
-            <i class="fa-solid fa-chevron-down"></i>
-          </button>
-          <div class="faq-answer" hidden>
-            <p>Plata anuală îți oferă o reducere de aproximativ 20% față de cea lunară. Practic, plătești 10 luni și primești 12. Este varianta recomandată pentru economii maxime.</p>
-          </div>
-        </div>
-        <!-- FAQ 4 -->
-        <div class="faq-item glass-card fade-in delay-300">
-          <button class="faq-question" aria-expanded="false">
-            <span>Abonamentul include participarea la competiții?</span>
-            <i class="fa-solid fa-chevron-down"></i>
-          </button>
-          <div class="faq-answer" hidden>
-            <p>Planul Campioni include participarea gratuită la toate competițiile organizate de club. Pentru planurile Începător și Avansați, există taxe separate de înscriere, dar beneficiezi de preț redus ca membru.</p>
-          </div>
-        </div>
-        <!-- FAQ 5 -->
-        <div class="faq-item glass-card fade-in delay-400">
-          <button class="faq-question" aria-expanded="false">
-            <span>Există abonamente pentru copii sau familie?</span>
-            <i class="fa-solid fa-chevron-down"></i>
-          </button>
-          <div class="faq-answer" hidden>
-            <p>Da! Avem planuri speciale pentru copii (6–12 ani) la preț redus, precum și pachete de familie cu discounturi suplimentare. <a href="/contact" style="color: var(--color-gold); text-decoration: underline;">Contactați-ne</a> pentru detalii personalizate.</p>
-          </div>
+        <div class="plan-card-skeleton glass glass--card" aria-hidden="true">
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--md"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--lg"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--sm"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--xs"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--sm"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--xs"></div>
+          <div class="plan-card-skeleton__line plan-card-skeleton__line--sm"></div>
+          <div class="plan-card-skeleton__circle"></div>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- =======================================================================
-       CALL TO ACTION
-       ======================================================================= -->
-  <section class="section" id="pricing-cta" style="position: relative; overflow: hidden;">
-    <div style="position: absolute; inset: 0; z-index: 0;" aria-hidden="true">
-      <img src="images/pricing-hero.jpg" alt="" loading="lazy"
-           style="width: 100%; height: 100%; object-fit: cover; opacity: 0.2; filter: brightness(0.5);"
-           aria-hidden="true">
-    </div>
-    <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.65) 40%, rgba(10,10,10,0.65) 60%, rgba(10,10,10,0.95) 100%); z-index: 0;" aria-hidden="true"></div>
-    <div class="container" style="position: relative; z-index: 1;">
-      <div class="text-center fade-in">
-        <span class="section-label">Ești pregătit?</span>
-        <h2>Devino Următorul <span class="text-gold">Campion</span></h2>
-        <span class="gold-separator"></span>
-        <p class="text-gray" style="max-width: 600px; margin-left: auto; margin-right: auto; margin-bottom: var(--space-2xl); font-size: 1.05rem;">
-          Primul antrenament este gratuit. Nu ai nimic de pierdut și totul de câștigat. Hai să scriem împreună următorul capitol!
+      <!-- FAQ Teaser -->
+      <div class="pricing-faq-teaser glass reveal">
+        <h3 class="pricing-faq-teaser__title">Ai întrebări?</h3>
+        <p class="pricing-faq-teaser__text">
+          Nu ești sigur ce abonament ți se potrivește? Contactează-ne — suntem aici să te ajutăm să alegi cel mai bun plan pentru obiectivele tale.
         </p>
-        <div class="btn-group" style="justify-content: center;">
-          <a href="/contact" class="btn btn-primary btn-xl">
-            <i class="fa-solid fa-fire"></i> Înscrie-te Acum
-          </a>
-          <a href="/schedule" class="btn btn-outline btn-xl">
-            <i class="fa-solid fa-table-list"></i> Vezi Programul
-          </a>
-        </div>
-        <p style="margin-top: var(--space-xl); font-size: 0.85rem; color: var(--color-gray-300);">
-          <i class="fa-solid fa-phone" style="margin-right: 0.4rem; color: var(--color-gold);"></i>
-          <span data-contact="phone">+40 721 234 567</span>
-          &nbsp;&nbsp;|&nbsp;&nbsp;
-          <i class="fa-solid fa-envelope" style="margin-right: 0.4rem; color: var(--color-gold);"></i>
-          <span data-contact="email">contact@boxing-champions.com</span>
-        </p>
+        <a href="/#contact" class="btn btn--outline">Contactează-ne</a>
       </div>
     </div>
   </section>
 
-  <!-- =======================================================================
+  <!-- ============================================================
        FOOTER
-       ======================================================================= -->
-  <footer class="footer">
+  ============================================================ -->
+  <footer class="footer" role="contentinfo">
     <div class="container">
-      <div class="footer-grid">
+      <div class="footer__grid">
         <div>
-          <p class="footer-brand"><i class="fa-solid fa-glove" style="margin-right: 0.4rem;"></i> BOXING CHAMPIONS</p>
-          <p class="footer-about" data-setting="about_text">
-            Cel mai bun club de box din România. Tradiție, disciplină și excelență din 1998.
-          </p>
-          <div style="margin-top: var(--space-lg); display: flex; gap: var(--space-md);">
-            <a href="https://facebook.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-facebook-f"></i>
-            </a>
-            <a href="https://instagram.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-instagram"></i>
-            </a>
-            <a href="https://tiktok.com/@boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="TikTok" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-tiktok"></i>
-            </a>
+          <div class="footer__brand">
+            BOXING <span>CHAMPIONS</span>
           </div>
+          <p class="footer__desc">
+            Club de box de elită — forjăm campioni din 2013. Antrenamente, competiții și o comunitate unită prin pasiunea pentru box.
+          </p>
         </div>
+
         <div>
-          <h4>Navigare</h4>
-          <ul class="footer-links">
-            <li><a href="/">Acasă</a></li>
-            <li><a href="/events">Evenimente</a></li>
-            <li><a href="/schedule">Program</a></li>
-            <li><a href="/pricing">Abonamente</a></li>
-            <li><a href="/shop">Magazin</a></li>
-            <li><a href="/contact">Contact</a></li>
+          <h4 class="footer__heading">Link-uri Rapide</h4>
+          <ul class="footer__links">
+            <li><a href="/#despre">Despre Noi</a></li>
+            <li><a href="/#antrenori">Antrenori</a></li>
+            <li><a href="/schedule.html">Program</a></li>
+            <li><a href="/events.html">Evenimente</a></li>
+            <li><a href="/pricing.html">Abonamente</a></li>
           </ul>
         </div>
+
         <div>
-          <h4>Legal</h4>
-          <ul class="footer-links">
+          <h4 class="footer__heading">Utile</h4>
+          <ul class="footer__links">
+            <li><a href="/#contact">Contact</a></li>
             <li><a href="#">Termeni &amp; Condiții</a></li>
-            <li><a href="#">Politica de Confidențialitate</a></li>
+            <li><a href="#">Confidențialitate</a></li>
             <li><a href="#">GDPR</a></li>
-            <li><a href="#">ANPC</a></li>
+            <li><a href="#">FAQ</a></li>
           </ul>
         </div>
+
         <div>
-          <h4>Contact</h4>
-          <ul class="footer-links">
-            <li><i class="fa-solid fa-location-dot text-gold" style="margin-right: 0.4rem;"></i> <span data-contact="address">Strada Sportului nr. 10, București</span></li>
-            <li><i class="fa-solid fa-phone text-gold" style="margin-right: 0.4rem;"></i> <span data-contact="phone">+40 721 234 567</span></li>
-            <li><i class="fa-solid fa-envelope text-gold" style="margin-right: 0.4rem;"></i> <span data-contact="email">contact@boxing-champions.com</span></li>
+          <h4 class="footer__heading">Urmărește-ne</h4>
+          <ul class="footer__links">
+            <li><a href="#" target="_blank" rel="noopener noreferrer">Instagram</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">Facebook</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">YouTube</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">X / Twitter</a></li>
           </ul>
         </div>
       </div>
-      <div class="footer-bottom">
-        <p>&copy; 2026 Boxing Champions. Toate drepturile rezervate. <span style="color: var(--color-gold);">#BoxingChampions</span></p>
+
+      <div class="footer__bottom">
+        <p>&copy; <span id="current-year">2025</span> Boxing Champions. Toate drepturile rezervate. | Construit cu pasiune.</p>
       </div>
     </div>
   </footer>
 
-  <!-- =======================================================================
+  <!-- ============================================================
        SCRIPTS
-       ======================================================================= -->
-  <script src="js/main.js"></script>
-  <script nonce="%NONCE%">
-    (function() {
-      // ====================================================================
-      // PRICING TOGGLE: LUNAR / ANUAL
-      // ====================================================================
-      const toggle = document.getElementById('pricing-toggle');
-      if (!toggle) return;
+  ============================================================ -->
+  <!-- Utilitare partajate (particule, cursor, scroll-reveal, navbar, preloader, fetch) -->
+  <script src="/js/shared.js"></script>
 
-      function updatePricing(isYearly) {
-        toggle.setAttribute('aria-checked', isYearly ? 'true' : 'false');
-        document.querySelectorAll('.pricing-price').forEach(el => {
-          const monthly = el.getAttribute('data-monthly');
-          const yearly = el.getAttribute('data-yearly');
-          el.textContent = isYearly ? yearly : monthly;
-        });
-        document.querySelectorAll('.pricing-period').forEach(el => {
-          el.textContent = isYearly
-            ? el.getAttribute('data-yearly')
-            : el.getAttribute('data-monthly');
-        });
-        document.querySelectorAll('.pricing-yearly-info').forEach(el => {
-          el.style.display = isYearly ? 'block' : 'none';
-        });
+  <!-- Logica specifică paginii Abonamente -->
+  <script>
+  (function () {
+    'use strict';
+
+    /* ==================================================================
+       DOM Ready
+       ================================================================== */
+    function domReady(fn) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fn);
+      } else {
+        fn();
+      }
+    }
+
+    /* ==================================================================
+       HELPERS
+       ================================================================== */
+    var BC = window.BoxingChampions || {};
+    var fetchJSON = BC.fetchJSON;
+    var showToast = BC.showToast;
+    var refreshScrollReveal = BC.refreshScrollReveal;
+
+    async function safeFetch(url, opts) {
+      if (typeof fetchJSON === 'function') {
+        return fetchJSON(url, opts);
+      }
+      var res = await fetch(url, opts || {});
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }
+
+    /* ==================================================================
+       STATE
+       ================================================================== */
+    var state = {
+      plans: [],
+      billingMode: 'monthly', // 'monthly' | 'yearly'
+      loading: false,
+    };
+
+    /* ==================================================================
+       CONSTANTS
+       ================================================================== */
+    var YEARLY_DISCOUNT = 0.20;    // 20% reducere la plata anuală
+    var MONTHS_PER_YEAR = 12;
+
+    /* ==================================================================
+       HARDCODED FALLBACK DATA
+       ================================================================== */
+    var FALLBACK_PLANS = [
+      {
+        id: 1,
+        name: 'Începător',
+        slug: 'incepator',
+        description: 'Perfect pentru cei care descoperă boxul. Acces la antrenamente de bază și echipamentele sălii.',
+        price: 150,
+        duration_days: 30,
+        features: [
+          '3 antrenamente / săptămână',
+          'Acces la sala de forță',
+          'Evaluare fizică inițială',
+          'Acces la evenimentele clubului',
+          'Program de inițiere în box'
+        ],
+        is_popular: false,
+        is_active: true,
+        sort_order: 1
+      },
+      {
+        id: 2,
+        name: 'Avansat',
+        slug: 'avansat',
+        description: 'Pentru boxeri cu experiență care vor să își depășească limitele. Sparring și tehnici avansate.',
+        price: 250,
+        duration_days: 30,
+        features: [
+          '5 antrenamente / săptămână',
+          'Acces nelimitat la sală',
+          'Sparring supervizat',
+          'Plan nutrițional personalizat',
+          'Acces prioritar la evenimente',
+          'Consultanță tehnică 1-la-1',
+          'Reduceri la produse shop'
+        ],
+        is_popular: true,
+        is_active: true,
+        sort_order: 2
+      },
+      {
+        id: 3,
+        name: 'Profesionist',
+        slug: 'profesionist',
+        description: 'Program complet pentru sportivi de performanță. Pregătire competițională și suport dedicat.',
+        price: 400,
+        duration_days: 30,
+        features: [
+          'Antrenamente nelimitate',
+          'Acces 24/7 la sală',
+          'Sparring zilnic',
+          'Antrenor personal dedicat',
+          'Plan nutrițional & suplimente',
+          'Pregătire competițională',
+          'Acces gratuit la toate evenimentele',
+          'Echipament personalizat inclus',
+          'Analiză video & statistici'
+        ],
+        is_popular: false,
+        is_active: true,
+        sort_order: 3
+      }
+    ];
+
+    /* ==================================================================
+       CALCULATE PRICE
+       ================================================================== */
+
+    /**
+     * Calculează prețul afișat în funcție de modul de facturare.
+     *
+     * @param {number} monthlyPrice - Prețul lunar din API
+     * @param {string} billingMode  - 'monthly' | 'yearly'
+     * @returns {{ displayPrice: number, originalPrice: number|null, perPeriod: string }}
+     */
+    function calculatePrice(monthlyPrice, billingMode) {
+      if (billingMode === 'yearly') {
+        var yearlyTotal = monthlyPrice * MONTHS_PER_YEAR;
+        var discounted = yearlyTotal * (1 - YEARLY_DISCOUNT);
+        return {
+          displayPrice: Math.round(discounted),
+          originalPrice: yearlyTotal,
+          perPeriod: '/an'
+        };
       }
 
-      toggle.addEventListener('click', function() {
-        const isYearly = toggle.getAttribute('aria-checked') === 'true';
-        updatePricing(!isYearly);
-      });
+      return {
+        displayPrice: monthlyPrice,
+        originalPrice: null,
+        perPeriod: '/lună'
+      };
+    }
 
-      // Suport tastatură
-      toggle.addEventListener('keydown', function(e) {
-        if (e.key === ' ' || e.key === 'Enter') {
-          e.preventDefault();
-          const isYearly = toggle.getAttribute('aria-checked') === 'true';
-          updatePricing(!isYearly);
+    /* ==================================================================
+       BUILD PLAN CARD
+       ================================================================== */
+    function buildPlanCard(plan, billingMode) {
+      var name = escapeHTML(plan.name);
+      var description = escapeHTML(plan.description || '');
+      var isPopular = plan.is_popular;
+      var features = Array.isArray(plan.features) ? plan.features : [];
+
+      var priceCalc = calculatePrice(Number(plan.price), billingMode);
+
+      // Badge "Cel mai popular"
+      var popularBadgeHTML = isPopular
+        ? '<div class="plan-card__badge">Cel mai popular 🔥</div>'
+        : '';
+
+      // Ribbon "Reducere" pentru anual
+      var ribbonHTML = (billingMode === 'yearly')
+        ? '<div class="plan-card__ribbon">-20%</div>'
+        : '';
+
+      // Preț vechi (doar pentru modul anual)
+      var oldPriceHTML = (priceCalc.originalPrice !== null)
+        ? '<div class="plan-card__price--old">' + priceCalc.originalPrice.toLocaleString('ro-RO') + ' RON</div>'
+        : '';
+
+      // Features list
+      var featuresHTML = features.length > 0
+        ? '<ul class="plan-card__features">' +
+            features.map(function (f) {
+              return '<li>✅ ' + escapeHTML(f) + '</li>';
+            }).join('') +
+          '</ul>'
+        : '';
+
+      // CTA button
+      var ctaLabel = isPopular ? 'Alege Acest Plan' : 'Începe Acum';
+
+      return '<div class="plan-card glass glass--card reveal' +
+        (isPopular ? ' plan-card--popular' : '') + '">' +
+        popularBadgeHTML +
+        ribbonHTML +
+        '<h3 class="plan-card__name">' + name + '</h3>' +
+        (description ? '<p class="plan-card__description">' + description + '</p>' : '') +
+        oldPriceHTML +
+        '<div class="plan-card__price"><span class="currency">RON</span>' +
+          priceCalc.displayPrice.toLocaleString('ro-RO') +
+        '</div>' +
+        '<div class="plan-card__period">' + priceCalc.perPeriod + '</div>' +
+        featuresHTML +
+        '<div class="plan-card__cta">' +
+          '<a href="/#contact" class="btn ' + (isPopular ? 'btn--primary' : 'btn--outline') + '">' + ctaLabel + '</a>' +
+        '</div>' +
+      '</div>';
+    }
+
+    /* ==================================================================
+       BUILD EMPTY STATE
+       ================================================================== */
+    function buildEmptyState() {
+      return '<div class="pricing-empty glass glass--card reveal">' +
+        '<div class="pricing-empty__icon" aria-hidden="true">🥊</div>' +
+        '<h3 class="pricing-empty__title">Abonamentele se pregătesc</h3>' +
+        '<p class="pricing-empty__text">Momentan nu sunt abonamente disponibile. Revino în curând sau contactează-ne direct pentru oferte personalizate.</p>' +
+        '<a href="/#contact" class="btn btn--outline">Contactează-ne</a>' +
+      '</div>';
+    }
+
+    /* ==================================================================
+       BUILD SKELETONS
+       ================================================================== */
+    function buildSkeletons(count) {
+      count = count || 3;
+      var html = '';
+      for (var i = 0; i < count; i++) {
+        html += '<div class="plan-card-skeleton glass glass--card" aria-hidden="true">' +
+          '<div class="plan-card-skeleton__line plan-card-skeleton__line--md"></div>' +
+          '<div class="plan-card-skeleton__line plan-card-skeleton__line--lg"></div>' +
+          '<div class="plan-card-skeleton__line plan-card-skeleton__line--sm"></div>' +
+          '<div class="plan-card-skeleton__line plan-card-skeleton__line--xs"></div>' +
+          '<div class="plan-card-skeleton__line plan-card-skeleton__line--sm"></div>' +
+          '<div class="plan-card-skeleton__line plan-card-skeleton__line--xs"></div>' +
+          '<div class="plan-card-skeleton__line plan-card-skeleton__line--sm"></div>' +
+          '<div class="plan-card-skeleton__circle"></div>' +
+        '</div>';
+      }
+      return html;
+    }
+
+    /* ==================================================================
+       RENDER PLANS
+       ================================================================== */
+    function renderPlans(plans) {
+      var grid = document.getElementById('pricing-grid');
+      if (!grid) return;
+
+      if (!plans || plans.length === 0) {
+        grid.innerHTML = buildEmptyState();
+        if (typeof refreshScrollReveal === 'function') refreshScrollReveal();
+        return;
+      }
+
+      grid.innerHTML = plans.map(function (plan) {
+        return buildPlanCard(plan, state.billingMode);
+      }).join('');
+
+      if (typeof refreshScrollReveal === 'function') refreshScrollReveal();
+    }
+
+    /* ==================================================================
+       LOAD PLANS FROM API
+       ================================================================== */
+    async function loadPlans() {
+      var grid = document.getElementById('pricing-grid');
+      if (!grid) return;
+
+      // Show skeletons
+      grid.innerHTML = buildSkeletons(3);
+
+      state.loading = true;
+
+      try {
+        var response = await safeFetch('/api/plans?sort=sort_order&is_active=true');
+        var plans = response.data || [];
+
+        if (plans.length === 0) {
+          console.warn('[pricing] API returned empty plans array, using fallback.');
+          plans = FALLBACK_PLANS;
         }
-      });
 
-      // ====================================================================
-      // FAQ ACCORDION
-      // ====================================================================
-      document.querySelectorAll('.faq-question').forEach(btn => {
-        btn.addEventListener('click', function() {
-          const answer = this.nextElementSibling;
-          const expanded = this.getAttribute('aria-expanded') === 'true';
-          this.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-          answer.hidden = expanded;
-        });
-      });
-    })();
-  </script>
+        state.plans = plans;
+        renderPlans(plans);
+      } catch (err) {
+        console.error('[pricing] API error:', err);
 
-  <!-- =======================================================================
-       DYNAMIC PRICING CARDS — fetch /api/subscriptions
-       ======================================================================= -->
-  <script nonce="%NONCE%">
-    (function() {
-      const cards = document.querySelectorAll('.pricing-card');
-      if (!cards || cards.length === 0) return;
+        // Use fallback data
+        state.plans = FALLBACK_PLANS;
+        renderPlans(FALLBACK_PLANS);
 
-      // ── Fallback hardcodat (identic cu HTML-ul static) ──────────────
-      var FALLBACK_PLANS = [
-        {
-          id: "incepator",
-          name: "Începător",
-          desc: "Perfect pentru cei care descoperă boxul",
-          icon: "fa-person-walking",
-          iconExtraClass: "",
-          monthly: "150",
-          yearly: "1440",
-          monthlyEquiv: "120 RON/lună",
-          periodMonthly: "/lună",
-          periodYearly: "/an",
-          popular: false,
-          popularBadge: "",
-          btnClass: "btn-outline",
-          features: [
-            { text: "3 antrenamente / săptămână", enabled: true },
-            { text: "Acces sală în orele de program", enabled: true },
-            { text: "Evaluare fizică inițială", enabled: true },
-            { text: "Program flexibil Luni–Vineri", enabled: true },
-            { text: "Acces vestiare și dușuri", enabled: true },
-            { text: "Antrenor personal", enabled: false },
-            { text: "Acces prioritar evenimente", enabled: false },
-            { text: "Reducere magazin", enabled: false }
-          ]
-        },
-        {
-          id: "avansati",
-          name: "Avansați",
-          desc: "Pentru sportivii ambițioși care vor progres",
-          icon: "fa-fire",
-          iconExtraClass: "pricing-icon-popular",
-          monthly: "250",
-          yearly: "2400",
-          monthlyEquiv: "200 RON/lună",
-          periodMonthly: "/lună",
-          periodYearly: "/an",
-          popular: true,
-          popularBadge: '<i class="fa-solid fa-star"></i> Cel mai popular',
-          btnClass: "btn-primary",
-          features: [
-            { text: "Antrenamente <strong>nelimitate</strong>", enabled: true },
-            { text: "Acces sală program extins", enabled: true },
-            { text: "Evaluare fizică lunară", enabled: true },
-            { text: "2 sesiuni 1-la-1 / lună", enabled: true },
-            { text: "Acces prioritar la evenimente", enabled: true },
-            { text: "Program flexibil complet", enabled: true },
-            { text: "Reducere 10% magazin", enabled: true },
-            { text: "Antrenor personal dedicat", enabled: false }
-          ]
-        },
-        {
-          id: "campioni",
-          name: "Campioni",
-          desc: "Experiența supremă pentru adevărații luptători",
-          icon: "fa-crown",
-          iconExtraClass: "pricing-icon-champion",
-          monthly: "400",
-          yearly: "3840",
-          monthlyEquiv: "320 RON/lună",
-          periodMonthly: "/lună",
-          periodYearly: "/an",
-          popular: false,
-          popularBadge: "",
-          btnClass: "btn-outline",
-          features: [
-            { text: "Antrenamente <strong>nelimitate</strong>", enabled: true },
-            { text: "Acces sală <strong>24/7</strong>", enabled: true },
-            { text: "Antrenor personal dedicat", enabled: true },
-            { text: "Plan nutrițional personalizat", enabled: true },
-            { text: "Evaluare fizică săptămânală", enabled: true },
-            { text: "Participare gratuită la competiții", enabled: true },
-            { text: "Echipament complet inclus", enabled: true },
-            { text: "Reducere 20% magazin", enabled: true }
-          ]
+        if (typeof showToast === 'function') {
+          showToast('Se afișează datele offline. Conectează-te la server pentru informații actualizate.', 'info', 4000);
         }
-      ];
+      } finally {
+        state.loading = false;
+      }
+    }
 
-      // ── Funcție care populează un card pe baza unui obiect plan ────
-      function populateCard(cardEl, plan, index) {
-        // Nume plan
-        var nameEl = cardEl.querySelector('.pricing-plan-name');
-        if (nameEl) nameEl.textContent = plan.name;
+    /* ==================================================================
+       TOGGLE HANDLING
+       ================================================================== */
+    function initToggle() {
+      var switchEl = document.getElementById('toggle-switch');
+      var labelMonthly = document.getElementById('label-monthly');
+      var labelYearly = document.getElementById('label-yearly');
+      var saveBadge = document.getElementById('toggle-save-badge');
 
-        // Descriere
-        var descEl = cardEl.querySelector('.pricing-plan-desc');
-        if (descEl) descEl.textContent = plan.desc;
+      if (!switchEl || !labelMonthly || !labelYearly) return;
 
-        // Icon
-        var iconEl = cardEl.querySelector('.pricing-icon');
-        if (iconEl) {
-          iconEl.className = 'pricing-icon';
-          if (plan.iconExtraClass) {
-            iconEl.classList.add(plan.iconExtraClass);
-          }
-          var iEl = iconEl.querySelector('i');
-          if (iEl) {
-            iEl.className = 'fa-solid ' + plan.icon;
-          }
-        }
+      function setBillingMode(mode) {
+        var isYearly = mode === 'yearly';
+        state.billingMode = mode;
 
-        // Badge "Cel mai popular"
-        var existingBadge = cardEl.querySelector('.pricing-popular-badge');
-        if (plan.popular) {
-          if (!existingBadge) {
-            var badge = document.createElement('span');
-            badge.className = 'pricing-popular-badge';
-            badge.innerHTML = plan.popularBadge;
-            var inner = cardEl.querySelector('.tilt-card-inner');
-            if (inner) inner.insertBefore(badge, inner.firstChild);
-          }
-          // Adaugă clasă pe card
-          cardEl.classList.add('pricing-card-popular');
+        // Update switch
+        if (isYearly) {
+          switchEl.classList.add('pricing__toggle-switch--yearly');
+          switchEl.setAttribute('aria-checked', 'true');
         } else {
-          if (existingBadge) existingBadge.remove();
-          cardEl.classList.remove('pricing-card-popular');
+          switchEl.classList.remove('pricing__toggle-switch--yearly');
+          switchEl.setAttribute('aria-checked', 'false');
         }
 
-        // Preț
-        var priceEl = cardEl.querySelector('.pricing-price');
-        if (priceEl) {
-          priceEl.setAttribute('data-monthly', plan.monthly);
-          priceEl.setAttribute('data-yearly', plan.yearly);
-          // Respectă toggle-ul curent
-          var toggleEl = document.getElementById('pricing-toggle');
-          var isYearly = toggleEl && toggleEl.getAttribute('aria-checked') === 'true';
-          priceEl.textContent = isYearly ? plan.yearly : plan.monthly;
+        // Update labels
+        if (isYearly) {
+          labelMonthly.classList.remove('pricing__toggle-label--active');
+          labelMonthly.setAttribute('aria-checked', 'false');
+          labelYearly.classList.add('pricing__toggle-label--active');
+          labelYearly.setAttribute('aria-checked', 'true');
+        } else {
+          labelYearly.classList.remove('pricing__toggle-label--active');
+          labelYearly.setAttribute('aria-checked', 'false');
+          labelMonthly.classList.add('pricing__toggle-label--active');
+          labelMonthly.setAttribute('aria-checked', 'true');
         }
 
-        // Perioadă
-        var periodEl = cardEl.querySelector('.pricing-period');
-        if (periodEl) {
-          periodEl.setAttribute('data-monthly', plan.periodMonthly);
-          periodEl.setAttribute('data-yearly', plan.periodYearly);
-          var toggleEl2 = document.getElementById('pricing-toggle');
-          var isYearly2 = toggleEl2 && toggleEl2.getAttribute('aria-checked') === 'true';
-          periodEl.textContent = isYearly2 ? plan.periodYearly : plan.periodMonthly;
+        // Show/hide save badge
+        if (saveBadge) {
+          saveBadge.style.display = isYearly ? 'inline-block' : 'none';
         }
 
-        // Echivalent lunar (afișat doar pe yearly)
-        var equivEl = cardEl.querySelector('.pricing-monthly-equiv');
-        if (equivEl) {
-          equivEl.textContent = plan.monthlyEquiv;
-        }
-
-        // Features
-        var featuresList = cardEl.querySelector('.pricing-features');
-        if (featuresList) {
-          featuresList.innerHTML = '';
-          plan.features.forEach(function(f) {
-            var li = document.createElement('li');
-            if (f.enabled) {
-              li.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + f.text;
-            } else {
-              li.className = 'feature-disabled';
-              li.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> ' + f.text;
-            }
-            featuresList.appendChild(li);
-          });
-        }
-
-        // Buton CTA
-        var btn = cardEl.querySelector('.pricing-card-footer .btn');
-        if (btn) {
-          btn.className = 'btn ' + plan.btnClass + ' btn-block';
+        // Re-render plans with new prices
+        if (state.plans.length > 0) {
+          renderPlans(state.plans);
         }
       }
 
-      // ── Populare din API sau fallback ──────────────────────────────
-      function populateFromData(plans) {
-        for (var i = 0; i < cards.length && i < plans.length; i++) {
-          populateCard(cards[i], plans[i], i);
-        }
-      }
+      // Click pe switch
+      switchEl.addEventListener('click', function () {
+        var newMode = state.billingMode === 'monthly' ? 'yearly' : 'monthly';
+        setBillingMode(newMode);
+      });
 
-      fetch('/api/subscriptions')
-        .then(function(res) {
-          if (!res.ok) throw new Error('API status ' + res.status);
-          return res.json();
-        })
-        .then(function(data) {
-          if (Array.isArray(data) && data.length > 0) {
-            // Normalizare date API → format intern
-            var apiPlans = data.map(function(item, idx) {
-              return {
-                id: item.id || ('plan-' + idx),
-                name: item.name || FALLBACK_PLANS[idx].name,
-                desc: item.description || item.desc || FALLBACK_PLANS[idx].desc,
-                icon: item.icon || FALLBACK_PLANS[idx].icon,
-                iconExtraClass: item.icon_extra_class || item.iconExtraClass || FALLBACK_PLANS[idx].iconExtraClass,
-                monthly: String(item.price_monthly || item.monthly || FALLBACK_PLANS[idx].monthly),
-                yearly: String(item.price_yearly || item.yearly || FALLBACK_PLANS[idx].yearly),
-                monthlyEquiv: item.monthly_equivalent || item.monthlyEquiv || FALLBACK_PLANS[idx].monthlyEquiv,
-                periodMonthly: item.period_monthly || item.periodMonthly || FALLBACK_PLANS[idx].periodMonthly,
-                periodYearly: item.period_yearly || item.periodYearly || FALLBACK_PLANS[idx].periodYearly,
-                popular: typeof item.popular === 'boolean' ? item.popular : FALLBACK_PLANS[idx].popular,
-                popularBadge: item.popular_badge || item.popularBadge || FALLBACK_PLANS[idx].popularBadge,
-                btnClass: item.btn_class || item.btnClass || FALLBACK_PLANS[idx].btnClass,
-                features: Array.isArray(item.features) ? item.features.map(function(f) {
-                  if (typeof f === 'string') return { text: f, enabled: true };
-                  return { text: f.text || f.name || '', enabled: f.enabled !== false };
-                }) : FALLBACK_PLANS[idx].features
-              };
-            });
-            populateFromData(apiPlans);
-          } else {
-            populateFromData(FALLBACK_PLANS);
-          }
-        })
-        .catch(function(err) {
-          console.warn('[pricing] API /api/subscriptions indisponibil, utilizare date hardcodate. (' + err.message + ')');
-          populateFromData(FALLBACK_PLANS);
-        });
-    })();
+      // Keyboard support for switch
+      switchEl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          var newMode = state.billingMode === 'monthly' ? 'yearly' : 'monthly';
+          setBillingMode(newMode);
+        }
+      });
+
+      // Click pe etichete
+      labelMonthly.addEventListener('click', function () {
+        if (state.billingMode !== 'monthly') {
+          setBillingMode('monthly');
+        }
+      });
+
+      labelMonthly.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setBillingMode('monthly');
+        }
+      });
+
+      labelYearly.addEventListener('click', function () {
+        if (state.billingMode !== 'yearly') {
+          setBillingMode('yearly');
+        }
+      });
+
+      labelYearly.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setBillingMode('yearly');
+        }
+      });
+    }
+
+    /* ==================================================================
+       UTILS
+       ================================================================== */
+    function escapeHTML(str) {
+      if (!str) return '';
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+
+    /* ==================================================================
+       SET CURRENT YEAR
+       ================================================================== */
+    function setCurrentYear() {
+      var el = document.getElementById('current-year');
+      if (el) el.textContent = new Date().getFullYear();
+    }
+
+    /* ==================================================================
+       INIT ALL
+       ================================================================== */
+    function init() {
+      setCurrentYear();
+      initToggle();
+      loadPlans();
+    }
+
+    domReady(init);
+  })();
   </script>
+
 </body>
 </html>

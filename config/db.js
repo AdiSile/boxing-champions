@@ -1,312 +1,213 @@
-'use strict';
+const Database = require('better-sqlite3');
+const path = require('path');
+const bcrypt = require('bcrypt');
 
-// ---------------------------------------------------------------------------
-// config/db.js — Database Configuration Module
-//
-// Re-exportă din modulul rădăcină db.js și asigură crearea tabelelor necesare.
-// Modulul rădăcină db.js se ocupă de:
-//   - Conectarea singleton la baza de date SQLite
-//   - Crearea schemei (toate tabelele)
-//   - Seed-ul datelor hardcodate (dacă tabelele sunt goale)
-//   - Crearea tabelului admins și seed-ul admin-ului default
-//
-// Acest modul oferă un singur punct de intrare pentru configurarea bazei
-// de date și expune o funcție suplimentară ensureTables() pentru
-// verificarea existenței tabelelor.
-// ---------------------------------------------------------------------------
+const DB_PATH = path.join(__dirname, '..', 'database.sqlite');
 
-const db = require('../db');
+let db;
 
-// ---------------------------------------------------------------------------
-// Lista tabelelor necesare aplicației
-// ---------------------------------------------------------------------------
-const REQUIRED_TABLES = [
-  'settings',
-  'coaches',
-  'events',
-  'event_photos',
-  'schedule',
-  'subscriptions',
-  'products',
-  'orders',
-  'messages',
-  'achievements',
-  'admins',
-  'seo',
-];
-
-// ---------------------------------------------------------------------------
-// Verifică existența tuturor tabelelor necesare
-// ---------------------------------------------------------------------------
-function ensureTables() {
-  const database = db.getDb();
-
-  const existing = database
-    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
-    .all()
-    .map((row) => row.name);
-
-  const missing = REQUIRED_TABLES.filter((t) => !existing.includes(t));
-
-  if (missing.length > 0) {
-    const msg = `[config/db] Tabele lipsă: ${missing.join(', ')}. Se reinițializează...`;
-    console.warn(msg);
-
-    // Re-execută schema și seed-ul prin re-importarea inițializării
-    // Forțăm recrearea tabelelor lipsă
-    database.exec(`
-      CREATE TABLE IF NOT EXISTS settings (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        key         TEXT    NOT NULL UNIQUE,
-        value       TEXT    NOT NULL DEFAULT '',
-        updated_at  TEXT    NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE TABLE IF NOT EXISTS coaches (
-        id              INTEGER PRIMARY KEY AUTOINCREMENT,
-        name            TEXT    NOT NULL,
-        specialization  TEXT    NOT NULL DEFAULT '',
-        certifications  TEXT    NOT NULL DEFAULT '',
-        photo           TEXT    NOT NULL DEFAULT '',
-        quote           TEXT    NOT NULL DEFAULT '',
-        active          INTEGER NOT NULL DEFAULT 1,
-        created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
-        updated_at      TEXT    NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE TABLE IF NOT EXISTS events (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        title       TEXT    NOT NULL,
-        event_date  TEXT    NOT NULL,
-        location    TEXT    NOT NULL DEFAULT '',
-        description TEXT    NOT NULL DEFAULT '',
-        active      INTEGER NOT NULL DEFAULT 1,
-        created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
-        updated_at  TEXT    NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE TABLE IF NOT EXISTS event_photos (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        event_id    INTEGER NOT NULL,
-        url         TEXT    NOT NULL DEFAULT '',
-        caption     TEXT    NOT NULL DEFAULT '',
-        sort_order  INTEGER NOT NULL DEFAULT 0,
-        FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
-      );
-
-      CREATE TABLE IF NOT EXISTS schedule (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        day         TEXT    NOT NULL,
-        start_time  TEXT    NOT NULL,
-        end_time    TEXT    NOT NULL,
-        category    TEXT    NOT NULL DEFAULT '',
-        gender      TEXT    NOT NULL DEFAULT 'Mixt',
-        active      INTEGER NOT NULL DEFAULT 1,
-        created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
-        updated_at  TEXT    NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE TABLE IF NOT EXISTS subscriptions (
-        id              INTEGER PRIMARY KEY AUTOINCREMENT,
-        name            TEXT    NOT NULL,
-        monthly_price   REAL    NOT NULL DEFAULT 0,
-        yearly_price    REAL    NOT NULL DEFAULT 0,
-        benefits        TEXT    NOT NULL DEFAULT '[]',
-        highlighted     INTEGER NOT NULL DEFAULT 0,
-        active          INTEGER NOT NULL DEFAULT 1,
-        created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
-        updated_at      TEXT    NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE TABLE IF NOT EXISTS products (
-        id                INTEGER PRIMARY KEY AUTOINCREMENT,
-        name              TEXT    NOT NULL,
-        description       TEXT    NOT NULL DEFAULT '',
-        price             REAL    NOT NULL DEFAULT 0,
-        old_price         REAL    DEFAULT NULL,
-        discount_label    TEXT    NOT NULL DEFAULT '',
-        contextual_label  TEXT    NOT NULL DEFAULT '',
-        category          TEXT    NOT NULL DEFAULT '',
-        image             TEXT    NOT NULL DEFAULT '',
-        stock             INTEGER NOT NULL DEFAULT 0,
-        active            INTEGER NOT NULL DEFAULT 1,
-        created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
-        updated_at        TEXT    NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE TABLE IF NOT EXISTS orders (
-        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_name       TEXT    NOT NULL DEFAULT '',
-        customer_email      TEXT    NOT NULL DEFAULT '',
-        customer_phone      TEXT    NOT NULL DEFAULT '',
-        items               TEXT    NOT NULL DEFAULT '[]',
-        total               REAL    NOT NULL DEFAULT 0,
-        status              TEXT    NOT NULL DEFAULT 'pending',
-        stripe_session_id   TEXT    NOT NULL DEFAULT '',
-        created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
-        updated_at          TEXT    NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE TABLE IF NOT EXISTS messages (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        name        TEXT    NOT NULL DEFAULT '',
-        email       TEXT    NOT NULL DEFAULT '',
-        phone       TEXT    NOT NULL DEFAULT '',
-        subject     TEXT    NOT NULL DEFAULT '',
-        message     TEXT    NOT NULL DEFAULT '',
-        is_read     INTEGER NOT NULL DEFAULT 0,
-        created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE TABLE IF NOT EXISTS achievements (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        key         TEXT    NOT NULL UNIQUE,
-        value       INTEGER NOT NULL DEFAULT 0,
-        label       TEXT    NOT NULL DEFAULT '',
-        updated_at  TEXT    NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE TABLE IF NOT EXISTS admins (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        email       TEXT    NOT NULL UNIQUE,
-        password    TEXT    NOT NULL,
-        created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE TABLE IF NOT EXISTS seo (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        page        TEXT    NOT NULL UNIQUE,
-        title       TEXT    NOT NULL DEFAULT '',
-        description TEXT    NOT NULL DEFAULT '',
-        keywords    TEXT    NOT NULL DEFAULT '',
-        og_image    TEXT    NOT NULL DEFAULT '',
-        updated_at  TEXT    NOT NULL DEFAULT (datetime('now'))
-      );
-    `);
+function getDb() {
+  if (!db) {
+    db = new Database(DB_PATH);
+    db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON');
   }
-
-  return {
-    total: REQUIRED_TABLES.length,
-    existing,
-    missing,
-    allPresent: missing.length === 0,
-  };
+  return db;
 }
 
-// ---------------------------------------------------------------------------
-// Inițializare: verifică tabelele la primul import
-// (modulul rădăcină ../db face deja schema + seed la require)
-// ---------------------------------------------------------------------------
-let tablesChecked = false;
+function initializeDatabase() {
+  const db = getDb();
 
-function initConfig() {
-  if (!tablesChecked) {
-    const result = ensureTables();
-    if (!result.allPresent) {
-      console.warn(`[config/db] ${result.missing.length} tabel(e) recreate.`);
-    }
-    tablesChecked = true;
+  // ── settings ──────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS settings (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      key         TEXT    NOT NULL UNIQUE,
+      value       TEXT    NOT NULL,
+      description TEXT    DEFAULT '',
+      updated_at  TEXT    DEFAULT (datetime('now'))
+    );
+  `);
+
+  // ── users ─────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      name          TEXT    NOT NULL,
+      email         TEXT    NOT NULL UNIQUE,
+      password      TEXT    NOT NULL,
+      role          TEXT    NOT NULL DEFAULT 'user' CHECK(role IN ('admin','user','coach')),
+      avatar        TEXT    DEFAULT NULL,
+      phone         TEXT    DEFAULT NULL,
+      is_active     INTEGER NOT NULL DEFAULT 1,
+      email_verified_at TEXT DEFAULT NULL,
+      remember_token    TEXT DEFAULT NULL,
+      created_at    TEXT    DEFAULT (datetime('now')),
+      updated_at    TEXT    DEFAULT (datetime('now'))
+    );
+  `);
+
+  // ── coaches ───────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS coaches (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id       INTEGER DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
+      name          TEXT    NOT NULL,
+      slug          TEXT    NOT NULL UNIQUE,
+      title         TEXT    DEFAULT NULL,
+      bio           TEXT    DEFAULT NULL,
+      specialties   TEXT    DEFAULT '[]',
+      certifications TEXT   DEFAULT '[]',
+      photo         TEXT    DEFAULT NULL,
+      email         TEXT    DEFAULT NULL,
+      phone         TEXT    DEFAULT NULL,
+      social_links  TEXT    DEFAULT '{}',
+      is_active     INTEGER NOT NULL DEFAULT 1,
+      sort_order    INTEGER DEFAULT 0,
+      created_at    TEXT    DEFAULT (datetime('now')),
+      updated_at    TEXT    DEFAULT (datetime('now'))
+    );
+  `);
+
+  // ── events ────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS events (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      title         TEXT    NOT NULL,
+      slug          TEXT    NOT NULL UNIQUE,
+      description   TEXT    DEFAULT NULL,
+      type          TEXT    DEFAULT 'general' CHECK(type IN ('seminar','workshop','camp','competition','general')),
+      location      TEXT    DEFAULT NULL,
+      start_date    TEXT    NOT NULL,
+      end_date      TEXT    DEFAULT NULL,
+      time          TEXT    DEFAULT NULL,
+      price         REAL    DEFAULT 0,
+      capacity      INTEGER DEFAULT NULL,
+      image         TEXT    DEFAULT NULL,
+      is_published  INTEGER NOT NULL DEFAULT 1,
+      created_at    TEXT    DEFAULT (datetime('now')),
+      updated_at    TEXT    DEFAULT (datetime('now'))
+    );
+  `);
+
+  // ── schedule ──────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS schedule (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      coach_id      INTEGER DEFAULT NULL REFERENCES coaches(id) ON DELETE SET NULL,
+      title         TEXT    NOT NULL,
+      day_of_week   INTEGER NOT NULL CHECK(day_of_week BETWEEN 0 AND 6),
+      start_time    TEXT    NOT NULL,
+      end_time      TEXT    NOT NULL,
+      location      TEXT    DEFAULT NULL,
+      max_participants INTEGER DEFAULT NULL,
+      is_active     INTEGER NOT NULL DEFAULT 1,
+      created_at    TEXT    DEFAULT (datetime('now')),
+      updated_at    TEXT    DEFAULT (datetime('now'))
+    );
+  `);
+
+  // ── plans ─────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS plans (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      name          TEXT    NOT NULL,
+      slug          TEXT    NOT NULL UNIQUE,
+      description   TEXT    DEFAULT NULL,
+      price         REAL    NOT NULL,
+      duration_days INTEGER NOT NULL DEFAULT 30,
+      features      TEXT    DEFAULT '[]',
+      is_popular    INTEGER NOT NULL DEFAULT 0,
+      is_active     INTEGER NOT NULL DEFAULT 1,
+      sort_order    INTEGER DEFAULT 0,
+      created_at    TEXT    DEFAULT (datetime('now')),
+      updated_at    TEXT    DEFAULT (datetime('now'))
+    );
+  `);
+
+  // ── products ──────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS products (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      name          TEXT    NOT NULL,
+      slug          TEXT    NOT NULL UNIQUE,
+      description   TEXT    DEFAULT NULL,
+      price         REAL    NOT NULL,
+      category      TEXT    DEFAULT 'general',
+      image         TEXT    DEFAULT NULL,
+      stock         INTEGER DEFAULT NULL,
+      is_active     INTEGER NOT NULL DEFAULT 1,
+      created_at    TEXT    DEFAULT (datetime('now')),
+      updated_at    TEXT    DEFAULT (datetime('now'))
+    );
+  `);
+
+  // ── orders ────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id       INTEGER DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
+      order_number  TEXT    NOT NULL UNIQUE,
+      status        TEXT    NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','confirmed','processing','completed','cancelled','refunded')),
+      total_amount  REAL    NOT NULL DEFAULT 0,
+      items         TEXT    NOT NULL DEFAULT '[]',
+      billing_name  TEXT    DEFAULT NULL,
+      billing_email TEXT    DEFAULT NULL,
+      billing_phone TEXT    DEFAULT NULL,
+      notes         TEXT    DEFAULT NULL,
+      paid_at       TEXT    DEFAULT NULL,
+      created_at    TEXT    DEFAULT (datetime('now')),
+      updated_at    TEXT    DEFAULT (datetime('now'))
+    );
+  `);
+
+  // ── contact_messages ─────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      name          TEXT    NOT NULL,
+      email         TEXT    NOT NULL,
+      subject       TEXT    DEFAULT NULL,
+      message       TEXT    NOT NULL,
+      is_read       INTEGER NOT NULL DEFAULT 0,
+      replied_at    TEXT    DEFAULT NULL,
+      created_at    TEXT    DEFAULT (datetime('now'))
+    );
+  `);
+
+  // ── Seed: default settings ────────────────────────────────
+  const seedSettings = db.prepare(`
+    INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)
+  `);
+
+  seedSettings.run('site_name', 'Everything Claude Code', 'Site title');
+  seedSettings.run('site_description', 'A modern full-stack application', 'Meta description');
+  seedSettings.run('admin_email', 'admin@example.com', 'Administrator email');
+  seedSettings.run('timezone', 'Europe/Bucharest', 'Default timezone');
+  seedSettings.run('locale', 'ro', 'Default locale');
+  seedSettings.run('items_per_page', '12', 'Pagination limit');
+  seedSettings.run('smtp_host', '', 'SMTP server host');
+  seedSettings.run('smtp_port', '587', 'SMTP port');
+  seedSettings.run('smtp_user', '', 'SMTP username');
+  seedSettings.run('smtp_pass', '', 'SMTP password');
+  seedSettings.run('maintenance_mode', '0', 'Site under maintenance');
+
+  // ── Seed: admin user ─────────────────────────────────────
+  const existingAdmin = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@example.com');
+  if (!existingAdmin) {
+    const saltRounds = 10;
+    const hashedPassword = bcrypt.hashSync('Admin123!', saltRounds);
+
+    db.prepare(`
+      INSERT INTO users (name, email, password, role, is_active, email_verified_at)
+      VALUES (?, ?, ?, 'admin', 1, datetime('now'))
+    `).run('Administrator', 'admin@example.com', hashedPassword);
+
+    console.log('[DB] Admin user seeded: admin@example.com / Admin123!');
   }
+
+  console.log('[DB] Database initialized successfully.');
+  return db;
 }
 
-// Execută verificarea o singură dată
-initConfig();
-
-// ---------------------------------------------------------------------------
-// Re-exportă toate funcțiile din modulul rădăcină db.js
-// ---------------------------------------------------------------------------
-module.exports = {
-  // --- Funcții adăugate de config/db ---
-  ensureTables,
-  getRequiredTables: () => [...REQUIRED_TABLES],
-
-  // --- Re-export din db.js ---
-  getDb: db.getDb,
-
-  // Settings
-  getAllSettings: db.getAllSettings,
-  getSetting: db.getSetting,
-  upsertSetting: db.upsertSetting,
-  updateSettingsBatch: db.updateSettingsBatch,
-
-  // Coaches
-  getAllCoaches: db.getAllCoaches,
-  getActiveCoaches: db.getActiveCoaches,
-  getCoachById: db.getCoachById,
-  createCoach: db.createCoach,
-  updateCoach: db.updateCoach,
-  deleteCoach: db.deleteCoach,
-  toggleCoachActive: db.toggleCoachActive,
-
-  // Events
-  getAllEvents: db.getAllEvents,
-  getActiveEvents: db.getActiveEvents,
-  getEventById: db.getEventById,
-  createEvent: db.createEvent,
-  updateEvent: db.updateEvent,
-  deleteEvent: db.deleteEvent,
-  toggleEventActive: db.toggleEventActive,
-
-  // Event Photos
-  addEventPhoto: db.addEventPhoto,
-  updateEventPhoto: db.updateEventPhoto,
-  deleteEventPhoto: db.deleteEventPhoto,
-  getEventPhotos: db.getEventPhotos,
-
-  // Schedule
-  getAllSchedule: db.getAllSchedule,
-  getActiveSchedule: db.getActiveSchedule,
-  getScheduleById: db.getScheduleById,
-  createSchedule: db.createSchedule,
-  updateSchedule: db.updateSchedule,
-  deleteSchedule: db.deleteSchedule,
-  toggleScheduleActive: db.toggleScheduleActive,
-
-  // Subscriptions
-  getAllSubscriptions: db.getAllSubscriptions,
-  getActiveSubscriptions: db.getActiveSubscriptions,
-  getSubscriptionById: db.getSubscriptionById,
-  createSubscription: db.createSubscription,
-  updateSubscription: db.updateSubscription,
-  deleteSubscription: db.deleteSubscription,
-  toggleSubscriptionActive: db.toggleSubscriptionActive,
-
-  // Products
-  getAllProducts: db.getAllProducts,
-  getActiveProducts: db.getActiveProducts,
-  getProductsByCategory: db.getProductsByCategory,
-  getProductById: db.getProductById,
-  createProduct: db.createProduct,
-  updateProduct: db.updateProduct,
-  deleteProduct: db.deleteProduct,
-  toggleProductActive: db.toggleProductActive,
-
-  // Orders
-  getAllOrders: db.getAllOrders,
-  getOrderById: db.getOrderById,
-  createOrder: db.createOrder,
-  updateOrderStatus: db.updateOrderStatus,
-  deleteOrder: db.deleteOrder,
-
-  // Messages
-  getAllMessages: db.getAllMessages,
-  getUnreadMessages: db.getUnreadMessages,
-  getMessageById: db.getMessageById,
-  createMessage: db.createMessage,
-  markMessageRead: db.markMessageRead,
-  deleteMessage: db.deleteMessage,
-
-  // Achievements
-  getAllAchievements: db.getAllAchievements,
-  getAchievement: db.getAchievement,
-  upsertAchievement: db.upsertAchievement,
-
-  // SEO
-  getAllSeo: db.getAllSeo,
-  getSeoByPage: db.getSeoByPage,
-  upsertSeo: db.upsertSeo,
-  updateSeoBatch: db.updateSeoBatch,
-
-  // Admin
-  getAdminByEmail: db.getAdminByEmail,
-};
+module.exports = { getDb, initializeDatabase };

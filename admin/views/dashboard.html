@@ -1,835 +1,151 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panou Administrare - Boxing Champions</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        :root {
-            --bg-dark: #0a0a0a;
-            --bg-panel: #111111;
-            --gold: #d4af37;
-            --gold-light: #f0c040;
-            --gold-dark: #b8941f;
-            --red: #c0392b;
-            --red-light: #e74c3c;
-            --red-dark: #96281b;
-            --text: #e0e0e0;
-            --text-muted: #999;
-            --glass-bg: rgba(17, 17, 17, 0.75);
-            --glass-border: rgba(212, 175, 55, 0.18);
-            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
-            --toast-success: #34d399;
-            --sidebar-width: 260px;
-            --transition: 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--bg-dark); color: var(--text); min-height: 100vh;
-            display: flex; overflow-x: hidden; position: relative; line-height: 1.55;
-        }
-        #particle-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
-        /* Auth loading overlay */
-        .auth-loading-overlay {
-            position: fixed; inset: 0; z-index: 9999;
-            background: var(--bg-dark);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 20px;
-        }
-        .auth-loading-overlay .auth-spinner {
-            width: 44px; height: 44px;
-            border: 3px solid rgba(212,175,55,0.22);
-            border-top-color: var(--gold);
-            border-radius: 50%;
-            animation: authSpin 0.8s linear infinite;
-        }
-        @keyframes authSpin { to { transform: rotate(360deg); } }
-        .auth-loading-overlay .auth-text {
-            color: var(--text-muted);
-            font-size: 0.95rem; font-weight: 500;
-            letter-spacing: 0.03em;
-        }
-        .auth-loading-overlay .auth-icon {
-            font-size: 2.6rem; color: var(--gold); opacity: 0.7;
-        }
-        .sidebar {
-            position: fixed; top: 0; left: 0; width: var(--sidebar-width); height: 100vh;
-            background: var(--glass-bg); backdrop-filter: blur(18px) saturate(120%);
-            -webkit-backdrop-filter: blur(18px) saturate(120%);
-            border-right: 1px solid var(--glass-border); box-shadow: var(--glass-shadow);
-            z-index: 10; display: flex; flex-direction: column; transition: transform var(--transition);
-        }
-        .sidebar-logo { padding: 24px 20px 18px; text-align: center; border-bottom: 1px solid rgba(212,175,55,0.14); flex-shrink: 0; }
-        .sidebar-logo img { width: 48px; height: 48px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(212,175,55,0.5)); margin-bottom: 6px; }
-        .sidebar-logo h2 { font-size: 1.15rem; font-weight: 700; color: var(--gold); letter-spacing: 0.04em; text-transform: uppercase; }
-        .sidebar-nav { flex: 1; overflow-y: auto; padding: 10px 0; display: flex; flex-direction: column; gap: 2px; }
-        .sidebar-nav::-webkit-scrollbar { width: 4px; }
-        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.25); border-radius: 4px; }
-        .sidebar-nav .nav-item {
-            display: flex; align-items: center; gap: 12px; padding: 12px 22px;
-            cursor: pointer; color: var(--text-muted); font-size: 0.93rem; font-weight: 500;
-            border-left: 3px solid transparent; transition: all var(--transition); user-select: none; white-space: nowrap;
-        }
-        .sidebar-nav .nav-item:hover, .sidebar-nav .nav-item:focus-visible {
-            background: rgba(212,175,55,0.07); color: var(--gold-light); border-left-color: var(--gold); outline: none;
-        }
-        .sidebar-nav .nav-item.active {
-            background: rgba(212,175,55,0.12); color: var(--gold); border-left-color: var(--gold); font-weight: 600;
-        }
-        .sidebar-nav .nav-item i { width: 20px; text-align: center; font-size: 1rem; flex-shrink: 0; }
-        .sidebar-footer { padding: 12px 22px; border-top: 1px solid rgba(212,175,55,0.14); flex-shrink: 0; }
-        .btn-logout {
-            display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 16px;
-            background: rgba(192,57,43,0.12); border: 1px solid rgba(192,57,43,0.35);
-            border-radius: 8px; color: var(--red-light); cursor: pointer; font-size: 0.93rem; font-weight: 600; transition: all var(--transition);
-        }
-        .btn-logout:hover { background: rgba(192,57,43,0.25); border-color: var(--red-light); color: #fff; }
-        .main-panel {
-            margin-left: var(--sidebar-width); flex: 1; min-height: 100vh;
-            padding: 30px 34px; position: relative; z-index: 5; display: flex; flex-direction: column;
-        }
-        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; flex-wrap: wrap; gap: 14px; }
-        .section-header h1 { font-size: 1.7rem; font-weight: 700; color: var(--gold); letter-spacing: 0.03em; }
-        .section-header h1 i { margin-right: 10px; opacity: 0.8; }
-        .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.93rem; font-weight: 600; transition: all var(--transition); text-decoration: none; }
-        .btn-gold { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); color: #0a0a0a; box-shadow: 0 4px 14px rgba(212,175,55,0.3); }
-        .btn-gold:hover { box-shadow: 0 6px 20px rgba(212,175,55,0.5); transform: translateY(-1px); }
-        .btn-gold:active { transform: translateY(0); }
-        .btn-red { background: var(--red); color: #fff; box-shadow: 0 4px 14px rgba(192,57,43,0.3); }
-        .btn-red:hover { background: var(--red-light); box-shadow: 0 6px 20px rgba(192,57,43,0.5); transform: translateY(-1px); }
-        .btn-red:active { transform: translateY(0); }
-        .btn-outline { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
-        .btn-outline:hover { background: rgba(212,175,55,0.1); }
-        .glass-card { background: var(--glass-bg); backdrop-filter: blur(14px) saturate(110%); -webkit-backdrop-filter: blur(14px) saturate(110%); border: 1px solid var(--glass-border); border-radius: 14px; padding: 22px 24px; box-shadow: var(--glass-shadow); }
-        .glass-table-wrap { overflow-x: auto; border-radius: 14px; background: var(--glass-bg); backdrop-filter: blur(14px) saturate(110%); -webkit-backdrop-filter: blur(14px) saturate(110%); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); }
-        table { width: 100%; border-collapse: collapse; min-width: 700px; }
-        table thead th { background: rgba(212,175,55,0.08); color: var(--gold); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--glass-border); }
-        table tbody td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.91rem; }
-        table tbody tr { transition: background var(--transition); }
-        table tbody tr:hover { background: rgba(212,175,55,0.04); }
-        table tbody tr:last-child td { border-bottom: none; }
-        .actions-cell { display: flex; gap: 8px; }
-        .actions-cell button { background: none; border: none; cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.88rem; transition: all var(--transition); }
-        .btn-icon-edit { color: var(--gold-light); }
-        .btn-icon-edit:hover { background: rgba(212,175,55,0.15); }
-        .btn-icon-delete { color: var(--red-light); }
-        .btn-icon-delete:hover { background: rgba(192,57,43,0.15); }
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity var(--transition); }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal { background: var(--glass-bg); backdrop-filter: blur(22px) saturate(130%); -webkit-backdrop-filter: blur(22px) saturate(130%); border: 1px solid var(--glass-border); border-radius: 16px; padding: 28px 32px; width: 90%; max-width: 560px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.7); position: relative; transform: translateY(14px); transition: transform var(--transition); }
-        .modal-overlay.active .modal { transform: translateY(0); }
-        .modal h3 { font-size: 1.3rem; color: var(--gold); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-        .modal .close-modal { position: absolute; top: 14px; right: 18px; background: none; border: none; color: var(--text-muted); font-size: 1.4rem; cursor: pointer; transition: color var(--transition); }
-        .modal .close-modal:hover { color: var(--red-light); }
-        .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-weight: 600; font-size: 0.85rem; color: var(--gold-light); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; background: rgba(255,255,255,0.04); color: var(--text); font-size: 0.93rem; font-family: inherit; transition: border var(--transition); }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,175,55,0.1); }
-        .form-group textarea { resize: vertical; min-height: 80px; }
-        .form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 22px; }
-        .toast-container { position: fixed; top: 22px; right: 22px; z-index: 200; display: flex; flex-direction: column; gap: 10px; }
-        .toast { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-radius: 10px; font-weight: 600; font-size: 0.91rem; min-width: 280px; max-width: 440px; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); animation: toastSlideIn 0.35s cubic-bezier(0.4,0,0.2,1); box-shadow: 0 8px 28px rgba(0,0,0,0.45); }
-        .toast--success { background: rgba(17,17,17,0.92); border: 1px solid var(--toast-success); color: var(--toast-success); }
-        .toast--error { background: rgba(17,17,17,0.92); border: 1px solid var(--red-light); color: var(--red-light); }
-        .toast--info { background: rgba(17,17,17,0.92); border: 1px solid var(--gold); color: var(--gold-light); }
-        @keyframes toastSlideIn { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes toastSlideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(60px); } }
-        .empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
-        .empty-state i { font-size: 3rem; color: var(--gold); opacity: 0.4; margin-bottom: 14px; display: block; }
-        .empty-state p { font-size: 1rem; }
-        .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(212,175,55,0.25); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); }
-            .sidebar.open { transform: translateX(0); }
-            .main-panel { margin-left: 0; padding: 20px 16px; }
-            .section-header { flex-direction: column; align-items: flex-start; }
-            .section-header h1 { font-size: 1.35rem; }
-            .modal { width: 95%; padding: 20px; max-width: none; }
-            .mobile-menu-toggle { display: flex !important; }
-        }
-        .mobile-menu-toggle { display: none; position: fixed; top: 14px; left: 14px; z-index: 20; background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--gold); padding: 10px 14px; cursor: pointer; font-size: 1.3rem; }
-        :focus-visible { outline: 2px solid var(--gold-light); outline-offset: 2px; }
-        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Boxing Champions — Panou de Administrare">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="/images/badge.png">
+  <link rel="apple-touch-icon" href="/images/badge.png">
+  <title>Panou Admin | Boxing Champions</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800;900&family=Oswald:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <style>
+    .section-panel { animation: fadeIn 0.35s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    #contact-view-message { white-space: pre-wrap; line-height: 1.7; max-height: 300px; overflow-y: auto; }
+  </style>
 </head>
 <body>
-    <!-- Auth loading overlay – afișat până la confirmarea autentificării -->
-    <div class="auth-loading-overlay" id="authLoadingOverlay" aria-live="polite" aria-label="Se verifică autentificarea">
-        <div class="auth-icon"><i class="fa-solid fa-shield-halved"></i></div>
-        <div class="auth-spinner"></div>
-        <div class="auth-text">Se verifică autentificarea…</div>
-    </div>
-    <canvas id="particle-canvas" aria-hidden="true"></canvas>
-    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Deschide meniul" title="Meniu"><i class="fa-solid fa-bars"></i></button>
-    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Navigare principală">
-        <div class="sidebar-logo">
-            <img src="../../public/images/boxing-logo.png" alt="Boxing Champions Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
-            <div style="display:none;font-size:2.5rem;color:var(--gold);"><i class="fa-solid fa-glove"></i></div>
-            <h2>Boxing Champions</h2>
+  <a href="#admin-main" class="skip-to-content"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i> Sari la conținutul principal</a>
+  <div class="admin-wrapper">
+    <header class="admin-topbar" id="admin-topbar">
+      <button class="admin-topbar__toggle" id="sidebar-toggle" aria-label="Deschide meniul"><i class="fa-solid fa-bars"></i></button>
+      <span class="admin-topbar__brand">BOXING <span>CHAMPIONS</span></span>
+      <span style="flex:1;"></span>
+    </header>
+    <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+    <aside class="admin-sidebar" id="admin-sidebar" aria-label="Navigare principală">
+      <div class="admin-sidebar__brand">
+        <img src="/admin/images/admin-badge.png" alt="Boxing Champions" width="42" height="42" onerror="this.style.display='none'">
+        <div class="admin-sidebar__brand-text">BOXING CHAMPIONS<span>Panou Admin</span></div>
+      </div>
+      <nav class="admin-sidebar__nav" aria-label="Meniu administrare">
+        <span class="admin-sidebar__section">Principal</span>
+        <button class="admin-sidebar__link admin-sidebar__link--active" data-section="dashboard"><i class="fa-solid fa-grid-2"></i> Dashboard</button>
+        <button class="admin-sidebar__link" data-section="orders"><i class="fa-solid fa-cart-shopping"></i> Comenzi<span class="sidebar__badge" id="sidebar-orders-count" style="display:none;">0</span></button>
+        <button class="admin-sidebar__link" data-section="contact"><i class="fa-solid fa-envelope"></i> Mesaje<span class="sidebar__badge" id="sidebar-contact-badge" style="display:none;">0</span></button>
+        <span class="admin-sidebar__section">Conținut</span>
+        <button class="admin-sidebar__link" data-section="coaches"><i class="fa-solid fa-user-tie"></i> Antrenori</button>
+        <button class="admin-sidebar__link" data-section="events"><i class="fa-solid fa-calendar-star"></i> Evenimente</button>
+        <button class="admin-sidebar__link" data-section="products"><i class="fa-solid fa-box"></i> Produse</button>
+        <button class="admin-sidebar__link" data-section="plans"><i class="fa-solid fa-tag"></i> Abonamente</button>
+        <button class="admin-sidebar__link" data-section="schedule"><i class="fa-solid fa-clock"></i> Program</button>
+        <span class="admin-sidebar__section">Marketing</span>
+        <button class="admin-sidebar__link" data-section="promotions"><i class="fa-solid fa-percent"></i> Promoții</button>
+        <span class="admin-sidebar__section">Sistem</span>
+        <button class="admin-sidebar__link" data-section="settings"><i class="fa-solid fa-gear"></i> Setări Generale</button>
+      </nav>
+      <div class="admin-sidebar__footer">
+        <div class="admin-sidebar__user">
+          <div class="admin-sidebar__user-avatar" id="sidebar-user-avatar" aria-hidden="true">A</div>
+          <div class="admin-sidebar__user-info">
+            <div class="admin-sidebar__user-name" id="sidebar-user-name">Admin</div>
+            <div class="admin-sidebar__user-role" id="sidebar-user-role">Admin</div>
+          </div>
+          <button class="admin-sidebar__logout" id="sidebar-logout" aria-label="Deconectare" title="Deconectare"><i class="fa-solid fa-right-from-bracket"></i></button>
         </div>
-        <nav class="sidebar-nav" id="sidebarNav">
-            <div class="nav-item active" data-section="general" tabindex="0" role="button" aria-current="page"><i class="fa-solid fa-gear"></i> Setări Generale</div>
-            <div class="nav-item" data-section="antrenori" tabindex="0" role="button"><i class="fa-solid fa-user-tie"></i> Antrenori</div>
-            <div class="nav-item" data-section="evenimente" tabindex="0" role="button"><i class="fa-solid fa-calendar-star"></i> Evenimente</div>
-            <div class="nav-item" data-section="program" tabindex="0" role="button"><i class="fa-solid fa-clock"></i> Program</div>
-            <div class="nav-item" data-section="abonamente" tabindex="0" role="button"><i class="fa-solid fa-id-card"></i> Abonamente</div>
-            <div class="nav-item" data-section="produse" tabindex="0" role="button"><i class="fa-solid fa-box-open"></i> Produse</div>
-            <div class="nav-item" data-section="comenzi" tabindex="0" role="button"><i class="fa-solid fa-truck-fast"></i> Comenzi</div>
-            <div class="nav-item" data-section="mesaje" tabindex="0" role="button"><i class="fa-solid fa-envelope"></i> Mesaje</div>
-            <div class="nav-item" data-section="seo" tabindex="0" role="button"><i class="fa-solid fa-magnifying-glass-chart"></i> SEO</div>
-        </nav>
-        <div class="sidebar-footer"><button class="btn-logout" id="btnLogout" aria-label="Deconectare"><i class="fa-solid fa-right-from-bracket"></i> Deconectare</button></div>
+      </div>
     </aside>
-    <main class="main-panel" id="mainPanel" role="main"></main>
-    <div class="modal-overlay" id="modalOverlay" aria-hidden="true">
-        <div class="modal" id="modalContent" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-            <button class="close-modal" id="closeModal" aria-label="Închide fereastra">&times;</button>
-            <h3 id="modalTitle"><i class="fa-solid fa-pen-to-square"></i> <span id="modalTitleText">Formular</span></h3>
-            <form id="modalForm" novalidate></form>
+    <main class="admin-main" id="admin-main">
+      <div class="page-header">
+        <h1 class="page-header__title" id="page-title">Panou <span>Admin</span> — Dashboard</h1>
+        <div class="page-header__actions" id="page-header-actions"></div>
+      </div>
+      <!-- SECTION: DASHBOARD -->
+      <section class="section-panel" id="section-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card reveal"><div class="stat-card__icon stat-card__icon--gold"><i class="fa-solid fa-user-tie"></i></div><div><div class="stat-card__value" id="stat-coaches">—</div><div class="stat-card__label">Antrenori</div></div></div>
+          <div class="stat-card reveal"><div class="stat-card__icon stat-card__icon--red"><i class="fa-solid fa-calendar-star"></i></div><div><div class="stat-card__value" id="stat-events">—</div><div class="stat-card__label">Evenimente</div></div></div>
+          <div class="stat-card reveal"><div class="stat-card__icon stat-card__icon--blue"><i class="fa-solid fa-box"></i></div><div><div class="stat-card__value" id="stat-products">—</div><div class="stat-card__label">Produse</div></div></div>
+          <div class="stat-card reveal"><div class="stat-card__icon stat-card__icon--green"><i class="fa-solid fa-tag"></i></div><div><div class="stat-card__value" id="stat-plans">—</div><div class="stat-card__label">Abonamente</div></div></div>
+          <div class="stat-card reveal"><div class="stat-card__icon stat-card__icon--purple"><i class="fa-solid fa-cart-shopping"></i></div><div><div class="stat-card__value" id="stat-orders">—</div><div class="stat-card__label">Comenzi Totale</div></div></div>
+          <div class="stat-card reveal"><div class="stat-card__icon stat-card__icon--red"><i class="fa-solid fa-envelope"></i></div><div><div class="stat-card__value" id="stat-messages">—</div><div class="stat-card__label">Mesaje Necitite</div></div></div>
         </div>
-    </div>
-    <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
-    <script nonce="%NONCE%">
-        (function() {
-            'use strict';
-
-            // ──────────────────────────────────────────────
-            // Secțiuni – API endpoint-uri aliniate la rutele
-            // reale din routes/api.js și câmpuri conforme cu
-            // schema bazei de date (db.js).
-            // ──────────────────────────────────────────────
-
-            // Setări generale – tratate special: răspunsul GET
-            // e un obiect {key: value}, iar PUT acceptă același
-            // obiect. În UI transformăm obiectul într-un array
-            // pentru afișare tabelară, iar la salvare trimitem
-            // întregul obiect îmbogățit cu valoarea editată.
-            var SETTINGS_ALLOWED_KEYS = [
-                'club_name', 'slogan', 'email', 'phone', 'address',
-                'facebook', 'instagram', 'tiktok', 'hero_badge', 'about_text'
-            ];
-
-            var SETTINGS_LABELS = {
-                club_name: 'Nume Club',
-                slogan: 'Slogan',
-                email: 'Email Contact',
-                phone: 'Telefon',
-                address: 'Adresă',
-                facebook: 'URL Facebook',
-                instagram: 'URL Instagram',
-                tiktok: 'URL TikTok',
-                hero_badge: 'Text Hero Badge',
-                about_text: 'Text Despre Noi'
-            };
-
-            var SECTIONS = {
-                antrenori: {
-                    label: 'Antrenori', icon: 'fa-user-tie', apiBase: '/api/admin/coaches',
-                    fields: [
-                        { name: 'name', label: 'Nume', type: 'text', required: true },
-                        { name: 'specialization', label: 'Specializare', type: 'text', required: false },
-                        { name: 'certifications', label: 'Certificări', type: 'textarea', required: false },
-                        { name: 'photo', label: 'URL Poză', type: 'url', required: false },
-                        { name: 'quote', label: 'Citat', type: 'textarea', required: false },
-                        { name: 'active', label: 'Activ', type: 'select', required: false, options: ['da','nu'] }
-                    ],
-                    columns: ['Nume', 'Specializare', 'Certificări', 'Activ'],
-                    rowRenderer: function(item) {
-                        return '<tr><td><strong>'+escapeHtml(item.name||'—')+'</strong></td><td>'+escapeHtml(item.specialization||'—')+'</td><td>'+escapeHtml((item.certifications||'').substring(0,50))+((item.certifications||'').length>50?'…':'')+'</td><td>'+escapeHtml(item.active?'da':'nu')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează antrenor"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge antrenor"><i class="fa-solid fa-trash"></i></button></div></td></tr>';
-                    },
-                    preSubmit: function(payload) {
-                        if (payload.active !== undefined) { payload.active = payload.active === 'da' ? true : false; }
-                        return payload;
-                    }
-                },
-                evenimente: {
-                    label: 'Evenimente', icon: 'fa-calendar-star', apiBase: '/api/admin/events',
-                    fields: [
-                        { name: 'title', label: 'Titlu', type: 'text', required: true },
-                        { name: 'event_date', label: 'Data', type: 'date', required: true },
-                        { name: 'location', label: 'Locație', type: 'text', required: false },
-                        { name: 'description', label: 'Descriere', type: 'textarea', required: false },
-                        { name: 'active', label: 'Activ', type: 'select', required: false, options: ['da','nu'] }
-                    ],
-                    columns: ['Titlu', 'Data', 'Locație', 'Activ'],
-                    rowRenderer: function(item) {
-                        return '<tr><td><strong>'+escapeHtml(item.title||'—')+'</strong></td><td>'+escapeHtml(item.event_date||'—')+'</td><td>'+escapeHtml(item.location||'—')+'</td><td>'+escapeHtml(item.active?'da':'nu')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează eveniment"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge eveniment"><i class="fa-solid fa-trash"></i></button></div></td></tr>';
-                    },
-                    preSubmit: function(payload) {
-                        if (payload.active !== undefined) { payload.active = payload.active === 'da' ? true : false; }
-                        return payload;
-                    }
-                },
-                program: {
-                    label: 'Program', icon: 'fa-clock', apiBase: '/api/admin/schedule',
-                    fields: [
-                        { name: 'day', label: 'Zi', type: 'select', required: true, options: ['Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă','Duminică'] },
-                        { name: 'start_time', label: 'Ora Început (HH:mm)', type: 'text', required: true, placeholder: '09:00' },
-                        { name: 'end_time', label: 'Ora Sfârșit (HH:mm)', type: 'text', required: true, placeholder: '10:30' },
-                        { name: 'category', label: 'Categorie', type: 'text', required: true },
-                        { name: 'gender', label: 'Sex', type: 'select', required: true, options: ['Masculin','Feminin','Mixt'] },
-                        { name: 'active', label: 'Activ', type: 'select', required: false, options: ['da','nu'] }
-                    ],
-                    columns: ['Zi', 'Interval Orar', 'Categorie', 'Sex', 'Activ'],
-                    rowRenderer: function(item) {
-                        return '<tr><td>'+escapeHtml(item.day||'—')+'</td><td>'+escapeHtml(item.start_time||'')+' - '+escapeHtml(item.end_time||'')+'</td><td>'+escapeHtml(item.category||'—')+'</td><td>'+escapeHtml(item.gender||'—')+'</td><td>'+escapeHtml(item.active?'da':'nu')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează program"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge program"><i class="fa-solid fa-trash"></i></button></div></td></tr>';
-                    },
-                    preSubmit: function(payload) {
-                        if (payload.active !== undefined) { payload.active = payload.active === 'da' ? true : false; }
-                        return payload;
-                    }
-                },
-                abonamente: {
-                    label: 'Abonamente', icon: 'fa-id-card', apiBase: '/api/admin/subscriptions',
-                    fields: [
-                        { name: 'name', label: 'Nume Abonament', type: 'text', required: true },
-                        { name: 'monthly_price', label: 'Preț Lunar (RON)', type: 'number', required: true, step: '0.01' },
-                        { name: 'yearly_price', label: 'Preț Anual (RON)', type: 'number', required: true, step: '0.01' },
-                        { name: 'benefits', label: 'Beneficii (JSON array)', type: 'textarea', required: false, placeholder: '["beneficiu 1","beneficiu 2"]' },
-                        { name: 'highlighted', label: 'Evidențiat', type: 'select', required: false, options: ['da','nu'] },
-                        { name: 'active', label: 'Activ', type: 'select', required: false, options: ['da','nu'] }
-                    ],
-                    columns: ['Nume', 'Preț Lunar', 'Preț Anual', 'Evidențiat', 'Activ'],
-                    rowRenderer: function(item) {
-                        return '<tr><td><strong>'+escapeHtml(item.name||'—')+'</strong></td><td>'+escapeHtml(String(item.monthly_price||'—'))+' RON</td><td>'+escapeHtml(String(item.yearly_price||'—'))+' RON</td><td>'+escapeHtml(item.highlighted?'da':'nu')+'</td><td>'+escapeHtml(item.active?'da':'nu')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează abonament"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge abonament"><i class="fa-solid fa-trash"></i></button></div></td></tr>';
-                    },
-                    preSubmit: function(payload) {
-                        if (payload.highlighted !== undefined) { payload.highlighted = payload.highlighted === 'da' ? true : false; }
-                        if (payload.active !== undefined) { payload.active = payload.active === 'da' ? true : false; }
-                        // Parse benefits JSON if present; send as array, backend handles stringify
-                        if (payload.benefits && typeof payload.benefits === 'string' && payload.benefits.trim()) {
-                            try { payload.benefits = JSON.parse(payload.benefits); } catch(e) { /* keep as string */ }
-                        }
-                        return payload;
-                    }
-                },
-                produse: {
-                    label: 'Produse', icon: 'fa-box-open', apiBase: '/api/admin/products',
-                    fields: [
-                        { name: 'name', label: 'Nume Produs', type: 'text', required: true },
-                        { name: 'description', label: 'Descriere', type: 'textarea', required: false },
-                        { name: 'price', label: 'Preț (RON)', type: 'number', required: true, step: '0.01' },
-                        { name: 'old_price', label: 'Preț Vechi (RON)', type: 'number', required: false, step: '0.01' },
-                        { name: 'discount_label', label: 'Etichetă Reducere', type: 'text', required: false },
-                        { name: 'contextual_label', label: 'Etichetă Contextuală', type: 'text', required: false },
-                        { name: 'category', label: 'Categorie', type: 'select', required: true, options: ['Îmbrăcăminte','Echipament','Accesorii','Nutriție'] },
-                        { name: 'image', label: 'URL Imagine', type: 'url', required: false },
-                        { name: 'stock', label: 'Stoc', type: 'number', required: true },
-                        { name: 'active', label: 'Activ', type: 'select', required: false, options: ['da','nu'] }
-                    ],
-                    columns: ['Nume', 'Categorie', 'Preț', 'Stoc', 'Activ'],
-                    rowRenderer: function(item) {
-                        return '<tr><td><strong>'+escapeHtml(item.name||'—')+'</strong></td><td>'+escapeHtml(item.category||'—')+'</td><td>'+escapeHtml(String(item.price||'—'))+' RON</td><td>'+escapeHtml(String(item.stock||'—'))+'</td><td>'+escapeHtml(item.active?'da':'nu')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează produs"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge produs"><i class="fa-solid fa-trash"></i></button></div></td></tr>';
-                    },
-                    preSubmit: function(payload) {
-                        if (payload.active !== undefined) { payload.active = payload.active === 'da' ? true : false; }
-                        if (payload.old_price === '' || payload.old_price === null || payload.old_price === undefined) { payload.old_price = null; }
-                        return payload;
-                    }
-                },
-                comenzi: {
-                    label: 'Comenzi', icon: 'fa-truck-fast', apiBase: '/api/admin/orders',
-                    fields: [
-                        { name: 'customer_name', label: 'Nume Client', type: 'text', required: true },
-                        { name: 'customer_email', label: 'Email Client', type: 'email', required: true },
-                        { name: 'customer_phone', label: 'Telefon Client', type: 'text', required: false },
-                        { name: 'items', label: 'Produse (JSON)', type: 'textarea', required: true },
-                        { name: 'total', label: 'Total (RON)', type: 'number', required: true, step: '0.01' },
-                        { name: 'status', label: 'Status', type: 'select', required: false, options: ['pending','confirmed','processing','shipped','delivered','cancelled'] }
-                    ],
-                    columns: ['Client', 'Email', 'Total', 'Status', 'Dată'],
-                    rowRenderer: function(item) {
-                        return '<tr><td>'+escapeHtml(item.customer_name||'—')+'</td><td>'+escapeHtml(item.customer_email||'—')+'</td><td>'+escapeHtml(String(item.total||'—'))+' RON</td><td>'+escapeHtml(item.status||'—')+'</td><td>'+escapeHtml(item.created_at||'—')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează comandă"><i class="fa-solid fa-pen"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge comandă"><i class="fa-solid fa-trash"></i></button></div></td></tr>';
-                    },
-                    // Orders update uses PATCH /api/admin/orders/:id/status, not PUT.
-                    // PUT /api/admin/orders/:id does NOT exist.
-                    // We still allow opening the modal for viewing; on submit we only PATCH status.
-                    useStatusPatch: true
-                },
-                mesaje: {
-                    label: 'Mesaje', icon: 'fa-envelope', apiBase: '/api/admin/messages',
-                    fields: [
-                        { name: 'name', label: 'Nume', type: 'text', required: true },
-                        { name: 'email', label: 'Email', type: 'email', required: true },
-                        { name: 'phone', label: 'Telefon', type: 'text', required: false },
-                        { name: 'subject', label: 'Subiect', type: 'text', required: true },
-                        { name: 'message', label: 'Mesaj', type: 'textarea', required: true },
-                        { name: 'is_read', label: 'Citit', type: 'select', required: false, options: ['nu','da'] }
-                    ],
-                    columns: ['Nume', 'Email', 'Subiect', 'Data', 'Citit'],
-                    rowRenderer: function(item) {
-                        return '<tr><td>'+escapeHtml(item.name||'—')+'</td><td>'+escapeHtml(item.email||'—')+'</td><td><strong>'+escapeHtml(item.subject||'—')+'</strong></td><td>'+escapeHtml(item.created_at||'—')+'</td><td>'+escapeHtml(item.is_read?'da':'nu')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Vezi mesaj"><i class="fa-solid fa-eye"></i></button><button class="btn-icon-delete" data-action="delete" data-id="'+escapeHtml(item.id)+'" aria-label="Șterge mesaj"><i class="fa-solid fa-trash"></i></button></div></td></tr>';
-                    },
-                    // Messages are read-only from admin (created by public form).
-                    // Edit button allows viewing + marking as read via PATCH /api/admin/messages/:id/read.
-                    preSubmit: function(payload) {
-                        if (payload.is_read !== undefined) { payload.is_read = payload.is_read === 'da' ? 1 : 0; }
-                        return payload;
-                    },
-                    useReadPatch: true
-                },
-                seo: {
-                    label: 'SEO', icon: 'fa-magnifying-glass-chart', apiBase: '/api/admin/seo',
-                    fields: [
-                        { name: 'page', label: 'Pagină', type: 'select', required: true, options: ['home','about','coaches','schedule','subscriptions','events','shop','contact'] },
-                        { name: 'title', label: 'Meta Title', type: 'text', required: true },
-                        { name: 'description', label: 'Meta Description', type: 'textarea', required: true },
-                        { name: 'keywords', label: 'Meta Keywords', type: 'text', required: false },
-                        { name: 'og_image', label: 'OG Image URL', type: 'url', required: false }
-                    ],
-                    columns: ['Pagină', 'Title', 'Description'],
-                    rowRenderer: function(item) {
-                        return '<tr><td><strong>'+escapeHtml(item.page||'—')+'</strong></td><td>'+escapeHtml((item.title||'').substring(0,60))+((item.title||'').length>60?'…':'')+'</td><td>'+escapeHtml((item.description||'').substring(0,80))+((item.description||'').length>80?'…':'')+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit" data-id="'+escapeHtml(item.id)+'" aria-label="Editează SEO"><i class="fa-solid fa-pen"></i></button></div></td></tr>';
-                    },
-                    // SEO PUT expects an array of all pages. On submit we wrap
-                    // the single edited item in an array (merge with existing).
-                    // The backend PUT /api/admin/seo accepts Array.
-                    seoBatchMode: true
-                }
-            };
-
-            var currentSection = 'general', editingId = null, currentSettingsCache = null;
-            var mainPanel = document.getElementById('mainPanel');
-            var sidebar = document.getElementById('sidebar');
-            var sidebarNav = document.getElementById('sidebarNav');
-            var modalOverlay = document.getElementById('modalOverlay');
-            var modalTitleText = document.getElementById('modalTitleText');
-            var modalForm = document.getElementById('modalForm');
-            var closeModalBtn = document.getElementById('closeModal');
-            var toastContainer = document.getElementById('toastContainer');
-            var btnLogout = document.getElementById('btnLogout');
-            var mobileMenuToggle = document.getElementById('mobileMenuToggle');
-            var particleCanvas = document.getElementById('particle-canvas');
-            var authLoadingOverlay = document.getElementById('authLoadingOverlay');
-
-            function escapeHtml(str) { var d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
-            function showToast(msg, type) {
-                type = type || 'success';
-                var icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
-                var t = document.createElement('div');
-                t.className = 'toast toast--' + type;
-                t.innerHTML = '<i class="fa-solid ' + (icons[type]||icons.info) + '"></i> ' + escapeHtml(msg);
-                toastContainer.appendChild(t);
-                setTimeout(function() {
-                    t.style.animation = 'toastSlideOut 0.3s ease forwards';
-                    t.addEventListener('animationend', function() { if (t.parentNode) t.parentNode.removeChild(t); });
-                }, 3200);
-            }
-            async function apiRequest(url, opts) {
-                opts = opts || {};
-                opts.headers = Object.assign({}, opts.headers, { 'Content-Type': 'application/json', 'Accept': 'application/json' });
-                opts.credentials = 'include';
-                try {
-                    var resp = await fetch(url, opts);
-                    if (resp.status === 401 || resp.status === 403) { window.location.replace('/admin'); throw new Error('Neautentificat'); }
-                    if (!resp.ok) { var ed = await resp.json().catch(function() { return {}; }); throw new Error(ed.message || ed.error || 'Eroare server (' + resp.status + ')'); }
-                    return await resp.json();
-                } catch (err) {
-                    if (err.message === 'Neautentificat') throw err;
-                    showToast(err.message || 'Eroare de rețea', 'error');
-                    throw err;
-                }
-            }
-
-            // ──────────────────────────────────────────────
-            // Settings helpers (secțiunea `general`)
-            // ──────────────────────────────────────────────
-
-            /**
-             * Transformă obiectul {key:value} returnat de
-             * GET /api/admin/settings într-un array de obiecte
-             * {key, value} pentru afișare tabelară.
-             */
-            function settingsObjToArray(obj) {
-                if (!obj || typeof obj !== 'object') return [];
-                return SETTINGS_ALLOWED_KEYS.map(function(k) {
-                    return { key: k, value: obj[k] !== undefined ? String(obj[k]) : '' };
-                });
-            }
-
-            /**
-             * Încarcă secțiunea Setări Generale: GET /api/admin/settings
-             */
-            async function loadSettingsSection() {
-                mainPanel.innerHTML = '<div class="section-header"><h1><i class="fa-solid fa-gear"></i> Setări Generale</h1><button class="btn btn-gold" id="btnEditAllSettings" aria-label="Editează toate setările"><i class="fa-solid fa-pen-to-square"></i> Editează</button></div><div class="glass-table-wrap">'+renderSpinner()+'</div>';
-                document.getElementById('btnEditAllSettings').addEventListener('click', function() { openSettingsModal(); });
-                try {
-                    var data = await apiRequest('/api/admin/settings', { method: 'GET' });
-                    currentSettingsCache = data; // păstrează cache-ul pentru submit
-                    var items = settingsObjToArray(data);
-                    renderSettingsTable(items);
-                } catch (err) {
-                    if (err.message !== 'Neautentificat') {
-                        mainPanel.querySelector('.glass-table-wrap').innerHTML = '<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><p>Eroare la încărcarea setărilor. Verifică conexiunea.</p></div>';
-                    }
-                }
-            }
-
-            function renderSettingsTable(items) {
-                var wrap = mainPanel.querySelector('.glass-table-wrap');
-                if (!items || items.length === 0) {
-                    wrap.innerHTML = '<div class="empty-state" style="padding:40px;"><i class="fa-solid fa-gear"></i><p>Nicio setare disponibilă.</p></div>';
-                    return;
-                }
-                var h = '<table role="grid" aria-label="Setări Generale"><thead><tr><th scope="col">Setare</th><th scope="col">Valoare</th><th scope="col">Acțiuni</th></tr></thead><tbody>';
-                items.forEach(function(it) {
-                    var displayLabel = SETTINGS_LABELS[it.key] || it.key;
-                    h += '<tr><td><strong>'+escapeHtml(displayLabel)+'</strong></td><td>'+escapeHtml(String(it.value||'—'))+'</td><td><div class="actions-cell"><button class="btn-icon-edit" data-action="edit-setting" data-key="'+escapeHtml(it.key)+'" data-value="'+escapeHtml(String(it.value||''))+'\" aria-label="Editează '+escapeHtml(displayLabel)+'"><i class="fa-solid fa-pen"></i></button></div></td></tr>';
-                });
-                h += '</tbody></table>';
-                wrap.innerHTML = h;
-                wrap.querySelector('table').addEventListener('click', function(e) {
-                    var btn = e.target.closest('button'); if (!btn) return;
-                    var action = btn.getAttribute('data-action');
-                    if (action === 'edit-setting') {
-                        var key = btn.getAttribute('data-key');
-                        var value = btn.getAttribute('data-value');
-                        openSettingEditModal(key, value);
-                    }
-                });
-            }
-
-            function openSettingsModal() {
-                // Deschide modal cu TOATE setările pentru batch edit
-                if (!currentSettingsCache) { showToast('Setările nu au fost încărcate.', 'error'); return; }
-                editingId = '__all__';
-                modalTitleText.textContent = 'Editare Setări Generale';
-                var fh = '';
-                SETTINGS_ALLOWED_KEYS.forEach(function(key) {
-                    var v = currentSettingsCache[key] !== undefined ? String(currentSettingsCache[key]) : '';
-                    var label = SETTINGS_LABELS[key] || key;
-                    fh += '<div class="form-group"><label for="field_'+key+'">'+escapeHtml(label)+'</label>';
-                    if (key === 'about_text') {
-                        fh += '<textarea id="field_'+key+'" name="'+key+'">'+escapeHtml(v)+'</textarea>';
-                    } else {
-                        fh += '<input type="text" id="field_'+key+'" name="'+key+'" value="'+escapeHtml(v)+'">';
-                    }
-                    fh += '</div>';
-                });
-                fh += '<div class="form-actions"><button type="button" class="btn btn-outline" id="btnCancelModal">Anulează</button><button type="submit" class="btn btn-gold"><i class="fa-solid fa-floppy-disk"></i> Salvează</button></div>';
-                modalForm.innerHTML = fh; modalOverlay.classList.add('active'); modalOverlay.setAttribute('aria-hidden', 'false');
-                setTimeout(function() { var fi = modalForm.querySelector('input, textarea'); if (fi) fi.focus(); }, 150);
-                document.getElementById('btnCancelModal').addEventListener('click', closeModal);
-                modalForm.onsubmit = async function(e) { e.preventDefault(); await submitSettingsBatch(); };
-            }
-
-            function openSettingEditModal(key, value) {
-                editingId = key;
-                var label = SETTINGS_LABELS[key] || key;
-                modalTitleText.textContent = 'Editare: ' + label;
-                var fh = '<div class="form-group"><label for="field_value">'+escapeHtml(label)+'</label>';
-                if (key === 'about_text') {
-                    fh += '<textarea id="field_value" name="value">'+escapeHtml(value)+'</textarea>';
-                } else {
-                    fh += '<input type="text" id="field_value" name="value" value="'+escapeHtml(value)+'">';
-                }
-                fh += '</div>';
-                fh += '<div class="form-actions"><button type="button" class="btn btn-outline" id="btnCancelModal">Anulează</button><button type="submit" class="btn btn-gold"><i class="fa-solid fa-floppy-disk"></i> Salvează</button></div>';
-                modalForm.innerHTML = fh; modalOverlay.classList.add('active'); modalOverlay.setAttribute('aria-hidden', 'false');
-                setTimeout(function() { var fi = modalForm.querySelector('input, textarea'); if (fi) fi.focus(); }, 150);
-                document.getElementById('btnCancelModal').addEventListener('click', closeModal);
-                modalForm.onsubmit = async function(e) { e.preventDefault(); await submitSingleSetting(key); };
-            }
-
-            async function submitSettingsBatch() {
-                var fd = new FormData(modalForm);
-                var payload = {};
-                SETTINGS_ALLOWED_KEYS.forEach(function(k) { payload[k] = fd.get(k) || ''; });
-                try {
-                    await apiRequest('/api/admin/settings', { method: 'PUT', body: JSON.stringify(payload) });
-                    showToast('Setări actualizate cu succes!', 'success');
-                    closeModal();
-                    // Reîncarcă secțiunea
-                    currentSettingsCache = payload;
-                    loadSettingsSection();
-                } catch (err) {}
-            }
-
-            async function submitSingleSetting(key) {
-                var fd = new FormData(modalForm);
-                var newValue = fd.get('value') || '';
-                // Trimite tot obiectul settings cu cheia modificată
-                var payload = Object.assign({}, currentSettingsCache || {});
-                payload[key] = newValue;
-                try {
-                    await apiRequest('/api/admin/settings', { method: 'PUT', body: JSON.stringify(payload) });
-                    showToast('Setare actualizată cu succes!', 'success');
-                    closeModal();
-                    currentSettingsCache = payload;
-                    loadSettingsSection();
-                } catch (err) {}
-            }
-
-            // ──────────────────────────────────────────────
-            // Generic section loading (pentru `antrenori`,
-            // `evenimente`, etc.)
-            // ──────────────────────────────────────────────
-
-            function renderSpinner() { return '<div class="empty-state"><div class="spinner"></div><p style="margin-top:12px;">Se încarcă…</p></div>'; }
-
-            function initParticles() {
-                var ctx = particleCanvas.getContext('2d');
-                var particles = [];
-                var COUNT = 65;
-                var PALETTE = ['rgba(212,175,55,0.22)','rgba(240,192,64,0.18)','rgba(184,148,31,0.24)','rgba(230,180,50,0.16)','rgba(200,160,40,0.20)'];
-                function resize() { particleCanvas.width = window.innerWidth; particleCanvas.height = window.innerHeight; }
-                window.addEventListener('resize', resize); resize();
-                function mk() { return { x: Math.random()*particleCanvas.width, y: Math.random()*particleCanvas.height, radius: Math.random()*2.8+0.8, speedX: (Math.random()-0.5)*0.35, speedY: (Math.random()-0.5)*0.35, color: PALETTE[Math.floor(Math.random()*PALETTE.length)], opacity: Math.random()*0.6+0.2, pulse: Math.random()*Math.PI*2, pulseSpeed: Math.random()*0.015+0.005 }; }
-                for (var i = 0; i < COUNT; i++) particles.push(mk());
-                function animate() {
-                    ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
-                    for (var i = 0; i < particles.length; i++) {
-                        var p = particles[i];
-                        p.x += p.speedX; p.y += p.speedY; p.pulse += p.pulseSpeed;
-                        var o = p.opacity + Math.sin(p.pulse) * 0.12;
-                        if (p.x < -10) p.x = particleCanvas.width + 10;
-                        if (p.x > particleCanvas.width + 10) p.x = -10;
-                        if (p.y < -10) p.y = particleCanvas.height + 10;
-                        if (p.y > particleCanvas.height + 10) p.y = -10;
-                        ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
-                        ctx.fillStyle = p.color.replace(/[\d.]+\)$/, Math.max(0.04, Math.min(0.5, o)) + ')');
-                        ctx.fill();
-                    }
-                    for (var i = 0; i < particles.length; i++) {
-                        for (var j = i + 1; j < particles.length; j++) {
-                            var dx = particles[i].x - particles[j].x, dy = particles[i].y - particles[j].y;
-                            var dist = Math.sqrt(dx*dx + dy*dy);
-                            if (dist < 100) { ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.strokeStyle = 'rgba(212,175,55,' + (0.06*(1 - dist/100)) + ')'; ctx.lineWidth = 0.5; ctx.stroke(); }
-                        }
-                    }
-                    requestAnimationFrame(animate);
-                }
-                animate();
-            }
-
-            function failAuthAndRedirect(msg) {
-                if (authLoadingOverlay) {
-                    var spinner = authLoadingOverlay.querySelector('.auth-spinner');
-                    var textEl = authLoadingOverlay.querySelector('.auth-text');
-                    var iconEl = authLoadingOverlay.querySelector('.auth-icon i');
-                    if (spinner) spinner.style.display = 'none';
-                    if (iconEl) { iconEl.className = 'fa-solid fa-lock'; iconEl.style.color = 'var(--red-light)'; }
-                    if (textEl) {
-                        textEl.textContent = msg || 'Autentificare eșuată. Redirecționare…';
-                        textEl.style.color = 'var(--red-light)';
-                    }
-                }
-                setTimeout(function() { window.location.replace('/admin'); }, 800);
-                return false;
-            }
-
-            async function checkAuth() {
-                var controller, timeoutId;
-                try {
-                    controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-                    if (controller) { timeoutId = setTimeout(function() { controller.abort(); }, 8000); }
-                    var fetchOpts = { method: 'GET', credentials: 'include', headers: { 'Accept': 'application/json' } };
-                    if (controller) { fetchOpts.signal = controller.signal; }
-                    var r = await fetch('/api/auth/check', fetchOpts);
-                    if (timeoutId) clearTimeout(timeoutId);
-                    if (r.status === 401 || r.status === 403) { return failAuthAndRedirect(); }
-                    var d;
-                    try { d = await r.json(); } catch (parseErr) { return failAuthAndRedirect(); }
-                    if (!d || d.authenticated === false || d.authenticated !== true) { return failAuthAndRedirect(); }
-                    return true;
-                } catch (e) {
-                    if (timeoutId) clearTimeout(timeoutId);
-                    return failAuthAndRedirect(e.name === 'AbortError' ? 'Timpul de verificare a expirat. Redirecționare…' : null);
-                }
-            }
-
-            function removeAuthLoadingAndBootstrap() {
-                if (authLoadingOverlay && authLoadingOverlay.parentNode) {
-                    authLoadingOverlay.parentNode.removeChild(authLoadingOverlay);
-                }
-                initParticles();
-            }
-
-            /**
-             * Încarcă o secțiune generică (non-settings).
-             */
-            async function loadSection(sk) {
-                var sec = SECTIONS[sk]; if (!sec) return;
-                mainPanel.innerHTML = '<div class="section-header"><h1><i class="fa-solid '+sec.icon+'"></i> '+sec.label+'</h1><button class="btn btn-gold" id="btnAddNew" aria-label="Adaugă nou în '+sec.label+'"><i class="fa-solid fa-plus"></i> Adaugă</button></div><div class="glass-table-wrap">'+renderSpinner()+'</div>';
-                document.getElementById('btnAddNew').addEventListener('click', function() { openModal(sk, null); });
-                try {
-                    var data = await apiRequest(sec.apiBase, { method: 'GET' });
-                    var items = Array.isArray(data) ? data : (data.data || data.items || data.results || []);
-                    renderTable(sk, items);
-                } catch (err) {
-                    if (err.message !== 'Neautentificat') {
-                        mainPanel.querySelector('.glass-table-wrap').innerHTML = '<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><p>Eroare la încărcarea datelor. Verifică conexiunea.</p></div>';
-                    }
-                }
-            }
-
-            function renderTable(sk, items) {
-                var sec = SECTIONS[sk], wrap = mainPanel.querySelector('.glass-table-wrap');
-                if (!items || items.length === 0) {
-                    wrap.innerHTML = '<div class="empty-state" style="padding:40px;"><i class="fa-solid '+sec.icon+'"></i><p>Nu există înregistrări în '+sec.label.toLowerCase()+'.</p><p style="font-size:0.85rem;margin-top:6px;">Apasă butonul <strong>Adaugă</strong> pentru a crea prima înregistrare.</p></div>';
-                    return;
-                }
-                var h = '<table role="grid" aria-label="'+escapeHtml(sec.label)+'"><thead><tr>';
-                sec.columns.forEach(function(c) { h += '<th scope="col">'+escapeHtml(c)+'</th>'; });
-                h += '<th scope="col">Acțiuni</th></tr></thead><tbody>';
-                items.forEach(function(it) { h += sec.rowRenderer(it); });
-                h += '</tbody></table>'; wrap.innerHTML = h;
-                wrap.querySelector('table').addEventListener('click', function(e) {
-                    var btn = e.target.closest('button'); if (!btn) return;
-                    var action = btn.getAttribute('data-action'), id = btn.getAttribute('data-id');
-                    if (action === 'edit') { var it = items.find(function(x) { return String(x.id) === String(id); }); openModal(sk, it || null); }
-                    else if (action === 'delete') { confirmDelete(sk, id); }
-                });
-            }
-
-            /**
-             * Deschide modalul pentru o secțiune generică.
-             * Pentru secțiuni cu `active` (0/1) se face
-             * conversia la string 'da'/'nu' pentru select.
-             */
-            function openModal(sk, item) {
-                var sec = SECTIONS[sk]; editingId = item ? item.id : null;
-                modalTitleText.textContent = item ? 'Editare ' + sec.label : 'Adaugă ' + sec.label;
-                var fh = '';
-                sec.fields.forEach(function(f) {
-                    var raw = item ? (item[f.name] !== undefined ? item[f.name] : '') : '';
-                    var v = raw;
-                    // Conversie boolean 0/1 → 'da'/'nu' pentru select-ul de active
-                    if (f.name === 'active' || f.name === 'highlighted') {
-                        if (raw === 1 || raw === true) v = 'da';
-                        else if (raw === 0 || raw === false) v = 'nu';
-                        else v = String(raw);
-                    } else if (f.name === 'is_read') {
-                        v = raw === 1 ? 'da' : 'nu';
-                    } else {
-                        v = String(raw);
-                    }
-                    fh += '<div class="form-group"><label for="field_'+f.name+'">'+escapeHtml(f.label)+(f.required?' <span style="color:var(--red-light);">*</span>':'')+'</label>';
-                    if (f.type === 'textarea') {
-                        fh += '<textarea id="field_'+f.name+'" name="'+f.name+'" '+(f.required?'required':'')+(f.placeholder?' placeholder="'+escapeHtml(f.placeholder)+'"':'')+'>'+escapeHtml(v)+'</textarea>';
-                    } else if (f.type === 'select' && f.options) {
-                        fh += '<select id="field_'+f.name+'" name="'+f.name+'" '+(f.required?'required':'')+'>';
-                        f.options.forEach(function(o) { fh += '<option value="'+escapeHtml(o)+'"'+(String(v)===String(o)?' selected':'')+'>'+escapeHtml(o)+'</option>'; });
-                        fh += '</select>';
-                    } else {
-                        var it = f.type || 'text', st = f.step ? ' step="'+f.step+'"' : '';
-                        fh += '<input type="'+it+'" id="field_'+f.name+'" name="'+f.name+'" value="'+escapeHtml(v)+'" '+(f.required?'required':'')+(f.placeholder?' placeholder="'+escapeHtml(f.placeholder)+'"':'')+st+'>';
-                    }
-                    fh += '</div>';
-                });
-                fh += '<div class="form-actions"><button type="button" class="btn btn-outline" id="btnCancelModal">Anulează</button><button type="submit" class="btn btn-gold"><i class="fa-solid fa-floppy-disk"></i> Salvează</button></div>';
-                modalForm.innerHTML = fh; modalOverlay.classList.add('active'); modalOverlay.setAttribute('aria-hidden', 'false');
-                setTimeout(function() { var fi = modalForm.querySelector('input, select, textarea'); if (fi) fi.focus(); }, 150);
-                document.getElementById('btnCancelModal').addEventListener('click', closeModal);
-                modalForm.onsubmit = async function(e) { e.preventDefault(); await submitForm(sk); };
-            }
-
-            function closeModal() { modalOverlay.classList.remove('active'); modalOverlay.setAttribute('aria-hidden', 'true'); modalForm.innerHTML = ''; editingId = null; }
-
-            async function submitForm(sk) {
-                var sec = SECTIONS[sk], fd = new FormData(modalForm), payload = {};
-                sec.fields.forEach(function(f) {
-                    var v = fd.get(f.name);
-                    if (v === null || v === '') { payload[f.name] = (f.type === 'number') ? null : ''; return; }
-                    if (f.type === 'number') { payload[f.name] = parseFloat(v); if (isNaN(payload[f.name])) payload[f.name] = null; }
-                    else { payload[f.name] = v; }
-                });
-                // Aplică preSubmit (conversii boolean etc.)
-                if (sec.preSubmit) { payload = sec.preSubmit(payload); }
-
-                try {
-                    var url, method;
-
-                    // Comenzi: doar PATCH status (nu există PUT /api/admin/orders/:id)
-                    if (sec.useStatusPatch && editingId) {
-                        url = sec.apiBase + '/' + editingId + '/status';
-                        method = 'PATCH';
-                        var statusPayload = { status: payload.status };
-                        await apiRequest(url, { method: method, body: JSON.stringify(statusPayload) });
-                        showToast('Status comandă actualizat!', 'success');
-                        closeModal(); loadSection(sk);
-                        return;
-                    }
-
-                    // Mesaje: PATCH /api/admin/messages/:id/read pentru marcare citit
-                    if (sec.useReadPatch && editingId && payload.is_read === 1) {
-                        url = sec.apiBase + '/' + editingId + '/read';
-                        method = 'PATCH';
-                        await apiRequest(url, { method: method, body: JSON.stringify({}) });
-                        showToast('Mesaj marcat ca citit!', 'success');
-                        closeModal(); loadSection(sk);
-                        return;
-                    }
-
-                    // SEO batch: PUT /api/admin/seo cu array
-                    if (sec.seoBatchMode) {
-                        url = sec.apiBase;
-                        method = 'PUT';
-                        var seoArray = [payload];
-                        await apiRequest(url, { method: method, body: JSON.stringify(seoArray) });
-                        showToast('Setări SEO actualizate!', 'success');
-                        closeModal(); loadSection(sk);
-                        return;
-                    }
-
-                    // Caz standard: POST pentru create, PUT pentru update
-                    url = editingId ? sec.apiBase + '/' + editingId : sec.apiBase;
-                    method = editingId ? 'PUT' : 'POST';
-                    await apiRequest(url, { method: method, body: JSON.stringify(payload) });
-                    showToast(editingId ? 'Înregistrare actualizată cu succes!' : 'Înregistrare adăugată cu succes!', 'success');
-                    closeModal(); loadSection(sk);
-                } catch (err) {}
-            }
-
-            async function confirmDelete(sk, id) {
-                var sec = SECTIONS[sk];
-                if (!confirm('Ești sigur că vrei să ștergi această înregistrare din ' + sec.label.toLowerCase() + '? Această acțiune este ireversibilă.')) return;
-                try { await apiRequest(sec.apiBase + '/' + id, { method: 'DELETE' }); showToast('Înregistrare ștearsă cu succes!', 'success'); loadSection(sk); } catch (err) {}
-            }
-
-            sidebarNav.addEventListener('click', function(e) { var ni = e.target.closest('.nav-item'); if (!ni) return; var sk = ni.getAttribute('data-section'); if (sk) switchSection(sk); });
-            sidebarNav.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { var ni = e.target.closest('.nav-item'); if (!ni) return; e.preventDefault(); var sk = ni.getAttribute('data-section'); if (sk) switchSection(sk); } });
-
-            function switchSection(sk) {
-                currentSection = sk;
-                sidebarNav.querySelectorAll('.nav-item').forEach(function(it) { it.classList.remove('active'); it.removeAttribute('aria-current'); });
-                var ai = sidebarNav.querySelector('[data-section="'+sk+'"]'); if (ai) { ai.classList.add('active'); ai.setAttribute('aria-current', 'page'); }
-                if (sk === 'general') {
-                    loadSettingsSection();
-                } else {
-                    loadSection(sk);
-                }
-                if (window.innerWidth <= 768) sidebar.classList.remove('open');
-            }
-
-            closeModalBtn.addEventListener('click', closeModal);
-            modalOverlay.addEventListener('click', function(e) { if (e.target === modalOverlay) closeModal(); });
-            document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && modalOverlay.classList.contains('active')) closeModal(); });
-
-            btnLogout.addEventListener('click', async function() {
-                if (!confirm('Ești sigur că vrei să te deconectezi?')) return;
-                try { await apiRequest('/api/auth/logout', { method: 'POST' }); } catch (err) {}
-                window.location.replace('/admin');
-            });
-
-            mobileMenuToggle.addEventListener('click', function() { sidebar.classList.toggle('open'); });
-            document.addEventListener('click', function(e) {
-                if (window.innerWidth <= 768 && !sidebar.contains(e.target) && e.target !== mobileMenuToggle && !mobileMenuToggle.contains(e.target)) sidebar.classList.remove('open');
-            });
-
-            async function init() {
-                var auth = await checkAuth();
-                if (!auth) return;
-                removeAuthLoadingAndBootstrap();
-                // Secțiunea implicită e `general`
-                loadSettingsSection();
-                showToast('Bine ai venit în panoul de administrare!', 'info');
-            }
-            init();
-        })();
-    </script>
+        <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
+          <div class="stat-card reveal"><div class="stat-card__icon stat-card__icon--gold"><i class="fa-solid fa-coins"></i></div><div><div class="stat-card__value" id="stat-revenue">— RON</div><div class="stat-card__label">Venit Comenzi Recente</div></div></div>
+          <div class="stat-card reveal"><div class="stat-card__icon stat-card__icon--green"><i class="fa-solid fa-percent"></i></div><div><div class="stat-card__value" id="stat-promotions">—</div><div class="stat-card__label">Promoții Active</div></div></div>
+        </div>
+        <div class="panel panel--gold-border reveal">
+          <div class="panel__header"><h3 class="panel__title"><i class="fa-solid fa-clock-rotate-left"></i> Ultimele Comenzi</h3><button class="btn btn--ghost btn--sm" onclick="Admin.switchSection('orders')">Vezi toate <i class="fa-solid fa-arrow-right"></i></button></div>
+          <div class="panel__body panel__body--no-padding"><div class="table-wrap"><table class="table table--sm"><thead><tr><th>Număr</th><th>Client</th><th>Total</th><th>Status</th></tr></thead><tbody id="dashboard-recent-orders"><tr><td colspan="4"><div class="skeleton skeleton--text" style="width:100%;"></div></td></tr></tbody></table></div></div>
+        </div>
+      </section>
+      <!-- SECTION: COACHES -->
+      <section class="section-panel u-hidden" id="section-coaches">
+        <div class="filter-bar"><div class="filter-bar__search"><i class="fa-solid fa-magnifying-glass"></i><input class="form-input" type="search" id="coaches-search" placeholder="Caută antrenori..." aria-label="Caută antrenori"></div><button class="btn btn--primary" id="btn-add-coach"><i class="fa-solid fa-plus"></i> Adaugă Antrenor</button></div>
+        <div class="panel panel--gold-border"><div class="panel__body panel__body--no-padding"><div class="table-wrap"><table class="table"><thead><tr><th data-sort="id" data-section="coaches">ID</th><th data-sort="name" data-section="coaches">Nume</th><th data-sort="title" data-section="coaches">Titlu</th><th>Email</th><th>Telefon</th><th>Activ</th><th data-sort="sort_order" data-section="coaches">Ordine</th><th>Acțiuni</th></tr></thead><tbody id="coaches-tbody"></tbody></table></div></div></div>
+        <div class="pagination" id="coaches-pagination"></div>
+      </section>
+      <!-- SECTION: EVENTS -->
+      <section class="section-panel u-hidden" id="section-events">
+        <div class="filter-bar"><div class="filter-bar__search"><i class="fa-solid fa-magnifying-glass"></i><input class="form-input" type="search" id="events-search" placeholder="Caută evenimente..." aria-label="Caută evenimente"></div><button class="btn btn--primary" id="btn-add-event"><i class="fa-solid fa-plus"></i> Adaugă Eveniment</button></div>
+        <div class="panel panel--gold-border"><div class="panel__body panel__body--no-padding"><div class="table-wrap"><table class="table"><thead><tr><th data-sort="id" data-section="events">ID</th><th data-sort="title" data-section="events">Titlu</th><th data-sort="type" data-section="events">Tip</th><th data-sort="start_date" data-section="events">Dată</th><th>Locație</th><th data-sort="price" data-section="events">Preț</th><th data-sort="capacity" data-section="events">Capacitate</th><th>Publicat</th><th>Acțiuni</th></tr></thead><tbody id="events-tbody"></tbody></table></div></div></div>
+        <div class="pagination" id="events-pagination"></div>
+      </section>
+      <!-- SECTION: PRODUCTS -->
+      <section class="section-panel u-hidden" id="section-products">
+        <div class="filter-bar"><div class="filter-bar__search"><i class="fa-solid fa-magnifying-glass"></i><input class="form-input" type="search" id="products-search" placeholder="Caută produse..." aria-label="Caută produse"></div><button class="btn btn--primary" id="btn-add-product"><i class="fa-solid fa-plus"></i> Adaugă Produs</button></div>
+        <div class="panel panel--gold-border"><div class="panel__body panel__body--no-padding"><div class="table-wrap"><table class="table"><thead><tr><th data-sort="id" data-section="products">ID</th><th data-sort="name" data-section="products">Nume</th><th data-sort="category" data-section="products">Categorie</th><th data-sort="price" data-section="products">Preț</th><th data-sort="stock" data-section="products">Stoc</th><th>Activ</th><th>Imagine</th><th data-sort="created_at" data-section="products">Creat</th><th>Acțiuni</th></tr></thead><tbody id="products-tbody"></tbody></table></div></div></div>
+        <div class="pagination" id="products-pagination"></div>
+      </section>
+      <!-- SECTION: PLANS -->
+      <section class="section-panel u-hidden" id="section-plans">
+        <div class="filter-bar"><div class="filter-bar__search"><i class="fa-solid fa-magnifying-glass"></i><input class="form-input" type="search" id="plans-search" placeholder="Caută abonamente..." aria-label="Caută abonamente"></div><button class="btn btn--primary" id="btn-add-plan"><i class="fa-solid fa-plus"></i> Adaugă Abonament</button></div>
+        <div class="panel panel--gold-border"><div class="panel__body panel__body--no-padding"><div class="table-wrap"><table class="table"><thead><tr><th data-sort="id" data-section="plans">ID</th><th data-sort="name" data-section="plans">Nume</th><th data-sort="price" data-section="plans">Preț</th><th data-sort="duration_days" data-section="plans">Durată</th><th data-sort="is_popular" data-section="plans">Popular</th><th>Activ</th><th data-sort="sort_order" data-section="plans">Ordine</th><th>Acțiuni</th></tr></thead><tbody id="plans-tbody"></tbody></table></div></div></div>
+        <div class="pagination" id="plans-pagination"></div>
+      </section>
+      <!-- SECTION: SCHEDULE -->
+      <section class="section-panel u-hidden" id="section-schedule"><div id="schedule-container"></div></section>
+      <!-- SECTION: ORDERS -->
+      <section class="section-panel u-hidden" id="section-orders">
+        <div class="filter-bar"><div class="filter-bar__search"><i class="fa-solid fa-magnifying-glass"></i><input class="form-input" type="search" id="orders-search" placeholder="Caută comenzi..." aria-label="Caută comenzi"></div></div>
+        <div class="panel panel--gold-border"><div class="panel__body panel__body--no-padding"><div class="table-wrap"><table class="table"><thead><tr><th data-sort="order_number" data-section="orders">Număr</th><th data-sort="billing_name" data-section="orders">Client</th><th>Email</th><th data-sort="total_amount" data-section="orders">Total</th><th data-sort="status" data-section="orders">Status</th><th data-sort="created_at" data-section="orders">Dată</th><th>Produse</th><th>Acțiuni</th></tr></thead><tbody id="orders-tbody"></tbody></table></div></div></div>
+        <div class="pagination" id="orders-pagination"></div>
+      </section>
+      <!-- SECTION: CONTACT -->
+      <section class="section-panel u-hidden" id="section-contact">
+        <div class="filter-bar"><div class="filter-bar__search"><i class="fa-solid fa-magnifying-glass"></i><input class="form-input" type="search" id="contact-search" placeholder="Caută mesaje..." aria-label="Caută mesaje"></div></div>
+        <div class="panel panel--gold-border"><div class="panel__body panel__body--no-padding"><div class="table-wrap"><table class="table"><thead><tr><th data-sort="id" data-section="contact">ID</th><th data-sort="name" data-section="contact">Nume</th><th data-sort="email" data-section="contact">Email</th><th data-sort="subject" data-section="contact">Subiect</th><th data-sort="is_read" data-section="contact">Status</th><th data-sort="created_at" data-section="contact">Dată</th><th>Acțiuni</th></tr></thead><tbody id="contact-tbody"></tbody></table></div></div></div>
+        <div class="pagination" id="contact-pagination"></div>
+      </section>
+      <!-- SECTION: PROMOTIONS -->
+      <section class="section-panel u-hidden" id="section-promotions">
+        <div class="filter-bar"><div class="filter-bar__search"><i class="fa-solid fa-magnifying-glass"></i><input class="form-input" type="search" id="promotions-search" placeholder="Caută promoții..." aria-label="Caută promoții"></div><button class="btn btn--primary" id="btn-add-promotion"><i class="fa-solid fa-plus"></i> Adaugă Promoție</button></div>
+        <div class="panel panel--gold-border"><div class="panel__body panel__body--no-padding"><div class="table-wrap"><table class="table"><thead><tr><th data-sort="id" data-section="promotions">ID</th><th data-sort="code" data-section="promotions">Cod</th><th data-sort="discount_type" data-section="promotions">Tip Reducere</th><th data-sort="discount_value" data-section="promotions">Valoare</th><th data-sort="applies_to" data-section="promotions">Se Aplică La</th><th data-sort="start_date" data-section="promotions">Început</th><th data-sort="end_date" data-section="promotions">Sfârșit</th><th data-sort="usage_limit" data-section="promotions">Limită</th><th>Activă</th><th>Acțiuni</th></tr></thead><tbody id="promotions-tbody"></tbody></table></div></div></div>
+        <div class="pagination" id="promotions-pagination"></div>
+      </section>
+      <!-- SECTION: SETTINGS -->
+      <section class="section-panel u-hidden" id="section-settings"><div id="settings-container"></div></section>
+    </main>
+  </div>
+  <!-- MODALS: Coach, Event, Product, Plan, Schedule, Order, Contact View, Promotion, Confirm Delete -->
+  <div class="modal-overlay" id="modal-coach" role="dialog" aria-modal="true" aria-labelledby="modal-coach-title"><div class="modal modal--lg"><div class="modal__header"><h2 class="modal__title" id="modal-coach-title">Adaugă Antrenor</h2><button class="modal__close" data-close-modal="modal-coach" aria-label="Închide">&times;</button></div><form class="modal__body" id="form-coach" novalidate><input type="hidden" id="coach-id"><div class="form-grid"><div class="form-group"><label class="form-label" for="coach-name">Nume <span class="form-label__required">*</span></label><input class="form-input" type="text" id="coach-name" required placeholder="Nume complet"></div><div class="form-group"><label class="form-label" for="coach-slug">Slug <span class="form-label__optional">(auto)</span></label><input class="form-input" type="text" id="coach-slug" placeholder="nume-antrenor"></div><div class="form-group"><label class="form-label" for="coach-title">Titlu</label><input class="form-input" type="text" id="coach-title" placeholder="ex: Antrenor Principal"></div><div class="form-group"><label class="form-label" for="coach-email">Email</label><input class="form-input" type="email" id="coach-email" placeholder="email@exemplu.ro"></div><div class="form-group"><label class="form-label" for="coach-phone">Telefon</label><input class="form-input" type="text" id="coach-phone" placeholder="07xx xxx xxx"></div><div class="form-group"><label class="form-label" for="coach-sort-order">Ordine</label><input class="form-input" type="number" id="coach-sort-order" value="0" min="0"></div><div class="form-group form-group--full"><label class="form-label" for="coach-bio">Bio</label><textarea class="form-textarea" id="coach-bio" rows="3" placeholder="Scurtă descriere..."></textarea></div><div class="form-group"><label class="form-label" for="coach-specialties">Specializări <span class="form-label__optional">(separate prin virgulă)</span></label><input class="form-input" type="text" id="coach-specialties" placeholder="Box, Kickboxing, MMA"></div><div class="form-group"><label class="form-label" for="coach-certifications">Certificări <span class="form-label__optional">(separate prin virgulă)</span></label><input class="form-input" type="text" id="coach-certifications" placeholder="FR Box, WAKO"></div><div class="form-group"><label class="form-switch"><input class="form-switch__input" type="checkbox" id="coach-is-active" checked><span class="form-switch__track"></span><span class="form-switch__label">Activ</span></label></div></div></form><div class="modal__footer"><button class="btn btn--ghost" data-close-modal="modal-coach">Anulează</button><button class="btn btn--primary" type="submit" form="form-coach"><i class="fa-solid fa-floppy-disk"></i> Salvează</button></div></div></div>
+  <!-- Additional modals (event, product, plan, schedule, order, contact-view, promotion, confirm-delete) follow same pattern -->
+  <div class="modal-overlay" id="modal-event" role="dialog" aria-modal="true" aria-labelledby="modal-event-title"><div class="modal modal--lg"><div class="modal__header"><h2 class="modal__title" id="modal-event-title">Adaugă Eveniment</h2><button class="modal__close" data-close-modal="modal-event" aria-label="Închide">&times;</button></div><form class="modal__body" id="form-event" novalidate><input type="hidden" id="event-id"><div class="form-grid"><div class="form-group"><label class="form-label" for="event-title">Titlu <span class="form-label__required">*</span></label><input class="form-input" type="text" id="event-title" required placeholder="Titlu eveniment"></div><div class="form-group"><label class="form-label" for="event-slug">Slug <span class="form-label__optional">(auto)</span></label><input class="form-input" type="text" id="event-slug" placeholder="titlu-eveniment"></div><div class="form-group"><label class="form-label" for="event-type">Tip</label><select class="form-select" id="event-type"><option value="competition">Competiție</option><option value="seminar">Seminar</option><option value="workshop">Workshop</option><option value="general">General</option></select></div><div class="form-group"><label class="form-label" for="event-location">Locație</label><input class="form-input" type="text" id="event-location" placeholder="Adresă sau sală"></div><div class="form-group"><label class="form-label" for="event-start-date">Data început <span class="form-label__required">*</span></label><input class="form-input" type="date" id="event-start-date" required></div><div class="form-group"><label class="form-label" for="event-end-date">Data sfârșit</label><input class="form-input" type="date" id="event-end-date"></div><div class="form-group"><label class="form-label" for="event-time">Ora</label><input class="form-input" type="time" id="event-time"></div><div class="form-group"><label class="form-label" for="event-price">Preț (RON)</label><input class="form-input" type="number" id="event-price" value="0" min="0" step="0.01"></div><div class="form-group"><label class="form-label" for="event-capacity">Capacitate</label><input class="form-input" type="number" id="event-capacity" placeholder="Ex: 50" min="1"></div><div class="form-group form-group--full"><label class="form-label" for="event-description">Descriere</label><textarea class="form-textarea" id="event-description" rows="3" placeholder="Descriere eveniment..."></textarea></div><div class="form-group"><label class="form-switch"><input class="form-switch__input" type="checkbox" id="event-is-published" checked><span class="form-switch__track"></span><span class="form-switch__label">Publicat</span></label></div></div></form><div class="modal__footer"><button class="btn btn--ghost" data-close-modal="modal-event">Anulează</button><button class="btn btn--primary" type="submit" form="form-event"><i class="fa-solid fa-floppy-disk"></i> Salvează</button></div></div></div>
+  <div class="modal-overlay" id="modal-product" role="dialog" aria-modal="true" aria-labelledby="modal-product-title"><div class="modal modal--lg"><div class="modal__header"><h2 class="modal__title" id="modal-product-title">Adaugă Produs</h2><button class="modal__close" data-close-modal="modal-product" aria-label="Închide">&times;</button></div><form class="modal__body" id="form-product" novalidate><input type="hidden" id="product-id"><div class="form-grid"><div class="form-group"><label class="form-label" for="product-name">Nume <span class="form-label__required">*</span></label><input class="form-input" type="text" id="product-name" required placeholder="Nume produs"></div><div class="form-group"><label class="form-label" for="product-slug">Slug <span class="form-label__optional">(auto)</span></label><input class="form-input" type="text" id="product-slug" placeholder="nume-produs"></div><div class="form-group"><label class="form-label" for="product-price">Preț (RON) <span class="form-label__required">*</span></label><input class="form-input" type="number" id="product-price" value="0" min="0" step="0.01" required></div><div class="form-group"><label class="form-label" for="product-category">Categorie</label><select class="form-select" id="product-category"><option value="general">Generale</option><option value="gloves">Mănuși</option><option value="headgear">Căști</option><option value="footwear">Încălțăminte</option><option value="apparel">Îmbrăcăminte</option><option value="protection">Protecție</option><option value="accessories">Accesorii</option><option value="equipment">Echipament</option></select></div><div class="form-group"><label class="form-label" for="product-stock">Stoc</label><input class="form-input" type="number" id="product-stock" placeholder="Cantitate" min="0"></div><div class="form-group"><label class="form-label" for="product-image">URL Imagine</label><input class="form-input" type="text" id="product-image" placeholder="/images/produs.jpg"></div><div class="form-group form-group--full"><label class="form-label" for="product-description">Descriere</label><textarea class="form-textarea" id="product-description" rows="3" placeholder="Descriere produs..."></textarea></div><div class="form-group"><label class="form-switch"><input class="form-switch__input" type="checkbox" id="product-is-active" checked><span class="form-switch__track"></span><span class="form-switch__label">Activ</span></label></div></div></form><div class="modal__footer"><button class="btn btn--ghost" data-close-modal="modal-product">Anulează</button><button class="btn btn--primary" type="submit" form="form-product"><i class="fa-solid fa-floppy-disk"></i> Salvează</button></div></div></div>
+  <div class="modal-overlay" id="modal-plan" role="dialog" aria-modal="true" aria-labelledby="modal-plan-title"><div class="modal modal--lg"><div class="modal__header"><h2 class="modal__title" id="modal-plan-title">Adaugă Abonament</h2><button class="modal__close" data-close-modal="modal-plan" aria-label="Închide">&times;</button></div><form class="modal__body" id="form-plan" novalidate><input type="hidden" id="plan-id"><div class="form-grid"><div class="form-group"><label class="form-label" for="plan-name">Nume <span class="form-label__required">*</span></label><input class="form-input" type="text" id="plan-name" required placeholder="Nume abonament"></div><div class="form-group"><label class="form-label" for="plan-slug">Slug <span class="form-label__optional">(auto)</span></label><input class="form-input" type="text" id="plan-slug" placeholder="nume-abonament"></div><div class="form-group"><label class="form-label" for="plan-price">Preț (RON) <span class="form-label__required">*</span></label><input class="form-input" type="number" id="plan-price" value="0" min="0" step="0.01" required></div><div class="form-group"><label class="form-label" for="plan-duration">Durată (zile)</label><input class="form-input" type="number" id="plan-duration" value="30" min="1"></div><div class="form-group"><label class="form-label" for="plan-sort-order">Ordine</label><input class="form-input" type="number" id="plan-sort-order" value="0" min="0"></div><div class="form-group form-group--full"><label class="form-label" for="plan-description">Descriere</label><textarea class="form-textarea" id="plan-description" rows="2" placeholder="Descriere abonament..."></textarea></div><div class="form-group form-group--full"><label class="form-label" for="plan-features">Beneficii <span class="form-label__optional">(câte unul pe linie)</span></label><textarea class="form-textarea" id="plan-features" rows="4" placeholder="Acces nelimitat la sală&#10;Antrenor personal&#10;Evaluare fizică gratuită"></textarea></div><div class="form-group"><label class="form-switch"><input class="form-switch__input" type="checkbox" id="plan-is-popular"><span class="form-switch__track"></span><span class="form-switch__label">Popular</span></label></div><div class="form-group"><label class="form-switch"><input class="form-switch__input" type="checkbox" id="plan-is-active" checked><span class="form-switch__track"></span><span class="form-switch__label">Activ</span></label></div></div></form><div class="modal__footer"><button class="btn btn--ghost" data-close-modal="modal-plan">Anulează</button><button class="btn btn--primary" type="submit" form="form-plan"><i class="fa-solid fa-floppy-disk"></i> Salvează</button></div></div></div>
+  <div class="modal-overlay" id="modal-schedule" role="dialog" aria-modal="true" aria-labelledby="modal-schedule-title"><div class="modal"><div class="modal__header"><h2 class="modal__title" id="modal-schedule-title">Adaugă Sesiune</h2><button class="modal__close" data-close-modal="modal-schedule" aria-label="Închide">&times;</button></div><form class="modal__body" id="form-schedule" novalidate><input type="hidden" id="schedule-id"><div class="form-grid"><div class="form-group"><label class="form-label" for="schedule-title">Titlu <span class="form-label__required">*</span></label><input class="form-input" type="text" id="schedule-title" required placeholder="Ex: Box Avansați"></div><div class="form-group"><label class="form-label" for="schedule-coach-id">ID Antrenor</label><input class="form-input" type="number" id="schedule-coach-id" placeholder="ID antrenor (opțional)" min="1"></div><div class="form-group"><label class="form-label" for="schedule-day">Zi <span class="form-label__required">*</span></label><select class="form-select" id="schedule-day" required><option value="0">Duminică</option><option value="1" selected>Luni</option><option value="2">Marți</option><option value="3">Miercuri</option><option value="4">Joi</option><option value="5">Vineri</option><option value="6">Sâmbătă</option></select></div><div class="form-group"><label class="form-label" for="schedule-start">Ora început <span class="form-label__required">*</span></label><input class="form-input" type="time" id="schedule-start" required></div><div class="form-group"><label class="form-label" for="schedule-end">Ora sfârșit <span class="form-label__required">*</span></label><input class="form-input" type="time" id="schedule-end" required></div><div class="form-group"><label class="form-label" for="schedule-location">Locație</label><input class="form-input" type="text" id="schedule-location" placeholder="Sala principală"></div><div class="form-group"><label class="form-label" for="schedule-max">Max Participanți</label><input class="form-input" type="number" id="schedule-max" placeholder="20" min="1"></div><div class="form-group"><label class="form-switch"><input class="form-switch__input" type="checkbox" id="schedule-is-active" checked><span class="form-switch__track"></span><span class="form-switch__label">Activă</span></label></div></div></form><div class="modal__footer"><button class="btn btn--ghost" data-close-modal="modal-schedule">Anulează</button><button class="btn btn--primary" type="submit" form="form-schedule"><i class="fa-solid fa-floppy-disk"></i> Salvează</button></div></div></div>
+  <div class="modal-overlay" id="modal-order" role="dialog" aria-modal="true" aria-labelledby="modal-order-title"><div class="modal modal--lg"><div class="modal__header"><h2 class="modal__title" id="modal-order-title">Detalii Comandă</h2><button class="modal__close" data-close-modal="modal-order" aria-label="Închide">&times;</button></div><form class="modal__body" id="form-order" novalidate><input type="hidden" id="order-id"><div class="form-grid"><div class="form-group"><label class="form-label">Număr Comandă</label><p style="font-size:1.1rem;font-weight:700;" id="order-number-display">—</p></div><div class="form-group"><label class="form-label">Total</label><p style="font-size:1.1rem;font-weight:700;color:var(--gold-primary);" id="order-total-display">—</p></div><div class="form-group"><label class="form-label" for="order-status">Status</label><select class="form-select" id="order-status"><option value="pending">În așteptare</option><option value="confirmed">Confirmată</option><option value="processing">În procesare</option><option value="completed">Finalizată</option><option value="cancelled">Anulată</option><option value="refunded">Rambursată</option></select></div><div class="form-group"><label class="form-label" for="order-billing-name">Nume Client</label><input class="form-input" type="text" id="order-billing-name"></div><div class="form-group"><label class="form-label" for="order-billing-email">Email Client</label><input class="form-input" type="email" id="order-billing-email"></div><div class="form-group"><label class="form-label" for="order-billing-phone">Telefon Client</label><input class="form-input" type="text" id="order-billing-phone"></div><div class="form-group form-group--full"><label class="form-label">Produse</label><div id="order-items-list" style="font-size:0.88rem;"></div></div><div class="form-group form-group--full"><label class="form-label" for="order-notes">Note</label><textarea class="form-textarea" id="order-notes" rows="2" placeholder="Note interne..."></textarea></div></div></form><div class="modal__footer"><button class="btn btn--ghost" data-close-modal="modal-order">Închide</button><button class="btn btn--primary" type="submit" form="form-order"><i class="fa-solid fa-floppy-disk"></i> Actualizează</button></div></div></div>
+  <div class="modal-overlay" id="modal-contact-view" role="dialog" aria-modal="true" aria-labelledby="modal-contact-view-title"><div class="modal"><div class="modal__header"><h2 class="modal__title" id="modal-contact-view-title">Mesaj Contact</h2><button class="modal__close" data-close-modal="modal-contact-view" aria-label="Închide">&times;</button></div><div class="modal__body"><input type="hidden" id="contact-view-id"><p><strong>Nume:</strong> <span id="contact-view-name">—</span></p><p><strong>Email:</strong> <span id="contact-view-email">—</span></p><p><strong>Subiect:</strong> <span id="contact-view-subject">—</span></p><p><strong>Dată:</strong> <span id="contact-view-date">—</span></p><hr style="border-color:rgba(255,255,255,0.06);margin:1rem 0;"><p><strong>Mesaj:</strong></p><p id="contact-view-message" style="background:rgba(255,255,255,0.03);padding:1rem;border-radius:8px;margin-top:0.5rem;">—</p></div><div class="modal__footer"><button class="btn btn--ghost" data-close-modal="modal-contact-view">Închide</button></div></div></div>
+  <!-- MODAL: PROMOTION -->
+  <div class="modal-overlay" id="modal-promotion" role="dialog" aria-modal="true" aria-labelledby="modal-promotion-title"><div class="modal modal--lg"><div class="modal__header"><h2 class="modal__title" id="modal-promotion-title">Adaugă Promoție</h2><button class="modal__close" data-close-modal="modal-promotion" aria-label="Închide">&times;</button></div><form class="modal__body" id="form-promotion" novalidate><input type="hidden" id="promotion-id"><div class="form-grid"><div class="form-group"><label class="form-label" for="promotion-code">Cod Promo <span class="form-label__required">*</span></label><input class="form-input" type="text" id="promotion-code" required placeholder="EX: BOX20"></div><div class="form-group"><label class="form-label" for="promotion-discount-type">Tip Reducere <span class="form-label__required">*</span></label><select class="form-select" id="promotion-discount-type" required><option value="percentage">Procent (%)</option><option value="fixed">Sumă Fixă (RON)</option></select></div><div class="form-group"><label class="form-label" for="promotion-discount-value">Valoare <span class="form-label__required">*</span></label><input class="form-input" type="number" id="promotion-discount-value" value="10" min="1" step="0.01" required></div><div class="form-group"><label class="form-label" for="promotion-applies-to">Se Aplică La</label><select class="form-select" id="promotion-applies-to"><option value="all">Toate</option><option value="plans">Abonamente</option><option value="products">Produse</option><option value="events">Evenimente</option></select></div><div class="form-group"><label class="form-label" for="promotion-start-date">Data Început</label><input class="form-input" type="date" id="promotion-start-date"></div><div class="form-group"><label class="form-label" for="promotion-end-date">Data Sfârșit</label><input class="form-input" type="date" id="promotion-end-date"></div><div class="form-group"><label class="form-label" for="promotion-usage-limit">Limită Utilizări <span class="form-label__optional">(gol = nelimitat)</span></label><input class="form-input" type="number" id="promotion-usage-limit" placeholder="100" min="1"></div><div class="form-group form-group--full"><label class="form-label" for="promotion-description">Descriere</label><textarea class="form-textarea" id="promotion-description" rows="2" placeholder="Descrierea promoției..."></textarea></div><div class="form-group"><label class="form-switch"><input class="form-switch__input" type="checkbox" id="promotion-is-active" checked><span class="form-switch__track"></span><span class="form-switch__label">Activă</span></label></div></div></form><div class="modal__footer"><button class="btn btn--ghost" data-close-modal="modal-promotion">Anulează</button><button class="btn btn--primary" type="submit" form="form-promotion"><i class="fa-solid fa-floppy-disk"></i> Salvează</button></div></div></div>
+  <!-- MODAL: CONFIRM DELETE -->
+  <div class="modal-overlay" id="modal-confirm-delete" role="alertdialog" aria-modal="true" aria-labelledby="confirm-delete-title"><div class="modal modal--sm"><div class="modal__header"><h2 class="modal__title" id="confirm-delete-title">Confirmă Ștergerea</h2><button class="modal__close" data-close-modal="modal-confirm-delete" aria-label="Închide">&times;</button></div><div class="modal__body u-text-center"><div class="confirm-modal__icon confirm-modal__icon--danger"><i class="fa-solid fa-triangle-exclamation"></i></div><p class="confirm-modal__message">Ești sigur că vrei să ștergi <strong id="confirm-delete-name">acest element</strong>?</p><p style="font-size:0.8rem;color:var(--gray-muted);">Această acțiune este ireversibilă.</p></div><div class="modal__footer"><button class="btn btn--ghost" data-close-modal="modal-confirm-delete">Anulează</button><button class="btn btn--danger" id="btn-confirm-delete"><i class="fa-solid fa-trash"></i> Șterge</button></div></div></div>
+  <script src="/admin/js/admin.js"></script>
 </body>
 </html>

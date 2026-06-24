@@ -1,289 +1,250 @@
-'use strict';
-
 // ---------------------------------------------------------------------------
-// routes/auth.js — Admin Authentication Routes
+// routes/auth.js
+// Autentificare: POST /api/auth/login (bcrypt + JWT cookie), GET /api/auth/check
 //
-// POST /api/auth/login   – bcrypt password verification, JWT in
-//                           HttpOnly / Secure / SameSite=Strict cookie
-// GET  /api/auth/check   – verify JWT from cookie, return admin payload
-//                           (always 200; success: false when unauthenticated)
-// POST /api/auth/logout  – clear auth cookie
-//
-// Security: input validation, constant-time bcrypt comparison, short-lived
-//           JWT with a strong secret, hardened cookie flags, no stack‑trace
-//           leakage in production.
+// Cookie-ul JWT se numește "token", HttpOnly, Secure, SameSite=Strict.
+// Fără CSRF – simplu și direct, conform specificației.
 // ---------------------------------------------------------------------------
 
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const db = require('../db');
+const { getDb } = require('../config/db');
+const { loginSchema, validate } = require('../middleware/validate');
+const { authRateLimiter } = require('../middleware/security');
 
 const router = express.Router();
 
 // ---------------------------------------------------------------------------
-// Configuration
+// Constante
 // ---------------------------------------------------------------------------
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_dev_secret_change_me';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
-const COOKIE_NAME = 'token';
-const SALT_ROUNDS = 12;
+
+/** Numele cookie-ului de autentificare */
+const TOKEN_COOKIE = 'token';
+
+/** Durata de viață a token-ului (15 minute) */
+const TOKEN_TTL = '15m';
+
+/** Algoritmul JWT */
+const JWT_ALGORITHM = 'HS256';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /**
- * Validate an email string with a reasonable regex.
- * Returns true if the email passes basic format checks.
+ * Obține secretul JWT din variabilele de mediu.
+ * @returns {string}
  */
-function isValidEmail(email) {
-  if (typeof email !== 'string') return false;
-  // RFC‑5322 simplified – good enough for admin login
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
-  return re.test(email.trim());
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('[auth] JWT_SECRET nu este definit în variabilele de mediu.');
+  }
+  if (secret.length < 32) {
+    throw new Error('[auth] JWT_SECRET este prea scurt (minim 32 caractere).');
+  }
+  return secret;
 }
 
 /**
- * Validate a password: must be a string, 8–128 chars.
+ * Convertește un TTL (ex: "15m", "1h", "7d") în milisecunde.
+ * @param {string} ttl
+ * @returns {number}
  */
-function isValidPassword(password) {
-  return typeof password === 'string' && password.length >= 8 && password.length <= 128;
-}
-
-/**
- * Generate a signed JWT for an admin payload.
- */
-function signToken(payload) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-}
-
-/**
- * Set the auth cookie with hardened flags.
- * `secure` is disabled in dev (no HTTPS) but enforced in production.
- */
-function setAuthCookie(res, token) {
-  const isProduction = process.env.NODE_ENV === 'production';
-
-  res.cookie(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: 'strict',
-    path: '/',
-    maxAge: ms(JWT_EXPIRES_IN),
-    // Not accessible via document.cookie
-  });
-}
-
-/**
- * Clear the auth cookie (used for logout).
- */
-function clearAuthCookie(res) {
-  res.clearCookie(COOKIE_NAME, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/',
-  });
-}
-
-/**
- * Parse a duration string like '8h', '60m', '7d' into milliseconds.
- * Returns 0 for unknown formats.
- */
-function ms(duration) {
-  const match = /^(\d+)\s*(s|m|h|d)$/i.exec(String(duration).trim());
-  if (!match) return 0;
+function ttlToMs(ttl) {
+  const match = ttl.match(/^(\d+)(s|m|h|d)$/);
+  if (!match) return 15 * 60 * 1000;
   const value = parseInt(match[1], 10);
-  const unit = match[2].toLowerCase();
-  const multipliers = { s: 1000, m: 60000, h: 3600000, d: 86400000 };
-  return value * (multipliers[unit] || 0);
-}
-
-/**
- * Extract the JWT from the cookie or Authorization header.
- * Returns the token string or null.
- */
-function extractToken(req) {
-  const cookieToken = req.cookies && req.cookies[COOKIE_NAME];
-  if (cookieToken) return cookieToken;
-
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.slice(7);
-  }
-
-  return null;
+  const multipliers = { s: 1000, m: 60 * 1000, h: 60 * 60 * 1000, d: 24 * 60 * 60 * 1000 };
+  return value * (multipliers[match[2]] || multipliers.m);
 }
 
 // ---------------------------------------------------------------------------
-// JWT verification middleware (exported for reuse by other route modules)
+// POST /api/auth/login
 // ---------------------------------------------------------------------------
-function verifyToken(req, res, next) {
-  const token = extractToken(req);
 
-  if (!token) {
-    return res.status(401).json({ success: false, redirect: '/login', message: 'Token lipsă. Autentifică-te din nou.' });
-  }
+router.post(
+  '/api/auth/login',
+  authRateLimiter,
+  validate(loginSchema),
+  async (req, res) => {
+    try {
+      const { email, password } = req.body;
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.admin = decoded; // { id, email, iat, exp }
-    return next();
-  } catch (err) {
-    if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ success: false, redirect: '/login', message: 'Sesiunea a expirat. Autentifică-te din nou.' });
+      // 1. Caută utilizatorul în baza de date
+      const db = getDb();
+      const user = db.prepare(
+        'SELECT id, name, email, password, role, is_active FROM users WHERE email = ?'
+      ).get(email);
+
+      // 2. Verificare generică – nu dezvălui dacă email-ul există sau nu
+      if (!user || !user.is_active) {
+        return res.status(401).json({
+          error: 'Invalid email or password.',
+          code: 'INVALID_CREDENTIALS',
+        });
+      }
+
+      // 3. Comparare parolă bcrypt
+      const passwordMatch = await bcrypt.compare(password, user.password);
+
+      if (!passwordMatch) {
+        return res.status(401).json({
+          error: 'Invalid email or password.',
+          code: 'INVALID_CREDENTIALS',
+        });
+      }
+
+      // 4. Semnează JWT
+      const secret = getJwtSecret();
+      const payload = {
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        type: 'access',
+      };
+
+      const token = jwt.sign(payload, secret, {
+        algorithm: JWT_ALGORITHM,
+        expiresIn: TOKEN_TTL,
+      });
+
+      // 5. Setează cookie HttpOnly, Secure, SameSite=Strict
+      res.cookie(TOKEN_COOKIE, token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        path: '/',
+        maxAge: ttlToMs(TOKEN_TTL),
+      });
+
+      // 6. Răspuns fără token în body (este în cookie)
+      return res.json({
+        message: 'Login successful.',
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      });
+    } catch (err) {
+      console.error('[auth] Login error:', err.message);
+      return res.status(500).json({
+        error: 'Internal server error.',
+        code: 'INTERNAL_ERROR',
+      });
     }
-    if (err.name === 'JsonWebTokenError') {
-      return res.status(401).json({ success: false, redirect: '/login', message: 'Token invalid.' });
+  }
+);
+
+// ---------------------------------------------------------------------------
+// GET /api/auth/check
+// ---------------------------------------------------------------------------
+
+router.get('/api/auth/check', (req, res) => {
+  try {
+    const token = req.cookies?.[TOKEN_COOKIE];
+
+    // Fără token = neautentificat (nu eroare)
+    if (!token) {
+      return res.json({
+        authenticated: false,
+        user: null,
+      });
     }
-    return res.status(500).json({ success: false, redirect: null, message: 'Eroare la verificarea token-ului.' });
-  }
-}
 
-// ---------------------------------------------------------------------------
-// Routes
-// ---------------------------------------------------------------------------
+    // Verificare JWT
+    const secret = getJwtSecret();
+    let payload;
 
-/**
- * POST /api/auth/login
- *
- * Body (JSON):
- *   { "email": "...", "password": "..." }
- *
- * On success returns: { success: true, redirect: "/admin/dashboard", message: "Autentificare reușită.", admin: { id, email } }
- * Also sets the token cookie.
- *
- * Dacă nu există niciun admin în baza de date, creează automat un admin default
- * (independent de email-ul introdus):
- *   email: admin@boxingchampions.ro
- *   parola: boxing2026
- */
-router.post('/login', (req, res) => {
-  // --- 1. Input presence ---
-  const { email, password } = req.body || {};
+    try {
+      payload = jwt.verify(token, secret, { algorithms: [JWT_ALGORITHM] });
+    } catch {
+      // Token invalid sau expirat – ștergem cookie-ul
+      res.clearCookie(TOKEN_COOKIE, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        path: '/',
+      });
 
-  if (!email || !password) {
-    return res.status(400).json({ success: false, redirect: null, message: 'Email și parolă obligatorii.' });
-  }
+      return res.json({
+        authenticated: false,
+        user: null,
+      });
+    }
 
-  // --- 2. Input validation ---
-  if (!isValidEmail(email)) {
-    return res.status(400).json({ success: false, redirect: null, message: 'Format email invalid.' });
-  }
+    // Validare structură payload
+    if (!payload || !payload.sub || payload.type !== 'access') {
+      res.clearCookie(TOKEN_COOKIE, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        path: '/',
+      });
 
-  if (!isValidPassword(password)) {
-    return res.status(400).json({ success: false, redirect: null, message: 'Parola trebuie să aibă între 8 și 128 de caractere.' });
-  }
+      return res.json({
+        authenticated: false,
+        user: null,
+      });
+    }
 
-  // --- 3. Asigură existența unui admin în sistem (independent de cerere) ---
-  const database = db.getDb();
-  const adminCount = database.prepare('SELECT COUNT(*) AS cnt FROM admins').get();
+    // Verificare utilizator în baza de date
+    const db = getDb();
+    const user = db.prepare(
+      'SELECT id, name, email, role, is_active FROM users WHERE id = ?'
+    ).get(payload.sub);
 
-  if (adminCount.cnt === 0) {
-    const defaultEmail = process.env.ADMIN_EMAIL || 'admin@boxingchampions.ro';
-    const defaultPassword = process.env.ADMIN_PASSWORD || 'boxing2026';
-    const hash = bcrypt.hashSync(defaultPassword, SALT_ROUNDS);
-    database.prepare('INSERT INTO admins (email, password) VALUES (?, ?)').run(defaultEmail, hash);
-    console.log('[AUTH] Admin default creat:', defaultEmail);
-  }
+    if (!user || !user.is_active) {
+      res.clearCookie(TOKEN_COOKIE, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        path: '/',
+      });
 
-  // --- 4. Look up admin ---
-  const normalizedEmail = email.trim().toLowerCase();
-  const admin = db.getAdminByEmail(normalizedEmail);
+      return res.json({
+        authenticated: false,
+        user: null,
+      });
+    }
 
-  if (!admin) {
-    // Use a generic message to avoid user enumeration
-    return res.status(401).json({ success: false, redirect: null, message: 'Credențiale incorecte' });
-  }
-
-  // --- 5. Verify password (constant-time via bcrypt) ---
-  let passwordOk = false;
-  try {
-    passwordOk = bcrypt.compareSync(password, admin.password);
-  } catch {
-    return res.status(500).json({ success: false, redirect: null, message: 'Eroare internă la verificarea parolei.' });
-  }
-
-  if (!passwordOk) {
-    return res.status(401).json({ success: false, redirect: null, message: 'Credențiale incorecte' });
-  }
-
-  // --- 6. Issue JWT ---
-  const payload = { id: admin.id, email: admin.email };
-  let token;
-  try {
-    token = signToken(payload);
-  } catch {
-    return res.status(500).json({ success: false, redirect: null, message: 'Nu s-a putut genera token-ul.' });
-  }
-
-  // --- 7. Set cookie ---
-  setAuthCookie(res, token);
-
-  // --- 8. Respond ---
-  return res.json({
-    success: true,
-    redirect: '/admin/dashboard',
-    message: 'Autentificare reușită.',
-    admin: {
-      id: admin.id,
-      email: admin.email,
-    },
-  });
-});
-
-/**
- * GET /api/auth/check
- *
- * Reads the JWT from cookie / Authorization header and returns the current
- * admin payload if the token is valid.
- *
- * Always returns HTTP 200.
- *   - Authenticated:   { success: true,  authenticated: true,  admin: { id, email } }
- *   - Unauthenticated: { success: false, authenticated: false, redirect: null, message: "..." }
- */
-router.get('/check', (req, res) => {
-  const token = extractToken(req);
-
-  if (!token) {
-    return res.status(200).json({ success: false, authenticated: false, redirect: null, message: 'Token lipsă. Autentifică-te din nou.' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    return res.status(200).json({
-      success: true,
+    // Autentificat cu succes
+    return res.json({
       authenticated: true,
-      admin: {
-        id: decoded.id,
-        email: decoded.email,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
       },
     });
   } catch (err) {
-    if (err.name === 'TokenExpiredError') {
-      return res.status(200).json({ success: false, authenticated: false, redirect: null, message: 'Sesiunea a expirat. Autentifică-te din nou.' });
-    }
-    if (err.name === 'JsonWebTokenError') {
-      return res.status(200).json({ success: false, authenticated: false, redirect: null, message: 'Token invalid.' });
-    }
-    return res.status(200).json({ success: false, authenticated: false, redirect: null, message: 'Eroare la verificarea token-ului.' });
+    console.error('[auth] Check error:', err.message);
+    return res.status(500).json({
+      error: 'Internal server error.',
+      code: 'INTERNAL_ERROR',
+    });
   }
 });
 
-/**
- * POST /api/auth/logout
- *
- * Clears the auth cookie. No JWT validation required — even an expired token
- * should be cleared from the client.
- */
-router.post('/logout', (_req, res) => {
-  clearAuthCookie(res);
-  return res.json({ success: true, redirect: '/admin', message: 'Deconectare reușită.' });
+// ---------------------------------------------------------------------------
+// POST /api/auth/logout (bonus – șterge cookie-ul)
+// ---------------------------------------------------------------------------
+
+router.post('/api/auth/logout', (req, res) => {
+  res.clearCookie(TOKEN_COOKIE, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    path: '/',
+  });
+
+  return res.json({
+    message: 'Logged out successfully.',
+  });
 });
 
-// ---------------------------------------------------------------------------
-// Exports
-// ---------------------------------------------------------------------------
 module.exports = router;
-module.exports.verifyToken = verifyToken;

@@ -3,593 +3,1349 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Boxing Champions — Contactează-ne. Programează o vizită, întrebări despre abonamente sau înscriere. Suntem aici pentru tine!">
+  <meta name="description" content="Contactează Boxing Champions — club de box de elită. Telefon, email, adresă, hartă și formular de contact rapid. Programează-ți primul antrenament gratuit.">
   <meta name="theme-color" content="#0a0a0a">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Contact — Boxing Champions</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <link rel="preload" as="image" href="images/contact-hero.jpg">
+  <meta name="robots" content="index, follow">
+  <link rel="icon" type="image/png" href="/images/badge.png">
+  <link rel="apple-touch-icon" href="/images/badge.png">
+
+  <title>Contact | Boxing Champions</title>
+
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Open Graph / SEO -->
+  <meta property="og:title" content="Contact | Boxing Champions">
+  <meta property="og:description" content="Contactează-ne rapid — telefon, email, adresă, hartă și formular de contact.">
+  <meta property="og:image" content="/images/badge.png">
+  <meta property="og:url" content="">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    "name": "Contact Boxing Champions",
+    "description": "Pagina de contact a clubului de box Boxing Champions — telefon, email, adresă, hartă și formular.",
+    "url": "/contact.html",
+    "about": {
+      "@type": "SportsClub",
+      "name": "Boxing Champions",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "București",
+        "addressCountry": "RO"
+      },
+      "sport": "Boxing"
+    }
+  }
+  </script>
+
+  <style>
+    /* ============================================================
+       CONTACT PAGE SPECIFIC STYLES
+       ============================================================ */
+
+    /* ---- Page Header ---- */
+    .contact-page-header {
+      position: relative;
+      min-height: 40vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: var(--black-deep);
+    }
+
+    .contact-page-header__bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .contact-page-header__bg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.32);
+    }
+
+    .contact-page-header__overlay {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 40%, rgba(212,168,67,0.07) 0%, transparent 55%),
+        linear-gradient(to top, var(--black-deep) 0%, transparent 50%);
+      z-index: 1;
+    }
+
+    .contact-page-header__content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      max-width: 800px;
+      padding: 3rem 2rem 2rem;
+    }
+
+    .contact-page-header__badge {
+      display: inline-block;
+      font-family: var(--font-heading);
+      font-size: clamp(0.75rem, 1.3vw, 0.9rem);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--gold-primary);
+      border: 1px solid var(--gold-primary);
+      padding: 0.45em 1.4em;
+      border-radius: 50px;
+      margin-bottom: 1.4rem;
+      backdrop-filter: blur(6px);
+      background: rgba(10,10,10,0.35);
+      animation: fadeInUp 0.8s var(--ease-out-expo) 0.1s both;
+    }
+
+    .contact-page-header__title {
+      font-family: var(--font-display);
+      font-size: clamp(2.4rem, 7vw, 5rem);
+      line-height: 1;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.3em;
+      animation: fadeInUp 0.8s var(--ease-out-expo) 0.3s both;
+    }
+
+    .contact-page-header__title .gold {
+      background: var(--gold-metallic);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    .contact-page-header__subtitle {
+      font-family: var(--font-body);
+      font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+      color: var(--gray-smoke);
+      max-width: 520px;
+      margin: 0 auto;
+      animation: fadeInUp 0.8s var(--ease-out-expo) 0.5s both;
+    }
+
+    /* ---- Main Content ---- */
+    .contact-main {
+      background: var(--black-deep);
+      padding-top: clamp(2rem, 4vw, 3rem);
+      padding-bottom: var(--section-pad);
+    }
+
+    /* ---- Quick-Action Cards ---- */
+    .contact__quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+      gap: clamp(1rem, 2.5vw, 1.8rem);
+      margin-bottom: clamp(2.5rem, 5vw, 4rem);
+    }
+
+    .contact__quick-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: clamp(1.2rem, 2vw, 1.8rem);
+      transition: transform var(--dur-normal) var(--ease-smooth),
+                  border-color var(--dur-normal),
+                  box-shadow var(--dur-normal);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .contact__quick-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--gold-primary);
+      box-shadow: 0 12px 36px rgba(212,168,67,0.12);
+    }
+
+    .contact__quick-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(212,168,67,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.4rem;
+      transition: background var(--dur-normal), transform var(--dur-normal);
+    }
+
+    .contact__quick-card:hover .contact__quick-icon {
+      background: rgba(212,168,67,0.2);
+      transform: scale(1.08);
+    }
+
+    .contact__quick-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .contact__quick-label {
+      font-family: var(--font-heading);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--gold-primary);
+      margin-bottom: 0.2rem;
+    }
+
+    .contact__quick-value {
+      font-size: 0.95rem;
+      color: var(--white-soft);
+      font-weight: 500;
+    }
+
+    .contact__quick-sub {
+      font-size: 0.78rem;
+      color: var(--gray-smoke);
+      margin-top: 0.15rem;
+    }
+
+    /* ---- Two-Column Layout ---- */
+    .contact__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(2rem, 5vw, 4rem);
+      margin-bottom: clamp(2.5rem, 5vw, 4rem);
+    }
+
+    /* ---- Info Panel ---- */
+    .contact__info-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.4rem;
+    }
+
+    .contact__info-heading {
+      font-family: var(--font-heading);
+      font-size: clamp(1.3rem, 2vw, 1.8rem);
+      color: var(--gold-primary);
+      margin-bottom: 0.3rem;
+    }
+
+    .contact__info-sub {
+      font-size: 0.9rem;
+      color: var(--gray-smoke);
+      margin-bottom: 0.8rem;
+      line-height: 1.6;
+    }
+
+    .contact__info-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1rem;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.04);
+      transition: background var(--dur-normal), border-color var(--dur-normal);
+    }
+
+    .contact__info-item:hover {
+      background: rgba(212,168,67,0.04);
+      border-color: rgba(212,168,67,0.15);
+    }
+
+    .contact__info-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: rgba(212,168,67,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.15rem;
+    }
+
+    .contact__info-text strong {
+      display: block;
+      font-family: var(--font-heading);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gold-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .contact__info-text span {
+      font-size: 0.9rem;
+      color: var(--gray-smoke);
+      line-height: 1.55;
+    }
+
+    .contact__info-text a {
+      color: var(--gray-smoke);
+      transition: color var(--dur-normal);
+    }
+
+    .contact__info-text a:hover {
+      color: var(--gold-primary);
+    }
+
+    /* ---- Social Quick Links ---- */
+    .contact__social-row {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin-top: 0.4rem;
+    }
+
+    .contact__social-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid var(--glass-border-light);
+      background: rgba(255,255,255,0.03);
+      color: var(--gray-smoke);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      text-decoration: none;
+      transition: all var(--dur-normal);
+    }
+
+    .contact__social-btn:hover {
+      border-color: var(--gold-primary);
+      color: var(--gold-primary);
+      background: rgba(212,168,67,0.08);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(212,168,67,0.12);
+    }
+
+    /* ---- Form Panel ---- */
+    .contact__form-panel {
+      position: relative;
+    }
+
+    .contact__form-heading {
+      font-family: var(--font-heading);
+      font-size: clamp(1.3rem, 2vw, 1.8rem);
+      color: var(--gold-primary);
+      margin-bottom: 0.3rem;
+    }
+
+    .contact__form-sub {
+      font-size: 0.9rem;
+      color: var(--gray-smoke);
+      margin-bottom: 1.6rem;
+    }
+
+    .contact__form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .contact__form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .contact__form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .contact__form-label {
+      font-family: var(--font-heading);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--gold-primary);
+    }
+
+    .contact__form-label--required::after {
+      content: ' *';
+      color: var(--red-vivid);
+    }
+
+    .contact__form-input,
+    .contact__form-textarea {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--glass-border-light);
+      border-radius: 10px;
+      padding: 0.8em 1em;
+      color: var(--white-soft);
+      font-size: 0.95rem;
+      transition: border-color var(--dur-normal), box-shadow var(--dur-normal);
+      outline: none;
+      font-family: var(--font-body);
+    }
+
+    .contact__form-input:focus,
+    .contact__form-textarea:focus {
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 0 3px rgba(212,168,67,0.1);
+    }
+
+    .contact__form-input::placeholder,
+    .contact__form-textarea::placeholder {
+      color: rgba(255,255,255,0.22);
+    }
+
+    .contact__form-input--error,
+    .contact__form-textarea--error {
+      border-color: var(--red-vivid) !important;
+      box-shadow: 0 0 0 3px rgba(198,40,40,0.12) !important;
+    }
+
+    .contact__form-error {
+      font-size: 0.75rem;
+      color: var(--red-vivid);
+      min-height: 1.1em;
+    }
+
+    .contact__form-textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    .contact__form-submit {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .contact__form-submit .btn {
+      flex-shrink: 0;
+    }
+
+    .contact__form-feedback {
+      font-size: 0.85rem;
+      min-height: 1.4em;
+      transition: opacity var(--dur-normal);
+    }
+
+    .contact__form-feedback--success {
+      color: #4caf50;
+    }
+
+    .contact__form-feedback--error {
+      color: var(--red-vivid);
+    }
+
+    .contact__form-spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(212,168,67,0.2);
+      border-top-color: var(--gold-primary);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    .contact__form-spinner--visible {
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ---- Google Maps Section ---- */
+    .contact__map-section {
+      margin-top: clamp(2rem, 4vw, 3rem);
+    }
+
+    .contact__map-heading {
+      font-family: var(--font-heading);
+      font-size: clamp(1.3rem, 2.5vw, 2rem);
+      color: var(--gold-primary);
+      text-align: center;
+      margin-bottom: 1.8rem;
+    }
+
+    .contact__map-wrap {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      position: relative;
+      aspect-ratio: 16 / 9;
+      min-height: 360px;
+    }
+
+    .contact__map-wrap iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    /* ---- Map skeleton / placeholder ---- */
+    .contact__map-placeholder {
+      position: absolute;
+      inset: 0;
+      background: var(--black-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
+      z-index: 1;
+      transition: opacity 0.5s;
+      pointer-events: none;
+    }
+
+    .contact__map-placeholder--hidden {
+      opacity: 0;
+    }
+
+    .contact__map-placeholder-icon {
+      font-size: 3rem;
+      opacity: 0.45;
+    }
+
+    .contact__map-placeholder-text {
+      font-size: 0.9rem;
+      color: var(--gray-smoke);
+      font-family: var(--font-heading);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* ---- WhatsApp Floating Button ---- */
+    .whatsapp-float {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 4000;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: #25D366;
+      color: #fff;
+      font-family: var(--font-heading);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-decoration: none;
+      padding: 0.7em 1.4em;
+      border-radius: 50px;
+      box-shadow: 0 6px 28px rgba(37,211,102,0.35);
+      transition: all var(--dur-normal) var(--ease-smooth);
+      animation: whatsappPulseIn 0.6s var(--ease-out-expo) 0.8s both;
+    }
+
+    .whatsapp-float:hover {
+      background: #20bd5a;
+      box-shadow: 0 8px 36px rgba(37,211,102,0.5);
+      transform: translateY(-2px);
+      color: #fff;
+    }
+
+    .whatsapp-float__icon {
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+
+    .whatsapp-float__label {
+      white-space: nowrap;
+    }
+
+    @keyframes whatsappPulseIn {
+      from { opacity: 0; transform: translateY(16px) scale(0.9); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ---- Skeleton Loading for Info Items ---- */
+    .contact__skeleton-line {
+      height: 14px;
+      border-radius: 4px;
+      background: var(--black-card);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+
+    .contact__skeleton-line::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+      animation: shimmer 1.6s infinite;
+    }
+
+    .contact__skeleton-line--lg { width: 75%; height: 18px; }
+    .contact__skeleton-line--md { width: 55%; }
+    .contact__skeleton-line--sm { width: 40%; }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 1200px) {
+      .contact__grid {
+        grid-template-columns: 1fr;
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .contact-page-header { min-height: 30vh; }
+
+      .contact__quick-actions {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .contact__form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .contact__form-submit {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .contact__form-submit .btn {
+        width: 100%;
+      }
+
+      .whatsapp-float {
+        bottom: 1.2rem;
+        right: 1.2rem;
+        padding: 0.6em 1.2em;
+        font-size: 0.75rem;
+      }
+
+      .whatsapp-float__label {
+        display: none;
+      }
+
+      .whatsapp-float {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+      }
+
+      .whatsapp-float__icon {
+        font-size: 1.6rem;
+      }
+
+      .contact__map-wrap {
+        aspect-ratio: 4 / 3;
+        min-height: 260px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .contact-page-header { min-height: 26vh; }
+
+      .contact__quick-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .contact__info-item {
+        padding: 0.8rem;
+      }
+
+      .contact__info-icon {
+        width: 38px;
+        height: 38px;
+        font-size: 1rem;
+      }
+
+      .contact__map-wrap {
+        aspect-ratio: 1 / 1;
+        min-height: 240px;
+        border-radius: 12px;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .contact__quick-card {
+        padding: 1rem;
+        gap: 0.7rem;
+      }
+
+      .contact__quick-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 1.1rem;
+      }
+    }
+
+    @media (max-width: 320px) {
+      .contact-page-header__title {
+        font-size: 1.8rem;
+      }
+    }
+  </style>
 </head>
 <body>
 
-  <!-- =======================================================================
+  <!-- ============================================================
+       PRELOADER
+  ============================================================ -->
+  <div id="preloader" aria-hidden="true">
+    <div class="preloader__inner">
+      <div class="preloader__glove">
+        <img src="/images/gloves.jpg" alt="" aria-hidden="true">
+      </div>
+      <p class="preloader__text">BOXING CHAMPIONS</p>
+      <div class="preloader__bar">
+        <div class="preloader__bar-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
        PARTICLES CANVAS
-       ======================================================================= -->
-  <canvas id="particles-canvas"></canvas>
+  ============================================================ -->
+  <canvas id="particles-canvas" aria-hidden="true"></canvas>
 
-  <!-- =======================================================================
-       CUSTOM CURSOR
-       ======================================================================= -->
-  <div class="cursor-dot"></div>
-  <div class="cursor-ring"></div>
-
-  <!-- =======================================================================
-       WHATSAPP FLOATING BUTTON
-       ======================================================================= -->
-  <a href="https://wa.me/40721234567?text=Salut%2C%20a%C8%99%20dori%20mai%20multe%20informa%C8%9Bii%20despre%20Boxing%20Champions%21"
-     target="_blank"
-     rel="noopener noreferrer"
-     class="whatsapp-float"
-     aria-label="Scrie-ne pe WhatsApp"
-     title="Scrie-ne pe WhatsApp">
-    <i class="fa-brands fa-whatsapp"></i>
-  </a>
-
-  <!-- =======================================================================
-       NAVBAR
-       ======================================================================= -->
-  <nav class="navbar z-content">
-    <div class="container">
-      <a href="/" class="nav-logo" aria-label="Boxing Champions — Acasă">
-        <i class="fa-solid fa-glove"></i> BOXING CHAMPIONS
+  <!-- ============================================================
+       NAVIGATION
+  ============================================================ -->
+  <nav class="nav" aria-label="Navigare principală">
+    <div class="nav__inner">
+      <a href="/" class="nav__logo" aria-label="Boxing Champions — Acasă">
+        <img src="/images/badge.png" alt="Boxing Champions Badge" width="48" height="48" loading="eager">
+        BOXING <span>CHAMPIONS</span>
       </a>
-      <button class="nav-toggle" aria-label="Deschide meniul" aria-expanded="false">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-      <ul class="nav-links" role="menubar">
-        <li role="none"><a href="/" role="menuitem">Acasă</a></li>
-        <li role="none"><a href="/events" role="menuitem">Evenimente</a></li>
-        <li role="none"><a href="/schedule" role="menuitem">Program</a></li>
-        <li role="none"><a href="/pricing" role="menuitem">Abonamente</a></li>
-        <li role="none"><a href="/shop" role="menuitem">Magazin</a></li>
-        <li role="none"><a href="/contact" role="menuitem" class="active">Contact</a></li>
+      <ul class="nav__links" role="menubar">
+        <li role="none"><a href="/#despre" class="nav__link" role="menuitem">Despre</a></li>
+        <li role="none"><a href="/#antrenori" class="nav__link" role="menuitem">Antrenori</a></li>
+        <li role="none"><a href="/schedule.html" class="nav__link" role="menuitem">Program</a></li>
+        <li role="none"><a href="/events.html" class="nav__link" role="menuitem">Evenimente</a></li>
+        <li role="none"><a href="/pricing.html" class="nav__link" role="menuitem">Abonamente</a></li>
+        <li role="none"><a href="/shop.html" class="nav__link" role="menuitem">Shop</a></li>
+        <li role="none"><a href="/contact.html" class="nav__link nav__link--active" role="menuitem">Contact</a></li>
       </ul>
+      <button class="nav__toggle" aria-label="Deschide meniul" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </nav>
 
-  <!-- =======================================================================
-       HERO SECTION — CONTACT
-       ======================================================================= -->
-  <section class="hero" id="hero">
-    <img src="images/contact-hero.jpg"
-         alt="Contact Boxing Champions"
-         class="hero-video"
-         style="object-fit: cover; width: 100%; height: 100%; position: absolute; inset: 0; z-index: 0;"
-         aria-hidden="true">
-    <div class="hero-overlay" style="background: linear-gradient(180deg, rgba(10,10,10,0.82) 0%, rgba(10,10,10,0.55) 50%, rgba(10,10,10,0.88) 100%);" aria-hidden="true"></div>
-    <div class="hero-content z-content" style="text-align: center;">
-      <span class="hero-badge">
-        <i class="fa-solid fa-headset" style="margin-right: 0.4rem;"></i> Suport 24/7
-      </span>
-      <h1 class="hero-title">
-        <span class="gold">CONTACTEAZĂ</span><br>ECHIPA
+  <!-- ============================================================
+       PAGE HEADER
+  ============================================================ -->
+  <section class="contact-page-header" aria-labelledby="contact-header-title">
+    <div class="contact-page-header__bg">
+      <img src="/images/contact-hero.jpg" alt="" aria-hidden="true" loading="eager">
+    </div>
+    <div class="contact-page-header__overlay" aria-hidden="true"></div>
+    <div class="contact-page-header__content reveal">
+      <div class="contact-page-header__badge">Hai să Vorbim</div>
+      <h1 class="contact-page-header__title" id="contact-header-title">
+        <span class="gold">CONTACT</span>
       </h1>
-      <p class="hero-subtitle" style="max-width: 600px; margin-left: auto; margin-right: auto;">
-        Ai o întrebare? Suntem aici să te ajutăm. Completează formularul, sună-ne sau scrie-ne pe WhatsApp.
+      <p class="contact-page-header__subtitle">
+        Suntem aici să te ajutăm. Scrie-ne, sună-ne sau treci pe la sală — primul antrenament este gratuit.
       </p>
     </div>
   </section>
 
-  <!-- =======================================================================
-       CONTACT SECTION — FORM + INFO
-       ======================================================================= -->
-  <section class="section" id="contact-main" style="padding-top: var(--space-3xl); padding-bottom: var(--space-3xl);">
+  <!-- ============================================================
+       MAIN CONTENT
+  ============================================================ -->
+  <main class="contact-main" aria-labelledby="contact-main-title">
     <div class="container">
-      <span class="section-label fade-in">Contact</span>
-      <h2 class="text-center fade-in">Hai să <span class="text-gold">Vorbim</span></h2>
-      <span class="gold-separator fade-in"></span>
-      <p class="text-center text-gray fade-in" style="max-width: 560px; margin-left: auto; margin-right: auto; margin-bottom: var(--space-3xl);">
-        Completează formularul și îți răspundem în cel mai scurt timp. Sau folosește datele de contact direct.
-      </p>
 
-      <div class="contact-grid">
-        <!-- ============================================================
-             FORMULAR — FLOATING LABELS
-             ============================================================ -->
-        <div class="glass-card fade-in" style="padding: var(--space-2xl);">
-          <h3 style="font-family: var(--font-display); font-size: 1.3rem; margin-bottom: var(--space-xs); color: var(--color-light);">
-            <i class="fa-solid fa-paper-plane text-gold" style="margin-right: 0.5rem;"></i> Trimite un Mesaj
-          </h3>
-          <p style="font-size: 0.82rem; color: var(--color-gray-300); margin-bottom: var(--space-xl);">
-            Toate câmpurile marcate cu <span style="color: var(--color-red-bright);">*</span> sunt obligatorii.
+      <h2 id="contact-main-title" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Contactează-ne</h2>
+
+      <!-- Quick Action Cards -->
+      <div class="contact__quick-actions reveal-stagger" id="contact-quick-actions" aria-label="Acțiuni rapide">
+        <!-- Phone -->
+        <a class="contact__quick-card glass glass--card" href="tel:+40700000000" id="quick-phone" aria-label="Sună-ne">
+          <div class="contact__quick-icon" aria-hidden="true">📞</div>
+          <div class="contact__quick-info">
+            <span class="contact__quick-label">Telefon</span>
+            <span class="contact__quick-value" id="quick-phone-value">+40 700 000 000</span>
+            <span class="contact__quick-sub">Disponibil 24/7</span>
+          </div>
+        </a>
+
+        <!-- Email -->
+        <a class="contact__quick-card glass glass--card" href="mailto:contact@boxingchampions.ro" id="quick-email" aria-label="Trimite-ne un email">
+          <div class="contact__quick-icon" aria-hidden="true">✉️</div>
+          <div class="contact__quick-info">
+            <span class="contact__quick-label">Email</span>
+            <span class="contact__quick-value" id="quick-email-value">contact@boxingchampions.ro</span>
+            <span class="contact__quick-sub">Răspundem în 24h</span>
+          </div>
+        </a>
+
+        <!-- Address -->
+        <a class="contact__quick-card glass glass--card" href="#map-section" id="quick-address" aria-label="Vezi pe hartă">
+          <div class="contact__quick-icon" aria-hidden="true">📍</div>
+          <div class="contact__quick-info">
+            <span class="contact__quick-label">Adresă</span>
+            <span class="contact__quick-value" id="quick-address-value">Str. Sportului nr. 10</span>
+            <span class="contact__quick-sub">București, România</span>
+          </div>
+        </a>
+
+        <!-- Schedule -->
+        <div class="contact__quick-card glass glass--card" id="quick-schedule" aria-label="Program de funcționare">
+          <div class="contact__quick-icon" aria-hidden="true">🕐</div>
+          <div class="contact__quick-info">
+            <span class="contact__quick-label">Program</span>
+            <span class="contact__quick-value" id="quick-schedule-value">Luni – Vineri: 06–22</span>
+            <span class="contact__quick-sub" id="quick-schedule-sub">Sâmbătă: 08–18</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Two-Column: Info + Form -->
+      <div class="contact__grid">
+
+        <!-- Left: Info Panel -->
+        <div class="contact__info-panel reveal" id="contact-info-panel">
+          <h3 class="contact__info-heading">Informații de Contact</h3>
+          <p class="contact__info-sub">
+            Fie că vrei să te înscrii, să afli mai multe despre abonamente sau să ne faci o vizită — suntem aici pentru tine.
           </p>
 
-          <form id="contact-form" novalidate>
-            <!-- Nume -->
-            <div class="floating-group">
-              <input type="text"
-                     id="contact-name"
-                     name="name"
-                     class="floating-input"
-                     placeholder=" "
-                     required
-                     minlength="2"
-                     maxlength="80"
-                     autocomplete="name"
-                     aria-required="true"
-                     aria-describedby="error-name">
-              <label for="contact-name" class="floating-label">
-                Nume complet <span style="color: var(--color-red-bright);">*</span>
-              </label>
-              <span class="validation-icon" aria-hidden="true"></span>
-              <span id="error-name" class="validation-error"></span>
+          <div class="contact__info-item">
+            <div class="contact__info-icon" aria-hidden="true">📍</div>
+            <div class="contact__info-text">
+              <strong>Adresa Sălii</strong>
+              <span id="info-address">Str. Sportului nr. 10, Sector 1<br>București, România</span>
             </div>
+          </div>
 
-            <!-- Email -->
-            <div class="floating-group">
-              <input type="email"
-                     id="contact-email"
-                     name="email"
-                     class="floating-input"
-                     placeholder=" "
-                     required
-                     maxlength="120"
-                     autocomplete="email"
-                     aria-required="true"
-                     aria-describedby="error-email">
-              <label for="contact-email" class="floating-label">
-                Adresă Email <span style="color: var(--color-red-bright);">*</span>
-              </label>
-              <span class="validation-icon" aria-hidden="true"></span>
-              <span id="error-email" class="validation-error"></span>
+          <div class="contact__info-item">
+            <div class="contact__info-icon" aria-hidden="true">📞</div>
+            <div class="contact__info-text">
+              <strong>Telefon</strong>
+              <span><a href="tel:+40700000000" id="info-phone">+40 700 000 000</a></span>
             </div>
+          </div>
 
-            <!-- Telefon -->
-            <div class="floating-group">
-              <input type="tel"
-                     id="contact-phone"
-                     name="phone"
-                     class="floating-input"
-                     placeholder=" "
-                     pattern="^\+?[0-9\s\-\(\)]{7,20}$"
-                     maxlength="20"
-                     autocomplete="tel"
-                     aria-describedby="error-phone">
-              <label for="contact-phone" class="floating-label">
-                Telefon (opțional)
-              </label>
-              <span class="validation-icon" aria-hidden="true"></span>
-              <span id="error-phone" class="validation-error"></span>
+          <div class="contact__info-item">
+            <div class="contact__info-icon" aria-hidden="true">✉️</div>
+            <div class="contact__info-text">
+              <strong>Email</strong>
+              <span><a href="mailto:contact@boxingchampions.ro" id="info-email">contact@boxingchampions.ro</a></span>
             </div>
+          </div>
 
-            <!-- Subiect -->
-            <div class="floating-group">
-              <input type="text"
-                     id="contact-subject"
-                     name="subject"
-                     class="floating-input"
-                     placeholder=" "
-                     required
-                     minlength="2"
-                     maxlength="150"
-                     aria-required="true"
-                     aria-describedby="error-subject">
-              <label for="contact-subject" class="floating-label">
-                Subiect <span style="color: var(--color-red-bright);">*</span>
-              </label>
-              <span class="validation-icon" aria-hidden="true"></span>
-              <span id="error-subject" class="validation-error"></span>
-            </div>
-
-            <!-- Mesaj -->
-            <div class="floating-group textarea">
-              <textarea id="contact-message"
-                        name="message"
-                        class="floating-input"
-                        placeholder=" "
-                        rows="5"
-                        required
-                        minlength="10"
-                        maxlength="5000"
-                        aria-required="true"
-                        aria-describedby="error-message counter-wrap"
-                        style="min-height: 130px;"></textarea>
-              <label for="contact-message" class="floating-label">
-                Mesajul tău <span style="color: var(--color-red-bright);">*</span>
-              </label>
-              <span class="validation-icon" aria-hidden="true"></span>
-              <span id="error-message" class="validation-error"></span>
-            </div>
-
-            <!-- Character counter -->
-            <div id="counter-wrap" class="char-counter-wrap">
-              <span id="char-counter" class="char-counter">0 / 5000</span>
-            </div>
-
-            <!-- Form status -->
-            <div id="form-status" class="form-status" role="status" aria-live="polite"></div>
-
-            <!-- Submit -->
-            <button type="submit" class="btn btn-primary btn-block" style="margin-top: var(--space-lg);">
-              <i class="fa-solid fa-paper-plane"></i>
-              <span class="btn-text">Trimite Mesajul</span>
-              <span class="btn-spinner" aria-hidden="true">
-                <i class="fa-solid fa-spinner fa-spin"></i>
+          <div class="contact__info-item">
+            <div class="contact__info-icon" aria-hidden="true">🕐</div>
+            <div class="contact__info-text">
+              <strong>Program Club</strong>
+              <span id="info-schedule">
+                Luni – Vineri: 06:00 – 22:00<br>
+                Sâmbătă: 08:00 – 18:00<br>
+                Duminică: Închis
               </span>
-            </button>
+            </div>
+          </div>
+
+          <div class="contact__info-item">
+            <div class="contact__info-icon" aria-hidden="true">🥊</div>
+            <div class="contact__info-text">
+              <strong>Antrenament Gratuit</strong>
+              <span>Primul antrenament este gratuit! Vino să ne cunoști și să descoperi atmosfera de campion.</span>
+            </div>
+          </div>
+
+          <!-- Social links -->
+          <div style="margin-top: 0.6rem;">
+            <strong style="font-family:var(--font-heading);font-size:0.82rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold-primary);display:block;margin-bottom:0.6rem;">Urmărește-ne</strong>
+            <div class="contact__social-row">
+              <a href="#" class="contact__social-btn" target="_blank" rel="noopener noreferrer" aria-label="Instagram">📸</a>
+              <a href="#" class="contact__social-btn" target="_blank" rel="noopener noreferrer" aria-label="Facebook">📘</a>
+              <a href="#" class="contact__social-btn" target="_blank" rel="noopener noreferrer" aria-label="YouTube">🎥</a>
+              <a href="#" class="contact__social-btn" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter">🐦</a>
+              <a href="#" class="contact__social-btn" target="_blank" rel="noopener noreferrer" aria-label="TikTok">🎵</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Form Panel -->
+        <div class="contact__form-panel reveal" id="contact-form-panel">
+          <h3 class="contact__form-heading">Trimite-ne un Mesaj</h3>
+          <p class="contact__form-sub">
+            Completează formularul și îți răspundem în cel mai scurt timp. De obicei, în mai puțin de 24 de ore.
+          </p>
+
+          <form class="contact__form glass glass--card" id="contact-form" novalidate aria-label="Formular de contact">
+            <div class="contact__form-row">
+              <div class="contact__form-group">
+                <label class="contact__form-label contact__form-label--required" for="contact-name">Nume complet</label>
+                <input class="contact__form-input" type="text" id="contact-name" name="name"
+                       required placeholder="Numele tău" autocomplete="name" minlength="2" maxlength="100">
+                <span class="contact__form-error" id="error-name" aria-live="polite"></span>
+              </div>
+              <div class="contact__form-group">
+                <label class="contact__form-label contact__form-label--required" for="contact-email">Email</label>
+                <input class="contact__form-input" type="email" id="contact-email" name="email"
+                       required placeholder="email@exemplu.com" autocomplete="email">
+                <span class="contact__form-error" id="error-email" aria-live="polite"></span>
+              </div>
+            </div>
+            <div class="contact__form-row">
+              <div class="contact__form-group">
+                <label class="contact__form-label" for="contact-phone">Telefon</label>
+                <input class="contact__form-input" type="tel" id="contact-phone" name="phone"
+                       placeholder="+40 7xx xxx xxx" autocomplete="tel" maxlength="20">
+                <span class="contact__form-error" id="error-phone" aria-live="polite"></span>
+              </div>
+              <div class="contact__form-group">
+                <label class="contact__form-label" for="contact-subject">Subiect</label>
+                <select class="contact__form-input" id="contact-subject" name="subject" aria-label="Subiectul mesajului">
+                  <option value="">Selectează un subiect</option>
+                  <option value="Antrenament gratuit">Antrenament gratuit</option>
+                  <option value="Abonamente">Abonamente</option>
+                  <option value="Program">Program &amp; Orar</option>
+                  <option value="Evenimente">Evenimente &amp; Competiții</option>
+                  <option value="Shop">Magazin / Echipamente</option>
+                  <option value="Altele">Altele</option>
+                </select>
+              </div>
+            </div>
+            <div class="contact__form-group">
+              <label class="contact__form-label contact__form-label--required" for="contact-message">Mesaj</label>
+              <textarea class="contact__form-textarea" id="contact-message" name="message"
+                        required placeholder="Scrie-ne un mesaj aici... Cu cât mai multe detalii, cu atât te putem ajuta mai bine."
+                        minlength="10" maxlength="2000"></textarea>
+              <span class="contact__form-error" id="error-message" aria-live="polite"></span>
+            </div>
+
+            <div class="contact__form-submit">
+              <button type="submit" class="btn btn--primary btn--lg" id="contact-submit-btn">
+                <span id="contact-submit-text">Trimite Mesajul</span>
+                <span class="contact__form-spinner" id="contact-spinner" aria-hidden="true"></span>
+              </button>
+              <span class="contact__form-feedback" id="contact-feedback" aria-live="polite"></span>
+            </div>
+
+            <p style="font-size:0.72rem;color:var(--gray-smoke);margin-top:0.4rem;opacity:0.7;">
+              Prin trimiterea acestui formular, ești de acord cu <a href="#" style="color:var(--gold-primary);">politica de confidențialitate</a>.
+            </p>
           </form>
         </div>
-
-        <!-- ============================================================
-             INFO CARD — CONTACT DETAILS
-             ============================================================ -->
-        <div class="fade-in delay-100">
-          <!-- Contact Info Card -->
-          <div class="contact-info-card">
-            <h3 style="font-family: var(--font-display); font-size: 1.2rem; margin-bottom: var(--space-xl); color: var(--color-light);">
-              <i class="fa-solid fa-circle-info text-gold" style="margin-right: 0.4rem;"></i> Informații Contact
-            </h3>
-
-            <div class="contact-info-item">
-              <div class="contact-info-icon">
-                <i class="fa-solid fa-location-dot"></i>
-              </div>
-              <div class="contact-info-text">
-                <h4>Adresă</h4>
-                <p data-contact="address">Strada Sportului nr. 10<br>Sector 1, București<br>România, 010123</p>
-              </div>
-            </div>
-
-            <div class="contact-info-item">
-              <div class="contact-info-icon">
-                <i class="fa-solid fa-phone"></i>
-              </div>
-              <div class="contact-info-text">
-                <h4>Telefon</h4>
-                <p>
-                  <a href="tel:+40721234567"
-                     data-contact="phone"
-                     style="color: var(--color-gray-300); text-decoration: none; transition: color var(--transition-fast);">
-                    +40 721 234 567
-                  </a>
-                </p>
-              </div>
-            </div>
-
-            <div class="contact-info-item">
-              <div class="contact-info-icon">
-                <i class="fa-solid fa-envelope"></i>
-              </div>
-              <div class="contact-info-text">
-                <h4>Email</h4>
-                <p>
-                  <a href="mailto:contact@boxing-champions.com"
-                     data-contact="email"
-                     style="color: var(--color-gray-300); text-decoration: none; transition: color var(--transition-fast);">
-                    contact@boxing-champions.com
-                  </a>
-                </p>
-              </div>
-            </div>
-
-            <div class="contact-info-item">
-              <div class="contact-info-icon">
-                <i class="fa-solid fa-clock"></i>
-              </div>
-              <div class="contact-info-text">
-                <h4>Program</h4>
-                <p data-contact="program">Luni – Vineri: 08:00 – 21:00<br>Sâmbătă: 09:00 – 14:00<br>Duminică: Închis</p>
-              </div>
-            </div>
-
-            <!-- Social Links -->
-            <div class="contact-social-links">
-              <a href="https://facebook.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-                <i class="fa-brands fa-facebook-f"></i>
-              </a>
-              <a href="https://instagram.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-                <i class="fa-brands fa-instagram"></i>
-              </a>
-              <a href="https://tiktok.com/@boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-                <i class="fa-brands fa-tiktok"></i>
-              </a>
-              <a href="https://youtube.com/@boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
-                <i class="fa-brands fa-youtube"></i>
-              </a>
-            </div>
-          </div>
-
-          <!-- Google Maps -->
-          <div class="contact-map-wrap">
-            <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2848.5!2d26.1!3d44.43!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDTCsDI1JzQ4LjAiTiAyNsKwMDYnMDAuMCJF!5e0!3m2!1sro!2sro!4v1700000000000"
-              title="Boxing Champions — Locație pe hartă"
-              allowfullscreen=""
-              loading="lazy"
-              referrerpolicy="no-referrer-when-downgrade"
-              aria-label="Hartă Google Maps cu locația Boxing Champions">
-            </iframe>
-          </div>
-        </div>
       </div>
-    </div>
-  </section>
 
-  <!-- =======================================================================
-       FINAL CTA SECTION
-       ======================================================================= -->
-  <section class="section" id="final-cta" style="position: relative; overflow: hidden;">
-    <div style="position: absolute; inset: 0; z-index: 0;" aria-hidden="true">
-      <img src="images/cta-bg.jpg" alt="" loading="lazy"
-           style="width: 100%; height: 100%; object-fit: cover; opacity: 0.2; filter: brightness(0.5);"
-           aria-hidden="true">
-    </div>
-    <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.65) 40%, rgba(10,10,10,0.65) 60%, rgba(10,10,10,0.95) 100%); z-index: 0;" aria-hidden="true"></div>
-    <div class="container" style="position: relative; z-index: 1;">
-      <div class="text-center fade-in">
-        <span class="section-label">Gata să Începi?</span>
-        <h2>Primul Antrenament <span class="text-gold">Gratuit</span></h2>
-        <span class="gold-separator"></span>
-        <p class="text-gray" style="max-width: 600px; margin-left: auto; margin-right: auto; margin-bottom: var(--space-2xl); font-size: 1.05rem;">
-          Vino să descoperi ce înseamnă adevărata disciplină, forță și determinare. Boxing Champions te așteaptă!
+      <!-- Google Maps Section -->
+      <div class="contact__map-section reveal" id="map-section" aria-labelledby="map-heading">
+        <h3 class="contact__map-heading" id="map-heading">Vino la Sală</h3>
+        <div class="contact__map-wrap" id="map-wrap">
+          <div class="contact__map-placeholder" id="map-placeholder" aria-hidden="true">
+            <span class="contact__map-placeholder-icon">🗺️</span>
+            <span class="contact__map-placeholder-text">Se încarcă harta...</span>
+          </div>
+          <iframe
+            id="google-map-iframe"
+            title="Locația Boxing Champions pe Google Maps"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2848.849653356295!2d26.096306315529374!3d44.42653997910234!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x40b1ff2a5c5c5e5f%3A0x5b5b5b5b5b5b5b5b!2sStrada%20Sportului%2010%2C%20Bucure%C8%99ti!5e0!3m2!1sro!2sro!4v1690000000000!5m2!1sro!2sro"
+            width="600"
+            height="450"
+            style="border:0;"
+            allowfullscreen=""
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            aria-label="Hartă Google Maps cu locația Boxing Champions">
+          </iframe>
+        </div>
+        <p style="text-align:center;margin-top:1rem;font-size:0.85rem;color:var(--gray-smoke);">
+          🚇 Metrou la 5 minute • 🚌 Autobuz 123, 456 • 🚗 Parcare gratuită disponibilă
         </p>
-        <div class="btn-group" style="justify-content: center;">
-          <a href="tel:+40721234567" class="btn btn-primary btn-xl">
-            <i class="fa-solid fa-phone"></i> Sună Acum
-          </a>
-          <a href="/pricing" class="btn btn-outline btn-xl">
-            <i class="fa-solid fa-crown"></i> Vezi Planurile
-          </a>
-        </div>
       </div>
-    </div>
-  </section>
 
-  <!-- =======================================================================
+    </div>
+  </main>
+
+  <!-- ============================================================
+       WHATSAPP FLOATING BUTTON
+  ============================================================ -->
+  <a
+    class="whatsapp-float"
+    href="https://wa.me/40700000000?text=Salut!%20A%C8%99%20dori%20mai%20multe%20informa%C8%9Bii%20despre%20Boxing%20Champions."
+    target="_blank"
+    rel="noopener noreferrer"
+    id="whatsapp-btn"
+    aria-label="Contactează-ne pe WhatsApp">
+    <span class="whatsapp-float__icon" aria-hidden="true">💬</span>
+    <span class="whatsapp-float__label">WhatsApp</span>
+  </a>
+
+  <!-- ============================================================
        FOOTER
-       ======================================================================= -->
-  <footer class="footer">
+  ============================================================ -->
+  <footer class="footer" role="contentinfo">
     <div class="container">
-      <div class="footer-grid">
+      <div class="footer__grid">
         <div>
-          <p class="footer-brand"><i class="fa-solid fa-glove" style="margin-right: 0.4rem;"></i> BOXING CHAMPIONS</p>
-          <p class="footer-about">
-            Cel mai bun club de box din România. Tradiție, disciplină și excelență din 1998.
-          </p>
-          <div style="margin-top: var(--space-lg); display: flex; gap: var(--space-md);">
-            <a href="https://facebook.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-facebook-f"></i>
-            </a>
-            <a href="https://instagram.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-instagram"></i>
-            </a>
-            <a href="https://tiktok.com/@boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="TikTok" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-tiktok"></i>
-            </a>
-          </div>
+          <div class="footer__brand">BOXING <span>CHAMPIONS</span></div>
+          <p class="footer__desc">Club de box de elită — forjăm campioni din 2013. Antrenamente, competiții și o comunitate unită prin pasiunea pentru box.</p>
         </div>
         <div>
-          <h4>Navigare</h4>
-          <ul class="footer-links">
-            <li><a href="/">Acasă</a></li>
-            <li><a href="/events">Evenimente</a></li>
-            <li><a href="/schedule">Program</a></li>
-            <li><a href="/pricing">Abonamente</a></li>
-            <li><a href="/shop">Magazin</a></li>
-            <li><a href="/contact">Contact</a></li>
+          <h4 class="footer__heading">Link-uri Rapide</h4>
+          <ul class="footer__links">
+            <li><a href="/#despre">Despre Noi</a></li>
+            <li><a href="/#antrenori">Antrenori</a></li>
+            <li><a href="/schedule.html">Program</a></li>
+            <li><a href="/events.html">Evenimente</a></li>
+            <li><a href="/pricing.html">Abonamente</a></li>
+            <li><a href="/shop.html">Shop</a></li>
           </ul>
         </div>
         <div>
-          <h4>Legal</h4>
-          <ul class="footer-links">
+          <h4 class="footer__heading">Utile</h4>
+          <ul class="footer__links">
+            <li><a href="/contact.html">Contact</a></li>
             <li><a href="#">Termeni &amp; Condiții</a></li>
-            <li><a href="#">Politica de Confidențialitate</a></li>
+            <li><a href="#">Confidențialitate</a></li>
             <li><a href="#">GDPR</a></li>
-            <li><a href="#">ANPC</a></li>
+            <li><a href="#">FAQ</a></li>
           </ul>
         </div>
         <div>
-          <h4>Contact</h4>
-          <ul class="footer-links">
-            <li><i class="fa-solid fa-location-dot text-gold" style="margin-right: 0.4rem;"></i> Strada Sportului nr. 10, București</li>
-            <li><i class="fa-solid fa-phone text-gold" style="margin-right: 0.4rem;"></i> +40 721 234 567</li>
-            <li><i class="fa-solid fa-envelope text-gold" style="margin-right: 0.4rem;"></i> contact@boxing-champions.com</li>
+          <h4 class="footer__heading">Urmărește-ne</h4>
+          <ul class="footer__links">
+            <li><a href="#" target="_blank" rel="noopener noreferrer">Instagram</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">Facebook</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">YouTube</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">X / Twitter</a></li>
           </ul>
         </div>
       </div>
-      <div class="footer-bottom">
-        <p>&copy; 2026 Boxing Champions. Toate drepturile rezervate. <span style="color: var(--color-gold);">#BoxingChampions</span></p>
+      <div class="footer__bottom">
+        <p>&copy; <span id="current-year">2025</span> Boxing Champions. Toate drepturile rezervate. | Construit cu 🥊 și pasiune.</p>
       </div>
     </div>
   </footer>
 
-  <!-- =======================================================================
-       WHATSAPP BUTTON CSS (pulse animation)
-       ======================================================================= -->
-  <style>
-    .whatsapp-float {
-      position: fixed;
-      bottom: 28px;
-      right: 28px;
-      z-index: 9999;
-      width: 58px;
-      height: 58px;
-      border-radius: 50%;
-      background: #25D366;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.65rem;
-      text-decoration: none;
-      box-shadow: 0 6px 24px rgba(37, 211, 102, 0.4);
-      transition: transform 0.25s ease, box-shadow 0.25s ease;
-      animation: whatsapp-pulse 2.2s ease-in-out infinite;
-    }
-    .whatsapp-float:hover {
-      transform: scale(1.12);
-      box-shadow: 0 8px 32px rgba(37, 211, 102, 0.6);
-      animation: none;
-    }
-    .whatsapp-float:active {
-      transform: scale(0.94);
-    }
-    @keyframes whatsapp-pulse {
-      0%, 100% { box-shadow: 0 6px 24px rgba(37, 211, 102, 0.35); }
-      50% { box-shadow: 0 6px 38px rgba(37, 211, 102, 0.7); }
-    }
-    @media (max-width: 640px) {
-      .whatsapp-float {
-        bottom: 18px;
-        right: 18px;
-        width: 50px;
-        height: 50px;
-        font-size: 1.4rem;
-      }
-    }
-  </style>
-
-  <!-- =======================================================================
+  <!-- ============================================================
        SCRIPTS
-       ======================================================================= -->
-  <script src="js/main.js"></script>
-  <script src="js/contact.js"></script>
+  ============================================================ -->
+  <script src="/js/shared.js"></script>
 
-  <!-- =======================================================================
-       INLINE SCRIPT — Contact Settings Loader
-       Încarcă datele de contact din GET /api/settings și populează
-       elementele [data-contact], cu fallback la datele hardcodate din HTML.
-       De asemenea, actualizează href-urile pentru telefon și email.
-       ======================================================================= -->
   <script>
-    (function () {
-      'use strict';
+  (function () {
+    'use strict';
 
-      // ──────────────────────────────────────────────────────────────────────
-      // Date de fallback — valori hardcodate identice cu HTML-ul static
-      // ──────────────────────────────────────────────────────────────────────
-      var FALLBACK_CONTACT = {
-        address: 'Strada Sportului nr. 10\nSector 1, București\nRomânia, 010123',
-        phone: '+40 721 234 567',
-        email: 'contact@boxing-champions.com',
-        program: 'Luni – Vineri: 08:00 – 21:00\nSâmbătă: 09:00 – 14:00\nDuminică: Închis'
-      };
-
-      // ──────────────────────────────────────────────────────────────────────
-      // Escape HTML — polyfill simplu
-      // ──────────────────────────────────────────────────────────────────────
-      function escapeHtml(str) {
-        if (typeof str !== 'string') return '';
-        var map = {
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#39;'
-        };
-        return str.replace(/[&<>"']/g, function (m) { return map[m]; });
-      }
-
-      // ──────────────────────────────────────────────────────────────────────
-      // Populează elementele [data-contact] din obiectul de setări
-      // ──────────────────────────────────────────────────────────────────────
-      function populateContactInfo(settings) {
-        var elements = document.querySelectorAll('[data-contact]');
-        if (!elements.length) return;
-
-        for (var i = 0; i < elements.length; i++) {
-          var el = elements[i];
-          var key = el.getAttribute('data-contact');
-          if (!key) continue;
-
-          // Determină valoarea: API sau fallback
-          var apiValue = (settings && typeof settings[key] === 'string' && settings[key].trim())
-            ? settings[key].trim()
-            : null;
-
-          var value = apiValue || FALLBACK_CONTACT[key] || '';
-
-          if (!value) continue;
-
-          var tagName = el.tagName.toUpperCase();
-
-          if (tagName === 'A') {
-            // Element link — actualizează textul și href
-            el.textContent = value;
-
-            if (key === 'phone') {
-              // Formatează numărul pentru href tel:
-              var cleanPhone = value.replace(/[\s\-\(\)\.]/g, '');
-              // Asigură prefixul + dacă lipsește și începe cu cifră
-              if (cleanPhone.indexOf('+') !== 0 && /^\d/.test(cleanPhone)) {
-                cleanPhone = '+' + cleanPhone;
-              }
-              el.setAttribute('href', 'tel:' + cleanPhone);
-            } else if (key === 'email') {
-              el.setAttribute('href', 'mailto:' + value.toLowerCase().trim());
-            }
-          } else {
-            // Element text — păstrează <br> pentru newline-uri
-            el.innerHTML = escapeHtml(value).replace(/\n/g, '<br>');
-          }
-        }
-      }
-
-      // ──────────────────────────────────────────────────────────────────────
-      // Fetch settings de la API
-      // ──────────────────────────────────────────────────────────────────────
-      function fetchContactSettings() {
-        var endpoint = '/api/settings';
-
-        // Folosește fetch cu timeout
-        var controller;
-        var timeoutId;
-
-        if (typeof AbortController !== 'undefined') {
-          controller = new AbortController();
-          timeoutId = setTimeout(function () {
-            controller.abort();
-          }, 5000);
-        }
-
-        var fetchOpts = {
-          headers: { 'Accept': 'application/json' }
-        };
-
-        if (controller) {
-          fetchOpts.signal = controller.signal;
-        }
-
-        fetch(endpoint, fetchOpts)
-          .then(function (response) {
-            if (timeoutId) clearTimeout(timeoutId);
-            if (!response.ok) {
-              throw new Error('HTTP ' + response.status);
-            }
-            return response.json();
-          })
-          .then(function (settings) {
-            populateContactInfo(settings);
-          })
-          .catch(function (err) {
-            if (timeoutId) clearTimeout(timeoutId);
-            console.warn('[Contact] Setările API nu au putut fi încărcate, se folosesc datele hardcodate:', err.message);
-            populateContactInfo(null); // fallback
-          });
-      }
-
-      // ──────────────────────────────────────────────────────────────────────
-      // Inițializare la DOM ready
-      // ──────────────────────────────────────────────────────────────────────
+    /* ==================================================================
+       DOM Ready
+       ================================================================== */
+    function domReady(fn) {
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', fetchContactSettings);
+        document.addEventListener('DOMContentLoaded', fn);
       } else {
-        fetchContactSettings();
+        fn();
       }
-    })();
+    }
+
+    /* ==================================================================
+       HELPERS
+       ================================================================== */
+    var BC = window.BoxingChampions || {};
+    var fetchJSON = BC.fetchJSON;
+    var showToast = BC.showToast;
+
+    async function safeFetch(url, opts) {
+      if (typeof fetchJSON === 'function') {
+        return fetchJSON(url, opts);
+      }
+      var res = await fetch(url, opts || {});
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }
+
+    function escapeHTML(str) {
+      if (!str) return '';
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+
+    /* ==================================================================
+       1. FETCH CONTACT DATA FROM API
+       ================================================================== */
+    async function loadContactData() {
+      try {
+        var data = await safeFetch('/api/settings');
+        if (!data) return;
+
+        // Extragem datele de contact din settings (pot fi în diverse chei)
+        var contact = data.contact || data.general || {};
+
+        // Phone
+        var phone = contact.phone || data.phone || '+40 700 000 000';
+        updateElement('quick-phone-value', phone);
+        updateElement('info-phone', phone);
+        var phoneLink = document.getElementById('quick-phone');
+        if (phoneLink) phoneLink.href = 'tel:' + phone.replace(/\s/g, '');
+
+        // Email
+        var email = contact.email || data.email || 'contact@boxingchampions.ro';
+        updateElement('quick-email-value', email);
+        updateElement('info-email', email);
+        var emailLink = document.getElementById('quick-email');
+        if (emailLink) emailLink.href = 'mailto:' + email;
+
+        // Address
+        var address = contact.address || data.address || 'Str. Sportului nr. 10, București';
+        updateElement('quick-address-value', address);
+        updateElement('info-address', address + '<br>București, România');
+
+        // Schedule
+        var scheduleWeekday = contact.schedule_weekday || 'Luni – Vineri: 06:00 – 22:00';
+        var scheduleSaturday = contact.schedule_saturday || 'Sâmbătă: 08:00 – 18:00';
+        updateElement('quick-schedule-value', scheduleWeekday);
+        updateElement('quick-schedule-sub', scheduleSaturday);
+        updateElement('info-schedule', scheduleWeekday + '<br>' + scheduleSaturday + '<br>Duminică: Închis');
+
+        // WhatsApp number
+        var waNumber = contact.whatsapp || phone || '+40700000000';
+        var waBtn = document.getElementById('whatsapp-btn');
+        if (waBtn) {
+          var cleanNumber = waNumber.replace(/[\s\+\(\)\-]/g, '');
+          waBtn.href = 'https://wa.me/' + cleanNumber + '?text=Salut!%20A%C8%99%20dori%20mai%20multe%20informa%C8%9Bii%20despre%20Boxing%20Champions.';
+        }
+      } catch (err) {
+        console.warn('[contact] Could not fetch settings, using defaults:', err.message);
+      }
+    }
+
+    function updateElement(id, text) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = text;
+    }
+
+    /* ==================================================================
+       2. CONTACT FORM HANDLING
+       ================================================================== */
+    function initContactForm() {
+      var form = document.getElementById('contact-form');
+      var submitBtn = document.getElementById('contact-submit-btn');
+      var submitText = document.getElementById('contact-submit-text');
+      var spinner = document.getElementById('contact-spinner');
+      var feedback = document.getElementById('contact-feedback');
+
+      if (!form) return;
+
+      // Clear error on input
+      var allInputs = form.querySelectorAll('.contact__form-input, .contact__form-textarea');
+      allInputs.forEach(function (input) {
+        input.addEventListener('input', function () {
+          input.classList.remove('contact__form-input--error', 'contact__form-textarea--error');
+          var errorEl = document.getElementById('error-' + input.name);
+          if (errorEl) errorEl.textContent = '';
+        });
+      });
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        // Reset errors
+        clearErrors();
+        feedback.textContent = '';
+        feedback.className = 'contact__form-feedback';
+
+        // Gather values
+        var name = (form.querySelector('#contact-name')?.value || '').trim();
+        var email = (form.querySelector('#contact-email')?.value || '').trim();
+        var phone = (form.querySelector('#contact-phone')?.value || '').trim();
+        var subject = (form.querySelector('#contact-subject')?.value || '').trim();
+        var message = (form.querySelector('#contact-message')?.value || '').trim();
+
+        // Validate
+        var hasError = false;
+
+        if (!name || name.length < 2) {
+          showFieldError('contact-name', 'error-name', 'Numele trebuie să aibă cel puțin 2 caractere.');
+          hasError = true;
+        }
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          showFieldError('contact-email', 'error-email', 'Te rugăm să introduci o adresă de email validă.');
+          hasError = true;
+        }
+
+        if (phone && !/^[+]?[\d\s()-]{7,20}$/.test(phone)) {
+          showFieldError('contact-phone', 'error-phone', 'Numărul de telefon nu pare valid.');
+          hasError = true;
+        }
+
+        if (!message || message.length < 10) {
+          showFieldError('contact-message', 'error-message', 'Mesajul trebuie să aibă cel puțin 10 caractere.');
+          hasError = true;
+        }
+
+        if (hasError) return;
+
+        // Build payload
+        var payload = {
+          name: name,
+          email: email,
+          subject: subject || 'Mesaj din site',
+          message: message,
+        };
+
+        if (phone) {
+          payload.message = '[Telefon: ' + phone + '] ' + payload.message;
+        }
+
+        // Submit
+        setLoading(true);
+
+        try {
+          await safeFetch('/api/contact', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          feedback.textContent = '✅ Mesajul a fost trimis cu succes! Te vom contacta în cel mai scurt timp.';
+          feedback.className = 'contact__form-feedback contact__form-feedback--success';
+          form.reset();
+
+          if (typeof showToast === 'function') {
+            showToast('Mesaj trimis cu succes! 🥊', 'success', 4000);
+          }
+        } catch (err) {
+          var errMsg = err.message || 'Nu s-a putut trimite mesajul. Încearcă din nou.';
+          feedback.textContent = '❌ ' + escapeHTML(errMsg);
+          feedback.className = 'contact__form-feedback contact__form-feedback--error';
+
+          if (typeof showToast === 'function') {
+            showToast('Eroare la trimitere. Încearcă din nou.', 'error', 4000);
+          }
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      function showFieldError(inputId, errorId, msg) {
+        var input = document.getElementById(inputId);
+        var error = document.getElementById(errorId);
+        if (input) input.classList.add(input.tagName === 'TEXTAREA' ? 'contact__form-textarea--error' : 'contact__form-input--error');
+        if (error) error.textContent = '⚠ ' + msg;
+      }
+
+      function clearErrors() {
+        form.querySelectorAll('.contact__form-input--error, .contact__form-textarea--error').forEach(function (el) {
+          el.classList.remove('contact__form-input--error', 'contact__form-textarea--error');
+        });
+        form.querySelectorAll('.contact__form-error').forEach(function (el) {
+          el.textContent = '';
+        });
+      }
+
+      function setLoading(loading) {
+        if (submitBtn) submitBtn.disabled = loading;
+        if (submitText) submitText.style.opacity = loading ? '0.5' : '1';
+        if (spinner) {
+          spinner.classList.toggle('contact__form-spinner--visible', loading);
+        }
+      }
+    }
+
+    /* ==================================================================
+       3. GOOGLE MAPS LAZY LOAD
+       ================================================================== */
+    function initMap() {
+      var placeholder = document.getElementById('map-placeholder');
+      var iframe = document.getElementById('google-map-iframe');
+
+      if (!placeholder || !iframe) return;
+
+      iframe.addEventListener('load', function () {
+        placeholder.classList.add('contact__map-placeholder--hidden');
+        setTimeout(function () {
+          if (placeholder.parentNode) {
+            placeholder.style.display = 'none';
+          }
+        }, 600);
+      });
+
+      // Fallback: hide placeholder after 8s
+      setTimeout(function () {
+        placeholder.classList.add('contact__map-placeholder--hidden');
+      }, 8000);
+    }
+
+    /* ==================================================================
+       4. WHATSAPP BUTTON SCROLL BEHAVIOR
+       ================================================================== */
+    function initWhatsAppScroll() {
+      var waBtn = document.getElementById('whatsapp-btn');
+      if (!waBtn) return;
+
+      var lastScrollY = 0;
+      var ticking = false;
+
+      window.addEventListener('scroll', function () {
+        if (!ticking) {
+          requestAnimationFrame(function () {
+            var scrollY = window.scrollY || window.pageYOffset;
+            var maxScroll = document.body.scrollHeight - window.innerHeight;
+
+            // Hide near bottom (footer area)
+            if (scrollY > maxScroll - 200) {
+              waBtn.style.opacity = '0';
+              waBtn.style.pointerEvents = 'none';
+              waBtn.style.transform = 'translateY(20px)';
+            } else {
+              waBtn.style.opacity = '1';
+              waBtn.style.pointerEvents = 'auto';
+              waBtn.style.transform = 'translateY(0)';
+            }
+
+            waBtn.style.transition = 'opacity 0.3s, transform 0.3s var(--ease-out-expo)';
+            ticking = false;
+          });
+          ticking = true;
+        }
+      }, { passive: true });
+    }
+
+    /* ==================================================================
+       5. SET CURRENT YEAR
+       ================================================================== */
+    function setCurrentYear() {
+      var el = document.getElementById('current-year');
+      if (el) el.textContent = new Date().getFullYear();
+    }
+
+    /* ==================================================================
+       6. SMOOTH SCROLL FOR INTERNAL LINKS
+       ================================================================== */
+    function initSmoothScroll() {
+      document.addEventListener('click', function (e) {
+        var link = e.target.closest('a[href^="#"]');
+        if (!link) return;
+        var targetId = link.getAttribute('href').slice(1);
+        var target = document.getElementById(targetId);
+        if (!target) return;
+
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+
+    /* ==================================================================
+       INIT ALL
+       ================================================================== */
+    function init() {
+      setCurrentYear();
+      loadContactData();
+      initContactForm();
+      initMap();
+      initWhatsAppScroll();
+      initSmoothScroll();
+    }
+
+    domReady(init);
+  })();
   </script>
+
 </body>
 </html>

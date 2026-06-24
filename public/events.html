@@ -3,363 +3,1429 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Boxing Champions — Evenimente. Gale, competiții și sparring-uri memorabile. Revistă cele mai recente evenimente ale clubului.">
+  <meta name="description" content="Boxing Champions — Evenimente, competiții și gale de box. Vezi evenimentele trecute și viitoare.">
   <meta name="theme-color" content="#0a0a0a">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Evenimente — Boxing Champions</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <meta name="robots" content="index, follow">
+  <link rel="icon" type="image/png" href="/images/badge.png">
+  <link rel="apple-touch-icon" href="/images/badge.png">
+
+  <title>Evenimente | Boxing Champions</title>
+
+  <!-- CSS principal -->
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- SEO / Open Graph -->
+  <meta property="og:title" content="Evenimente | Boxing Champions">
+  <meta property="og:description" content="Competiții și gale de box — vezi evenimentele trecute și viitoare.">
+  <meta property="og:image" content="/images/badge.png">
+  <meta property="og:url" content="">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SportsClub",
+    "name": "Boxing Champions",
+    "description": "Evenimente, competiții și gale de box.",
+    "image": "/images/badge.png",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "București",
+      "addressCountry": "RO"
+    },
+    "sport": "Boxing"
+  }
+  </script>
+
+  <style>
+    /* ============================================================
+       EVENTS PAGE SPECIFIC STYLES
+       ============================================================ */
+
+    /* ---- Page Header ---- */
+    .events-page-header {
+      position: relative;
+      min-height: 42vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: var(--black-deep);
+    }
+
+    .events-page-header__bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .events-page-header__bg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.28);
+    }
+
+    .events-page-header__overlay {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 50%, rgba(212,168,67,0.06) 0%, transparent 60%),
+        linear-gradient(to top, var(--black-deep) 0%, transparent 50%);
+      z-index: 1;
+    }
+
+    .events-page-header__content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      max-width: 800px;
+      padding: 3rem 2rem 2rem;
+    }
+
+    .events-page-header__badge {
+      display: inline-block;
+      font-family: var(--font-heading);
+      font-size: clamp(0.75rem, 1.3vw, 0.9rem);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--gold-primary);
+      border: 1px solid var(--gold-primary);
+      padding: 0.45em 1.4em;
+      border-radius: 50px;
+      margin-bottom: 1.4rem;
+      backdrop-filter: blur(6px);
+      background: rgba(10,10,10,0.35);
+    }
+
+    .events-page-header__title {
+      font-family: var(--font-display);
+      font-size: clamp(2.4rem, 6vw, 5rem);
+      line-height: 1;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.3em;
+    }
+
+    .events-page-header__title .gold {
+      background: var(--gold-metallic);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    .events-page-header__subtitle {
+      font-family: var(--font-body);
+      font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+      color: var(--gray-smoke);
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    /* ---- Filters Bar ---- */
+    .events-filters {
+      background: var(--black-rich);
+      border-bottom: 1px solid rgba(212,168,67,0.1);
+      padding: 1.4rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .events-filters--scrolled {
+      background: rgba(17,17,17,0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(212,168,67,0.2);
+    }
+
+    .events-filters__inner {
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding: 0 clamp(1rem, 4vw, 3rem);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .events-filters__search {
+      flex: 1;
+      min-width: 220px;
+      position: relative;
+    }
+
+    .events-filters__search input {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--glass-border-light);
+      border-radius: 50px;
+      padding: 0.65em 1.2em 0.65em 2.8em;
+      color: var(--white-soft);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color var(--dur-normal), box-shadow var(--dur-normal);
+    }
+
+    .events-filters__search input:focus {
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 0 3px rgba(212,168,67,0.08);
+    }
+
+    .events-filters__search input::placeholder {
+      color: rgba(255,255,255,0.25);
+    }
+
+    .events-filters__search-icon {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gold-primary);
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+
+    .events-filters__tabs {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .events-filters__tab {
+      font-family: var(--font-heading);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.55em 1.2em;
+      border: 1px solid var(--glass-border);
+      background: transparent;
+      color: var(--gray-smoke);
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all var(--dur-normal) var(--ease-smooth);
+      white-space: nowrap;
+    }
+
+    .events-filters__tab:hover {
+      border-color: var(--gold-primary);
+      color: var(--gold-primary);
+      background: rgba(212,168,67,0.06);
+    }
+
+    .events-filters__tab--active {
+      border-color: var(--gold-primary);
+      color: var(--black-deep);
+      background: var(--gold-metallic);
+      font-weight: 700;
+    }
+
+    /* ---- Events Grid ---- */
+    .events-main {
+      background: var(--black-deep);
+      padding-top: clamp(2rem, 4vw, 3rem);
+      padding-bottom: var(--section-pad);
+    }
+
+    .events-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));
+      gap: clamp(1.6rem, 3vw, 2.2rem);
+    }
+
+    /* ---- Event Card ---- */
+    .event-detail-card {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .event-detail-card__gallery {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 1.2rem;
+      background: var(--black-card);
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .event-detail-card__gallery img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform var(--dur-slow) var(--ease-out-expo);
+    }
+
+    .event-detail-card:hover .event-detail-card__gallery img {
+      transform: scale(1.06);
+    }
+
+    .event-detail-card__gallery-nav {
+      position: absolute;
+      bottom: 0.7rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 0.4rem;
+      z-index: 2;
+    }
+
+    .event-detail-card__gallery-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.35);
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      transition: background var(--dur-normal), transform var(--dur-normal);
+    }
+
+    .event-detail-card__gallery-dot--active {
+      background: var(--gold-primary);
+      transform: scale(1.3);
+    }
+
+    .event-detail-card__gallery-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(10,10,10,0.7);
+      border: 1px solid rgba(212,168,67,0.3);
+      color: var(--gold-primary);
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      transition: background var(--dur-normal), border-color var(--dur-normal);
+      opacity: 0;
+    }
+
+    .event-detail-card:hover .event-detail-card__gallery-arrow {
+      opacity: 1;
+    }
+
+    .event-detail-card__gallery-arrow:hover {
+      background: rgba(10,10,10,0.9);
+      border-color: var(--gold-primary);
+    }
+
+    .event-detail-card__gallery-arrow--prev {
+      left: 0.6rem;
+    }
+
+    .event-detail-card__gallery-arrow--next {
+      right: 0.6rem;
+    }
+
+    .event-detail-card__meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 0.6rem;
+    }
+
+    .event-detail-card__date-badge {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--red-vivid);
+      color: #fff;
+      border-radius: 10px;
+      padding: 0.35em 0.8em;
+      min-width: 52px;
+      line-height: 1.1;
+    }
+
+    .event-detail-card__date-day {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+    }
+
+    .event-detail-card__date-month {
+      font-family: var(--font-heading);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .event-detail-card__type {
+      font-family: var(--font-heading);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 0.3em 0.9em;
+      border-radius: 50px;
+      font-weight: 700;
+    }
+
+    .event-detail-card__type--competition { background: #c62828; color: #fff; }
+    .event-detail-card__type--seminar     { background: #2196f3; color: #fff; }
+    .event-detail-card__type--workshop    { background: #ff9800; color: #000; }
+    .event-detail-card__type--camp        { background: #4caf50; color: #000; }
+    .event-detail-card__type--general     { background: var(--gold-primary); color: #000; }
+
+    .event-detail-card__title {
+      font-size: clamp(1.2rem, 1.8vw, 1.5rem);
+      margin-bottom: 0.45rem;
+    }
+
+    .event-detail-card__location {
+      font-size: 0.85rem;
+      color: var(--gray-smoke);
+      margin-bottom: 0.3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35em;
+    }
+
+    .event-detail-card__time {
+      font-size: 0.8rem;
+      color: var(--gray-smoke);
+      margin-bottom: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35em;
+    }
+
+    .event-detail-card__desc {
+      font-size: 0.9rem;
+      color: #ccc;
+      margin-bottom: 1rem;
+      flex: 1;
+    }
+
+    .event-detail-card__price {
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      color: var(--gold-primary);
+      margin-bottom: 1rem;
+    }
+
+    .event-detail-card__footer {
+      margin-top: auto;
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+
+    /* ---- Empty State ---- */
+    .events-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: clamp(3rem, 6vw, 5rem) 2rem;
+    }
+
+    .events-empty__icon {
+      font-size: 4rem;
+      margin-bottom: 1.4rem;
+      opacity: 0.6;
+    }
+
+    .events-empty__title {
+      font-family: var(--font-heading);
+      font-size: clamp(1.4rem, 2.5vw, 2rem);
+      color: var(--gold-primary);
+      margin-bottom: 0.6rem;
+    }
+
+    .events-empty__text {
+      color: var(--gray-smoke);
+      max-width: 440px;
+      margin: 0 auto 2rem;
+      font-size: 0.95rem;
+    }
+
+    /* ---- Pagination ---- */
+    .events-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 2.8rem;
+      flex-wrap: wrap;
+    }
+
+    .events-pagination__btn {
+      font-family: var(--font-heading);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.55em 1.3em;
+      border: 1px solid var(--glass-border);
+      background: transparent;
+      color: var(--gray-smoke);
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all var(--dur-normal) var(--ease-smooth);
+    }
+
+    .events-pagination__btn:hover:not(:disabled) {
+      border-color: var(--gold-primary);
+      color: var(--gold-primary);
+      background: rgba(212,168,67,0.06);
+    }
+
+    .events-pagination__btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .events-pagination__btn--active {
+      border-color: var(--gold-primary);
+      color: var(--black-deep);
+      background: var(--gold-metallic);
+      font-weight: 700;
+    }
+
+    .events-pagination__info {
+      font-size: 0.8rem;
+      color: var(--gray-smoke);
+      margin: 0 0.5rem;
+    }
+
+    /* ---- Loading skeleton ---- */
+    .event-card-skeleton {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .event-card-skeleton__img {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      border-radius: 14px;
+      background: var(--black-card);
+      margin-bottom: 1.2rem;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .event-card-skeleton__img::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+      animation: shimmer 1.6s infinite;
+    }
+
+    .event-card-skeleton__line {
+      height: 14px;
+      border-radius: 4px;
+      background: var(--black-card);
+      margin-bottom: 0.7rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .event-card-skeleton__line::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+      animation: shimmer 1.6s infinite;
+    }
+
+    .event-card-skeleton__line--short { width: 60%; }
+    .event-card-skeleton__line--medium { width: 80%; }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 768px) {
+      .events-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .events-filters__inner {
+        flex-direction: column;
+      }
+
+      .events-filters__search {
+        width: 100%;
+      }
+
+      .events-page-header {
+        min-height: 30vh;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .events-page-header {
+        min-height: 26vh;
+      }
+
+      .events-filters__tabs {
+        gap: 0.3rem;
+      }
+
+      .events-filters__tab {
+        font-size: 0.7rem;
+        padding: 0.45em 0.9em;
+      }
+
+      .event-detail-card__gallery-arrow {
+        opacity: 1;
+        width: 28px;
+        height: 28px;
+        font-size: 0.7rem;
+      }
+    }
+  </style>
 </head>
 <body>
 
-  <!-- =======================================================================
+  <!-- ============================================================
+       PRELOADER
+  ============================================================ -->
+  <div id="preloader" aria-hidden="true">
+    <div class="preloader__inner">
+      <div class="preloader__glove">
+        <img src="/images/gloves.jpg" alt="" aria-hidden="true">
+      </div>
+      <p class="preloader__text">BOXING CHAMPIONS</p>
+      <div class="preloader__bar">
+        <div class="preloader__bar-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
        PARTICLES CANVAS
-       ======================================================================= -->
-  <canvas id="particles-canvas"></canvas>
+  ============================================================ -->
+  <canvas id="particles-canvas" aria-hidden="true"></canvas>
 
-  <!-- =======================================================================
-       CUSTOM CURSOR
-       ======================================================================= -->
-  <div class="cursor-dot"></div>
-  <div class="cursor-ring"></div>
-
-  <!-- =======================================================================
-       NAVBAR
-       ======================================================================= -->
-  <nav class="navbar z-content">
-    <div class="container">
-      <a href="/" class="nav-logo" aria-label="Boxing Champions — Acasă">
-        <i class="fa-solid fa-glove"></i> BOXING CHAMPIONS
+  <!-- ============================================================
+       NAVIGATION
+  ============================================================ -->
+  <nav class="nav" aria-label="Navigare principală">
+    <div class="nav__inner">
+      <a href="/" class="nav__logo" aria-label="Boxing Champions — Acasă">
+        <img src="/images/badge.png" alt="Boxing Champions Badge" width="48" height="48" loading="eager">
+        BOXING <span>CHAMPIONS</span>
       </a>
-      <button class="nav-toggle" aria-label="Deschide meniul" aria-expanded="false">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-      <ul class="nav-links" role="menubar">
-        <li role="none"><a href="/" role="menuitem">Acasă</a></li>
-        <li role="none"><a href="/events" role="menuitem" class="active">Evenimente</a></li>
-        <li role="none"><a href="/schedule" role="menuitem">Program</a></li>
-        <li role="none"><a href="/pricing" role="menuitem">Abonamente</a></li>
-        <li role="none"><a href="/shop" role="menuitem">Magazin</a></li>
-        <li role="none"><a href="/contact" role="menuitem">Contact</a></li>
+
+      <ul class="nav__links" role="menubar">
+        <li role="none"><a href="/#despre" class="nav__link" role="menuitem">Despre</a></li>
+        <li role="none"><a href="/#antrenori" class="nav__link" role="menuitem">Antrenori</a></li>
+        <li role="none"><a href="/#program" class="nav__link" role="menuitem">Program</a></li>
+        <li role="none"><a href="/events.html" class="nav__link nav__link--active" role="menuitem">Evenimente</a></li>
+        <li role="none"><a href="/pricing.html" class="nav__link" role="menuitem">Abonamente</a></li>
+        <li role="none"><a href="/shop.html" class="nav__link" role="menuitem">Shop</a></li>
+        <li role="none"><a href="/#contact" class="nav__link" role="menuitem">Contact</a></li>
       </ul>
+
+      <button class="nav__toggle" aria-label="Deschide meniul" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </nav>
 
-  <!-- =======================================================================
-       PAGE HERO — EVENIMENTE
-       ======================================================================= -->
-  <section class="hero" id="events-hero" style="min-height: 50vh;">
-    <div style="position: absolute; inset: 0; z-index: -1;" aria-hidden="true">
-      <img src="images/event-gala.jpg" alt="" loading="lazy"
-           style="width: 100%; height: 100%; object-fit: cover; opacity: 0.25; filter: brightness(0.4);"
-           aria-hidden="true">
+  <!-- ============================================================
+       PAGE HEADER
+  ============================================================ -->
+  <section class="events-page-header" aria-labelledby="events-header-title">
+    <div class="events-page-header__bg">
+      <img src="/images/event-competition.jpg" alt="" aria-hidden="true" loading="eager">
     </div>
-    <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,0.9) 0%, rgba(10,10,10,0.6) 50%, rgba(10,10,10,0.95) 100%); z-index: -1;" aria-hidden="true"></div>
-    <div class="hero-content z-content" style="padding-top: 6rem;">
-      <span class="hero-badge">
-        <i class="fa-solid fa-trophy" style="margin-right: 0.4rem;"></i> Galeria Noastră
-      </span>
-      <h1 class="hero-title" style="font-size: clamp(2.4rem, 5vw, 4.5rem);">
+    <div class="events-page-header__overlay" aria-hidden="true"></div>
+
+    <div class="events-page-header__content reveal">
+      <div class="events-page-header__badge">
+        Competiții &amp; Gale
+      </div>
+      <h1 class="events-page-header__title" id="events-header-title">
         EVENI<span class="gold">MENTE</span>
       </h1>
-      <p class="hero-subtitle">
-        Cele mai recente gale, competiții și sparring-uri. Fii parte din următoarea pagină de istorie!
+      <p class="events-page-header__subtitle">
+        De la seminarii și workshop-uri până la competiții de amploare — fiecare eveniment Boxing Champions este o experiență de neuitat.
       </p>
-      <div class="btn-group" style="justify-content: center;">
-        <a href="/contact" class="btn btn-primary btn-lg">
-          <i class="fa-solid fa-calendar-check"></i> Participă la Următorul Eveniment
-        </a>
-      </div>
     </div>
   </section>
 
-  <!-- =======================================================================
-       EVENTS LIST SECTION
-       ======================================================================= -->
-  <section class="section" id="events-list" style="padding-top: var(--space-3xl);">
-    <div class="container">
-      <span class="section-label fade-in">Arhivă</span>
-      <h2 class="text-center fade-in">Evenimentele <span class="text-gold">Noastre</span></h2>
-      <span class="gold-separator fade-in"></span>
-      <p class="text-center text-gray fade-in" style="max-width: 600px; margin-left: auto; margin-right: auto; margin-bottom: var(--space-3xl);">
-        De la gale grandioase la competiții interne, fiecare eveniment Boxing Champions scrie o nouă filă de istorie.
-      </p>
+  <!-- ============================================================
+       FILTERS BAR
+  ============================================================ -->
+  <div class="events-filters" id="events-filters" aria-label="Filtre evenimente">
+    <div class="events-filters__inner">
+      <div class="events-filters__search">
+        <span class="events-filters__search-icon" aria-hidden="true">&#128269;</span>
+        <input
+          type="search"
+          id="events-search"
+          placeholder="Caută evenimente..."
+          aria-label="Caută evenimente după titlu, locație sau descriere"
+          autocomplete="off"
+        >
+      </div>
 
-      <!-- Grid evenimente — hardcodat ca fallback, populat dinamic de script-ul inline -->
+      <div class="events-filters__tabs" role="tablist" aria-label="Filtru tip eveniment">
+        <button class="events-filters__tab events-filters__tab--active" role="tab" aria-selected="true" data-type="all">Toate</button>
+        <button class="events-filters__tab" role="tab" aria-selected="false" data-type="competition">Competiții</button>
+        <button class="events-filters__tab" role="tab" aria-selected="false" data-type="seminar">Seminarii</button>
+        <button class="events-filters__tab" role="tab" aria-selected="false" data-type="workshop">Workshop-uri</button>
+        <button class="events-filters__tab" role="tab" aria-selected="false" data-type="camp">Cantonamente</button>
+        <button class="events-filters__tab" role="tab" aria-selected="false" data-type="general">Generale</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       EVENTS GRID
+  ============================================================ -->
+  <section class="events-main" aria-labelledby="events-grid-title">
+    <div class="container">
+      <h2 id="events-grid-title" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Listă evenimente</h2>
+
+      <!-- Loading State -->
       <div class="events-grid" id="events-grid">
-        <!-- Fallback: carduri hardcodate — rămân vizibile dacă API-ul nu răspunde -->
-        <div class="event-card glass-card tilt-card fade-in">
-          <div class="tilt-card-inner">
-            <div class="tilt-card-glow"></div>
-            <div class="tilt-card-shine"></div>
-            <div style="height:220px;overflow:hidden;border-radius:var(--radius-md) var(--radius-md) 0 0;">
-              <img src="images/event-gala.jpg" alt="Gala Campionilor 2025" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
-            </div>
-            <div class="event-card-body">
-              <span style="font-size:0.75rem;color:var(--color-gold-light);">15 Martie 2025</span>
-              <h3 style="font-family:var(--font-display);font-size:1.15rem;margin:var(--space-xs) 0;color:var(--color-light);">Gala Campionilor 2025</h3>
-              <p style="font-size:0.8rem;color:var(--color-gray-300);margin-bottom:var(--space-sm);"><i class="fa-solid fa-location-dot" style="margin-right:0.35rem;color:var(--color-gold);"></i>Sala Polivalentă, București</p>
-              <p style="font-size:0.82rem;color:var(--color-gray-200);line-height:1.5;">Cea mai mare gală a anului. 12 meciuri de top, centuri naționale puse în joc și o atmosferă electrizantă.</p>
-            </div>
-          </div>
+        <!-- Skeleton loading cards -->
+        <div class="event-card-skeleton glass glass--card" aria-hidden="true">
+          <div class="event-card-skeleton__img"></div>
+          <div class="event-card-skeleton__line event-card-skeleton__line--medium"></div>
+          <div class="event-card-skeleton__line event-card-skeleton__line--short"></div>
+          <div class="event-card-skeleton__line"></div>
+          <div class="event-card-skeleton__line event-card-skeleton__line--short"></div>
         </div>
-        <div class="event-card glass-card tilt-card fade-in delay-100">
-          <div class="tilt-card-inner">
-            <div class="tilt-card-glow"></div>
-            <div class="tilt-card-shine"></div>
-            <div style="height:220px;overflow:hidden;border-radius:var(--radius-md) var(--radius-md) 0 0;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-size:3rem;color:var(--color-gray-400);">
-              <i class="fa-solid fa-medal"></i>
-            </div>
-            <div class="event-card-body">
-              <span style="font-size:0.75rem;color:var(--color-gold-light);">22 Februarie 2025</span>
-              <h3 style="font-family:var(--font-display);font-size:1.15rem;margin:var(--space-xs) 0;color:var(--color-light);">Cupa de Aur — Ediția a XII-a</h3>
-              <p style="font-size:0.8rem;color:var(--color-gray-300);margin-bottom:var(--space-sm);"><i class="fa-solid fa-location-dot" style="margin-right:0.35rem;color:var(--color-gold);"></i>Sala Sporturilor, Cluj-Napoca</p>
-              <p style="font-size:0.82rem;color:var(--color-gray-200);line-height:1.5;">Competiție open. Peste 80 de sportivi din 12 cluburi s-au întrecut pentru trofeul suprem.</p>
-            </div>
-          </div>
+        <div class="event-card-skeleton glass glass--card" aria-hidden="true">
+          <div class="event-card-skeleton__img"></div>
+          <div class="event-card-skeleton__line event-card-skeleton__line--medium"></div>
+          <div class="event-card-skeleton__line event-card-skeleton__line--short"></div>
+          <div class="event-card-skeleton__line"></div>
+          <div class="event-card-skeleton__line event-card-skeleton__line--short"></div>
         </div>
-        <div class="event-card glass-card tilt-card fade-in delay-200">
-          <div class="tilt-card-inner">
-            <div class="tilt-card-glow"></div>
-            <div class="tilt-card-shine"></div>
-            <div style="height:220px;overflow:hidden;border-radius:var(--radius-md) var(--radius-md) 0 0;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-size:3rem;color:var(--color-gray-400);">
-              <i class="fa-solid fa-boxing-glove"></i>
-            </div>
-            <div class="event-card-body">
-              <span style="font-size:0.75rem;color:var(--color-gold-light);">10 Ianuarie 2025</span>
-              <h3 style="font-family:var(--font-display);font-size:1.15rem;margin:var(--space-xs) 0;color:var(--color-light);">Sparring Night: Întâlnirea Generațiilor</h3>
-              <p style="font-size:0.8rem;color:var(--color-gray-300);margin-bottom:var(--space-sm);"><i class="fa-solid fa-location-dot" style="margin-right:0.35rem;color:var(--color-gold);"></i>Club Boxing Champions, București</p>
-              <p style="font-size:0.82rem;color:var(--color-gray-200);line-height:1.5;">Veteranii și tinerii talentați ai clubului s-au întâlnit într-o seară de sparring memorabilă.</p>
-            </div>
-          </div>
+        <div class="event-card-skeleton glass glass--card" aria-hidden="true">
+          <div class="event-card-skeleton__img"></div>
+          <div class="event-card-skeleton__line event-card-skeleton__line--medium"></div>
+          <div class="event-card-skeleton__line event-card-skeleton__line--short"></div>
+          <div class="event-card-skeleton__line"></div>
+          <div class="event-card-skeleton__line event-card-skeleton__line--short"></div>
         </div>
       </div>
 
+      <!-- Pagination -->
+      <nav class="events-pagination" id="events-pagination" aria-label="Navigare pagini evenimente"></nav>
     </div>
   </section>
 
-  <!-- =======================================================================
-       CALL TO ACTION — PARTICIPĂ
-       ======================================================================= -->
-  <section class="section" id="events-cta" style="position: relative; overflow: hidden; background: rgba(212, 175, 55, 0.02);">
-    <div class="container" style="position: relative; z-index: 1;">
-      <div class="text-center fade-in">
-        <span class="section-label">Nu rata</span>
-        <h2>Vrei să participi la <span class="text-gold">următoarea gală</span>?</h2>
-        <span class="gold-separator"></span>
-        <p class="text-gray" style="max-width: 580px; margin-left: auto; margin-right: auto; margin-bottom: var(--space-2xl); font-size: 1.05rem;">
-          Fie că ești sportiv sau spectator, te așteptăm cu brațele deschise. Intră în legătură cu noi și rezervă-ți locul!
-        </p>
-        <div class="btn-group" style="justify-content: center;">
-          <a href="/contact" class="btn btn-primary btn-xl">
-            <i class="fa-solid fa-paper-plane"></i> Contactează-ne
-          </a>
-          <a href="/schedule" class="btn btn-outline btn-xl">
-            <i class="fa-solid fa-table-list"></i> Vezi Programul
-          </a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- =======================================================================
+  <!-- ============================================================
        FOOTER
-       ======================================================================= -->
-  <footer class="footer">
+  ============================================================ -->
+  <footer class="footer" role="contentinfo">
     <div class="container">
-      <div class="footer-grid">
+      <div class="footer__grid">
         <div>
-          <p class="footer-brand"><i class="fa-solid fa-glove" style="margin-right: 0.4rem;"></i> BOXING CHAMPIONS</p>
-          <p class="footer-about" data-setting="about_text">
-            Cel mai bun club de box din România. Tradiție, disciplină și excelență din 1998.
-          </p>
-          <div style="margin-top: var(--space-lg); display: flex; gap: var(--space-md);">
-            <a href="https://facebook.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-facebook-f"></i>
-            </a>
-            <a href="https://instagram.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-instagram"></i>
-            </a>
-            <a href="https://tiktok.com/@boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="TikTok" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-tiktok"></i>
-            </a>
+          <div class="footer__brand">
+            BOXING <span>CHAMPIONS</span>
           </div>
+          <p class="footer__desc">
+            Club de box de elită — forjăm campioni din 2013. Antrenamente, competiții și o comunitate unită prin pasiunea pentru box.
+          </p>
         </div>
+
         <div>
-          <h4>Navigare</h4>
-          <ul class="footer-links">
-            <li><a href="/">Acasă</a></li>
-            <li><a href="/events">Evenimente</a></li>
-            <li><a href="/schedule">Program</a></li>
-            <li><a href="/pricing">Abonamente</a></li>
-            <li><a href="/shop">Magazin</a></li>
-            <li><a href="/contact">Contact</a></li>
+          <h4 class="footer__heading">Link-uri Rapide</h4>
+          <ul class="footer__links">
+            <li><a href="/#despre">Despre Noi</a></li>
+            <li><a href="/#antrenori">Antrenori</a></li>
+            <li><a href="/#program">Program</a></li>
+            <li><a href="/events.html">Evenimente</a></li>
+            <li><a href="/pricing.html">Abonamente</a></li>
+            <li><a href="/shop.html">Shop</a></li>
           </ul>
         </div>
+
         <div>
-          <h4>Legal</h4>
-          <ul class="footer-links">
+          <h4 class="footer__heading">Utile</h4>
+          <ul class="footer__links">
+            <li><a href="/#contact">Contact</a></li>
             <li><a href="#">Termeni &amp; Condiții</a></li>
-            <li><a href="#">Politica de Confidențialitate</a></li>
+            <li><a href="#">Confidențialitate</a></li>
             <li><a href="#">GDPR</a></li>
-            <li><a href="#">ANPC</a></li>
+            <li><a href="#">FAQ</a></li>
           </ul>
         </div>
+
         <div>
-          <h4>Contact</h4>
-          <ul class="footer-links">
-            <li><i class="fa-solid fa-location-dot text-gold" style="margin-right: 0.4rem;"></i> <span data-contact="address">Strada Sportului nr. 10, București</span></li>
-            <li><i class="fa-solid fa-phone text-gold" style="margin-right: 0.4rem;"></i> <span data-contact="phone">+40 721 234 567</span></li>
-            <li><i class="fa-solid fa-envelope text-gold" style="margin-right: 0.4rem;"></i> <span data-contact="email">contact@boxing-champions.com</span></li>
+          <h4 class="footer__heading">Urmărește-ne</h4>
+          <ul class="footer__links">
+            <li><a href="#" target="_blank" rel="noopener noreferrer">Instagram</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">Facebook</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">YouTube</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">X / Twitter</a></li>
           </ul>
         </div>
       </div>
-      <div class="footer-bottom">
-        <p>&copy; 2026 Boxing Champions. Toate drepturile rezervate. <span style="color: var(--color-gold);">#BoxingChampions</span></p>
+
+      <div class="footer__bottom">
+        <p>&copy; <span id="current-year">2025</span> Boxing Champions. Toate drepturile rezervate. | Construit cu pasiune.</p>
       </div>
     </div>
   </footer>
 
-  <!-- =======================================================================
+  <!-- ============================================================
        SCRIPTS
-       ======================================================================= -->
-  <script src="js/main.js"></script>
+  ============================================================ -->
+  <!-- Utilitare partajate (particule, cursor, scroll-reveal, navbar, preloader, fetch) -->
+  <script src="/js/shared.js"></script>
 
-  <!-- =======================================================================
-       INLINE SCRIPT — EVENIMENTE DINAMICE CU FALLBACK HARDCODAT
-       Fetch /api/events → populează #events-grid.
-       Dacă API-ul eșuează, conținutul hardcodat din HTML rămâne vizibil.
-       ======================================================================= -->
+  <!-- Logica specifică paginii Evenimente -->
   <script>
   (function () {
     'use strict';
 
-    var grid = document.getElementById('events-grid');
-    if (!grid) return;
-
-    // Salvează referința la HTML-ul hardcodat (fallback)
-    var fallbackHTML = grid.innerHTML;
-
-    /**
-     * Escape HTML pentru prevenirea XSS.
-     * @param {string} str
-     * @returns {string}
-     */
-    function escapeHtml(str) {
-      if (typeof str !== 'string') return '';
-      var map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-      };
-      return str.replace(/[&<>"']/g, function (m) { return map[m]; });
+    /* ==================================================================
+       DOM Ready
+       ================================================================== */
+    function domReady(fn) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fn);
+      } else {
+        fn();
+      }
     }
 
-    /**
-     * Render card HTML pentru un eveniment.
-     * @param {object} event
-     * @param {number} index
-     * @returns {string}
-     */
-    function renderEventCard(event, index) {
-      var delay = index * 100;
-      var firstPhoto = (event.photos && event.photos.length > 0) ? event.photos[0].url : '';
-      var locationHTML = event.location
-        ? '<p style="font-size:0.8rem;color:var(--color-gray-300);margin-bottom:var(--space-sm);"><i class="fa-solid fa-location-dot" style="margin-right:0.35rem;color:var(--color-gold);"></i>' + escapeHtml(event.location) + '</p>'
-        : '';
+    /* ==================================================================
+       HELPERS
+       ================================================================== */
+    var BC = window.BoxingChampions || {};
+    var fetchJSON = BC.fetchJSON;
+    var showToast = BC.showToast;
+    var refreshScrollReveal = BC.refreshScrollReveal;
 
-      var desc = (event.description && event.description.length > 120)
-        ? event.description.slice(0, 120) + '...'
-        : (event.description || '');
+    // Fallback fetchJSON dacă shared.js nu e disponibil
+    async function safeFetch(url, opts) {
+      if (typeof fetchJSON === 'function') {
+        return fetchJSON(url, opts);
+      }
+      var res = await fetch(url, opts || {});
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }
 
-      var html = '<div class="event-card glass-card tilt-card fade-in delay-' + delay + '">' +
-        '<div class="tilt-card-inner">' +
-        '<div class="tilt-card-glow"></div>' +
-        '<div class="tilt-card-shine"></div>' +
-        '<div style="height:220px;overflow:hidden;border-radius:var(--radius-md) var(--radius-md) 0 0;">';
+    /* ==================================================================
+       STATE
+       ================================================================== */
+    var state = {
+      events: [],
+      pagination: null,
+      currentPage: 1,
+      limit: 9,
+      currentType: 'all',
+      searchQuery: '',
+      searchDebounce: null,
+    };
 
-      if (firstPhoto) {
-        html += '<img src="' + escapeHtml(firstPhoto) + '" alt="' + escapeHtml(event.title) + '" style="width:100%;height:100%;object-fit:cover;" loading="lazy">';
+    /* ==================================================================
+       HARDCODED FALLBACK DATA
+       ================================================================== */
+    var FALLBACK_EVENTS = [
+      {
+        id: 1,
+        title: 'Gala Boxing Champions 2025',
+        slug: 'gala-boxing-champions-2025',
+        description: 'Cea mai mare gală de box a anului. 12 meciuri de top, centură în joc și invitați speciali din lumea boxului internațional.',
+        type: 'competition',
+        location: 'Sala Polivalentă, București',
+        start_date: '2025-04-15',
+        end_date: '2025-04-15',
+        time: '18:00 – 23:00',
+        price: 75,
+        capacity: 2000,
+        image: '/images/event-competition.jpg',
+        is_published: true,
+        gallery: [
+          '/images/event-gallery-1.jpg',
+          '/images/event-gallery-2.jpg',
+          '/images/event-gallery-3.jpg'
+        ]
+      },
+      {
+        id: 2,
+        title: 'Seminar: Tehnici Avansate de Apărare',
+        slug: 'seminar-tehnici-avansate-aparare',
+        description: 'Seminar intensiv de o zi cu antrenorul principal. Focus pe apărare, contraatac și joc de picioare. Locuri limitate.',
+        type: 'seminar',
+        location: 'Sala Boxing Champions, București',
+        start_date: '2025-03-22',
+        end_date: '2025-03-22',
+        time: '10:00 – 16:00',
+        price: 120,
+        capacity: 30,
+        image: '/images/event-placeholder.jpg',
+        is_published: true,
+        gallery: [
+          '/images/event-gallery-2.jpg',
+          '/images/event-gallery-1.jpg'
+        ]
+      },
+      {
+        id: 3,
+        title: 'Workshop: Forță și Condiție Fizică',
+        slug: 'workshop-forta-conditie-fizica',
+        description: 'Workshop practic axat pe dezvoltarea forței explozive și a condiției fizice specifice boxului. Include evaluare individuală.',
+        type: 'workshop',
+        location: 'Sala Boxing Champions, București',
+        start_date: '2025-05-10',
+        end_date: '2025-05-11',
+        time: '09:00 – 14:00',
+        price: 90,
+        capacity: 25,
+        image: '/images/event-placeholder.jpg',
+        is_published: true,
+        gallery: [
+          '/images/event-gallery-3.jpg',
+          '/images/event-gallery-1.jpg',
+          '/images/event-gallery-2.jpg'
+        ]
+      },
+      {
+        id: 4,
+        title: 'Cantonament de Vară 2025',
+        slug: 'cantonament-vara-2025',
+        description: 'Cantonament intensiv de 7 zile la munte. Antrenamente de dimineață până seara, sparring, alergare montană și nutriție sportivă.',
+        type: 'camp',
+        location: 'Complex Sportiv, Poiana Brașov',
+        start_date: '2025-07-07',
+        end_date: '2025-07-14',
+        time: 'Program complet',
+        price: 450,
+        capacity: 40,
+        image: '/images/event-placeholder.jpg',
+        is_published: true,
+        gallery: [
+          '/images/event-gallery-1.jpg',
+          '/images/event-gallery-3.jpg'
+        ]
+      },
+      {
+        id: 5,
+        title: 'Competiție Internă: Cupa Campionilor',
+        slug: 'cupa-campionilor-2025',
+        description: 'Competiție internă deschisă tuturor membrilor clubului. Categorii: copii, cadeți, seniori amatori. Premii și diplome.',
+        type: 'competition',
+        location: 'Sala Boxing Champions, București',
+        start_date: '2025-02-08',
+        end_date: '2025-02-09',
+        time: '10:00 – 20:00',
+        price: 0,
+        capacity: null,
+        image: '/images/event-competition.jpg',
+        is_published: true,
+        gallery: [
+          '/images/event-gallery-2.jpg',
+          '/images/event-gallery-1.jpg',
+          '/images/event-gallery-3.jpg'
+        ]
+      },
+      {
+        id: 6,
+        title: 'Seară de Gală: Întâlnire cu Campionii',
+        slug: 'seara-gala-intalnire-campioni',
+        description: 'Eveniment special cu foști campioni naționali și mondiali. Povești inspiraționale, Q&A, sesiune de autografe și demonstrații live.',
+        type: 'general',
+        location: 'Hotel Intercontinental, București',
+        start_date: '2024-12-18',
+        end_date: '2024-12-18',
+        time: '19:00 – 22:00',
+        price: 60,
+        capacity: 150,
+        image: '/images/event-placeholder.jpg',
+        is_published: true,
+        gallery: [
+          '/images/event-gallery-3.jpg',
+          '/images/event-gallery-2.jpg'
+        ]
+      }
+    ];
+
+    /* ==================================================================
+       UTILS
+       ================================================================== */
+    function escapeHTML(str) {
+      if (!str) return '';
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+
+    function truncateText(text, maxLen) {
+      if (!text) return '';
+      return text.length > maxLen ? text.slice(0, maxLen).trim() + '...' : text;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return { day: '--', month: 'TBA', full: 'TBA', year: '' };
+      var date = new Date(dateStr);
+      var monthNames = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Noi', 'Dec'];
+      var monthFull = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'];
+      return {
+        day: String(date.getDate()).padStart(2, '0'),
+        month: monthNames[date.getMonth()],
+        full: date.getDate() + ' ' + monthFull[date.getMonth()] + ' ' + date.getFullYear(),
+        year: date.getFullYear(),
+        monthFull: monthFull[date.getMonth()]
+      };
+    }
+
+    function getTypeLabel(type) {
+      var labels = {
+        competition: 'Competiție',
+        seminar: 'Seminar',
+        workshop: 'Workshop',
+        camp: 'Cantonament',
+        general: 'Eveniment General'
+      };
+      return labels[type] || type || 'General';
+    }
+
+    /* ==================================================================
+       BUILD GALLERY FOR AN EVENT CARD
+       ================================================================== */
+    function buildGalleryHTML(event, cardIndex) {
+      var images = [];
+
+      // Use gallery array if available, else fallback to single image
+      if (Array.isArray(event.gallery) && event.gallery.length > 0) {
+        images = event.gallery;
+      } else if (event.image) {
+        images = [event.image];
       } else {
-        html += '<div style="width:100%;height:100%;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-size:3rem;color:var(--color-gray-400);"><i class="fa-solid fa-calendar-days"></i></div>';
+        // Fallback placeholder
+        images = ['/images/event-placeholder.jpg'];
       }
 
-      html += '</div>' +
-        '<div class="event-card-body">' +
-        '<span style="font-size:0.75rem;color:var(--color-gold-light);">' + escapeHtml(event.event_date || '') + '</span>' +
-        '<h3 style="font-family:var(--font-display);font-size:1.15rem;margin:var(--space-xs) 0;color:var(--color-light);">' + escapeHtml(event.title) + '</h3>' +
-        locationHTML;
-
-      if (desc) {
-        html += '<p style="font-size:0.82rem;color:var(--color-gray-200);line-height:1.5;">' + escapeHtml(desc) + '</p>';
+      if (images.length <= 1) {
+        return '<div class="event-detail-card__gallery">' +
+          '<img src="' + escapeHTML(images[0]) + '" alt="' + escapeHTML(event.title) + '" loading="lazy" onerror="this.src=\'/images/event-placeholder.jpg\'">' +
+        '</div>';
       }
 
-      // Galerie foto suplimentară
-      if (event.photos && event.photos.length > 1) {
-        html += '<div style="display:flex;gap:var(--space-xs);margin-top:var(--space-md);flex-wrap:wrap;">';
-        event.photos.forEach(function (p) {
-          html += '<span style="display:inline-block;padding:0.2rem 0.6rem;background:rgba(212,175,55,0.08);border-radius:50px;font-size:0.7rem;color:var(--color-gray-300);"><i class="fa-solid fa-image" style="margin-right:0.25rem;"></i>' + escapeHtml(p.caption || 'Foto') + '</span>';
-        });
-        html += '</div>';
+      var dotsHTML = images.map(function (_, idx) {
+        return '<button class="event-detail-card__gallery-dot' + (idx === 0 ? ' event-detail-card__gallery-dot--active' : '') + '" data-card="' + cardIndex + '" data-idx="' + idx + '" aria-label="Imaginea ' + (idx + 1) + ' din ' + images.length + '"></button>';
+      }).join('');
+
+      return '<div class="event-detail-card__gallery" data-card="' + cardIndex + '" data-current="0" data-images="' + escapeHTML(JSON.stringify(images)) + '">' +
+        '<img src="' + escapeHTML(images[0]) + '" alt="' + escapeHTML(event.title) + '" loading="lazy" onerror="this.src=\'/images/event-placeholder.jpg\'">' +
+        '<button class="event-detail-card__gallery-arrow event-detail-card__gallery-arrow--prev" data-card="' + cardIndex + '" data-dir="prev" aria-label="Imaginea anterioară">&lt;</button>' +
+        '<button class="event-detail-card__gallery-arrow event-detail-card__gallery-arrow--next" data-card="' + cardIndex + '" data-dir="next" aria-label="Imaginea următoare">&gt;</button>' +
+        '<div class="event-detail-card__gallery-nav">' + dotsHTML + '</div>' +
+      '</div>';
+    }
+
+    /* ==================================================================
+       BUILD EVENT CARD
+       ================================================================== */
+    function buildEventCard(event, index) {
+      var dateInfo = formatDate(event.start_date);
+      var endDateInfo = event.end_date ? formatDate(event.end_date) : null;
+      var typeLabel = getTypeLabel(event.type);
+      var typeClass = event.type || 'general';
+
+      var dateDisplay = dateInfo.full;
+      if (endDateInfo && event.start_date !== event.end_date) {
+        dateDisplay = dateInfo.day + ' ' + dateInfo.monthFull + ' – ' + endDateInfo.full;
       }
 
-      html += '</div></div></div>';
+      var timeDisplay = event.time || '';
+      var priceDisplay = '';
+      if (event.price !== null && event.price !== undefined) {
+        if (Number(event.price) === 0) {
+          priceDisplay = '<div class="event-detail-card__price">Intrare Liberă</div>';
+        } else {
+          priceDisplay = '<div class="event-detail-card__price">' + Number(event.price).toFixed(0) + ' RON</div>';
+        }
+      }
+
+      var galleryHTML = buildGalleryHTML(event, index);
+
+      return '<div class="event-detail-card glass glass--card reveal">' +
+        galleryHTML +
+        '<div class="event-detail-card__meta">' +
+          '<div class="event-detail-card__date-badge">' +
+            '<span class="event-detail-card__date-day">' + dateInfo.day + '</span>' +
+            '<span class="event-detail-card__date-month">' + dateInfo.month + '</span>' +
+          '</div>' +
+          '<span class="event-detail-card__type event-detail-card__type--' + typeClass + '">' + typeLabel + '</span>' +
+        '</div>' +
+        '<h3 class="event-detail-card__title">' + escapeHTML(event.title) + '</h3>' +
+        '<div class="event-detail-card__location">' + escapeHTML(event.location || 'Locație TBA') + '</div>' +
+        (timeDisplay ? '<div class="event-detail-card__time">' + escapeHTML(timeDisplay) + '</div>' : '') +
+        '<p class="event-detail-card__desc">' + escapeHTML(truncateText(event.description || '', 200)) + '</p>' +
+        priceDisplay +
+        '<div class="event-detail-card__footer">' +
+          (event.capacity ? '<span style="font-size:0.8rem;color:var(--gray-smoke);">Capacitate: ' + event.capacity + ' locuri</span>' : '') +
+        '</div>' +
+      '</div>';
+    }
+
+    /* ==================================================================
+       BUILD EMPTY STATE
+       ================================================================== */
+    function buildEmptyState(message) {
+      return '<div class="events-empty glass glass--card reveal">' +
+        '<div class="events-empty__icon" aria-hidden="true">&#129354;</div>' +
+        '<h3 class="events-empty__title">Niciun eveniment găsit</h3>' +
+        '<p class="events-empty__text">' + escapeHTML(message || 'Momentan nu sunt evenimente disponibile în această categorie. Revino în curând sau încearcă alt filtru.') + '</p>' +
+        '<button class="btn btn--outline" onclick="document.getElementById(\'events-search\').value=\'\';document.querySelector(\'.events-filters__tab--active\')?.click();">Resetează filtrele</button>' +
+      '</div>';
+    }
+
+    /* ==================================================================
+       BUILD PAGINATION
+       ================================================================== */
+    function buildPagination(pagination) {
+      if (!pagination || pagination.totalPages <= 1) return '';
+
+      var html = '';
+      var totalPages = pagination.totalPages;
+      var current = pagination.page;
+
+      // Prev button
+      html += '<button class="events-pagination__btn" data-page="' + (current - 1) + '"' + (current <= 1 ? ' disabled' : '') + ' aria-label="Pagina anterioară">&laquo; Anterior</button>';
+
+      // Page numbers
+      var startPage = Math.max(1, current - 2);
+      var endPage = Math.min(totalPages, current + 2);
+
+      if (startPage > 1) {
+        html += '<button class="events-pagination__btn" data-page="1">1</button>';
+        if (startPage > 2) {
+          html += '<span class="events-pagination__info">...</span>';
+        }
+      }
+
+      for (var p = startPage; p <= endPage; p++) {
+        html += '<button class="events-pagination__btn' + (p === current ? ' events-pagination__btn--active' : '') + '" data-page="' + p + '"' + (p === current ? ' disabled aria-current="page"' : '') + '>' + p + '</button>';
+      }
+
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+          html += '<span class="events-pagination__info">...</span>';
+        }
+        html += '<button class="events-pagination__btn" data-page="' + totalPages + '">' + totalPages + '</button>';
+      }
+
+      // Next button
+      html += '<button class="events-pagination__btn" data-page="' + (current + 1) + '"' + (current >= totalPages ? ' disabled' : '') + ' aria-label="Pagina următoare">Următor &raquo;</button>';
+
       return html;
     }
 
-    /**
-     * Re-trigger fade-in animations pentru cardurile din grid.
-     */
-    function triggerFadeIn() {
-      requestAnimationFrame(function () {
-        var cards = grid.querySelectorAll('.fade-in');
-        cards.forEach(function (card) {
-          card.classList.add('visible');
+    /* ==================================================================
+       RENDER EVENTS
+       ================================================================== */
+    function renderEvents(events, pagination) {
+      var grid = document.getElementById('events-grid');
+      var paginationEl = document.getElementById('events-pagination');
+
+      if (!grid) return;
+
+      if (!events || events.length === 0) {
+        grid.innerHTML = buildEmptyState('Nu am găsit evenimente care să corespundă criteriilor tale.');
+        if (paginationEl) paginationEl.innerHTML = '';
+        if (typeof refreshScrollReveal === 'function') refreshScrollReveal();
+        return;
+      }
+
+      grid.innerHTML = events.map(function (event, idx) {
+        return buildEventCard(event, idx);
+      }).join('');
+
+      if (paginationEl) {
+        paginationEl.innerHTML = buildPagination(pagination);
+      }
+
+      // Bind gallery interactions
+      bindGalleryEvents();
+      // Bind pagination clicks
+      bindPaginationEvents();
+
+      if (typeof refreshScrollReveal === 'function') refreshScrollReveal();
+    }
+
+    /* ==================================================================
+       BIND GALLERY EVENTS
+       ================================================================== */
+    function bindGalleryEvents() {
+      // Arrow buttons
+      document.querySelectorAll('.event-detail-card__gallery-arrow').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var cardIndex = parseInt(this.getAttribute('data-card'), 10);
+          var dir = this.getAttribute('data-dir');
+          navigateGallery(cardIndex, dir);
+        });
+      });
+
+      // Dot buttons
+      document.querySelectorAll('.event-detail-card__gallery-dot').forEach(function (dot) {
+        dot.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var cardIndex = parseInt(this.getAttribute('data-card'), 10);
+          var idx = parseInt(this.getAttribute('data-idx'), 10);
+          setGalleryImage(cardIndex, idx);
         });
       });
     }
 
-    // Fetch evenimente de la API
-    fetch('/api/events', { headers: { 'Accept': 'application/json' } })
-      .then(function (response) {
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        return response.json();
-      })
-      .then(function (events) {
-        // Verifică că avem date valide
-        if (!events || !Array.isArray(events) || events.length === 0) {
-          // Păstrează fallback-ul hardcodat, doar re-trigger animations
-          triggerFadeIn();
-          return;
+    function getGalleryData(cardIndex) {
+      var gallery = document.querySelector('.event-detail-card__gallery[data-card="' + cardIndex + '"]');
+      if (!gallery) return null;
+
+      var images = [];
+      try {
+        images = JSON.parse(gallery.getAttribute('data-images') || '[]');
+      } catch (_) {
+        return null;
+      }
+
+      var currentIdx = parseInt(gallery.getAttribute('data-current') || '0', 10);
+
+      return {
+        element: gallery,
+        images: images,
+        currentIdx: currentIdx
+      };
+    }
+
+    function navigateGallery(cardIndex, dir) {
+      var data = getGalleryData(cardIndex);
+      if (!data || data.images.length <= 1) return;
+
+      var newIdx = dir === 'next'
+        ? (data.currentIdx + 1) % data.images.length
+        : (data.currentIdx - 1 + data.images.length) % data.images.length;
+
+      setGalleryImage(cardIndex, newIdx);
+    }
+
+    function setGalleryImage(cardIndex, newIdx) {
+      var data = getGalleryData(cardIndex);
+      if (!data || !data.images[newIdx]) return;
+
+      // Update image
+      var img = data.element.querySelector('img');
+      if (img) {
+        img.src = data.images[newIdx];
+      }
+
+      // Update data attribute
+      data.element.setAttribute('data-current', newIdx);
+
+      // Update dots
+      var dots = data.element.querySelectorAll('.event-detail-card__gallery-dot');
+      dots.forEach(function (dot, idx) {
+        if (idx === newIdx) {
+          dot.classList.add('event-detail-card__gallery-dot--active');
+        } else {
+          dot.classList.remove('event-detail-card__gallery-dot--active');
         }
-
-        // Construiește HTML dinamic din datele API
-        var html = '';
-        events.forEach(function (event, index) {
-          html += renderEventCard(event, index);
-        });
-
-        // Înlocuiește conținutul grid-ului
-        grid.innerHTML = html;
-
-        // Re-trigger fade-in animations pentru cardurile noi
-        triggerFadeIn();
-      })
-      .catch(function (err) {
-        // API eșuat — conținutul hardcodat rămâne vizibil
-        console.warn('[Events] API fetch failed, using hardcoded fallback:', err.message);
-        // Restaurează fallback-ul dacă cumva a fost alterat
-        if (grid.children.length === 0) {
-          grid.innerHTML = fallbackHTML;
-        }
-        // Re-trigger fade-in pe cardurile hardcodate
-        triggerFadeIn();
       });
+    }
+
+    /* ==================================================================
+       BIND PAGINATION EVENTS
+       ================================================================== */
+    function bindPaginationEvents() {
+      document.querySelectorAll('.events-pagination__btn:not([disabled])').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var page = parseInt(this.getAttribute('data-page'), 10);
+          if (!isNaN(page) && page > 0) {
+            state.currentPage = page;
+            loadEvents();
+            // Scroll to top of grid
+            var grid = document.getElementById('events-grid');
+            if (grid) {
+              grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }
+        });
+      });
+    }
+
+    /* ==================================================================
+       LOAD EVENTS FROM API
+       ================================================================== */
+    async function loadEvents() {
+      var grid = document.getElementById('events-grid');
+      var paginationEl = document.getElementById('events-pagination');
+
+      if (!grid) return;
+
+      // Show skeleton while loading
+      grid.innerHTML = Array(6).fill(0).map(function () {
+        return '<div class="event-card-skeleton glass glass--card" aria-hidden="true">' +
+          '<div class="event-card-skeleton__img"></div>' +
+          '<div class="event-card-skeleton__line event-card-skeleton__line--medium"></div>' +
+          '<div class="event-card-skeleton__line event-card-skeleton__line--short"></div>' +
+          '<div class="event-card-skeleton__line"></div>' +
+          '<div class="event-card-skeleton__line event-card-skeleton__line--short"></div>' +
+        '</div>';
+      }).join('');
+
+      if (paginationEl) paginationEl.innerHTML = '';
+
+      try {
+        // Build query
+        var queryParams = '?page=' + state.currentPage + '&limit=' + state.limit + '&sort=-start_date';
+
+        if (state.currentType && state.currentType !== 'all') {
+          queryParams += '&type=' + encodeURIComponent(state.currentType);
+        }
+
+        if (state.searchQuery && state.searchQuery.trim()) {
+          queryParams += '&search=' + encodeURIComponent(state.searchQuery.trim());
+        }
+
+        var response = await safeFetch('/api/events' + queryParams);
+        var events = response.data || [];
+        var pagination = response.pagination || null;
+
+        state.events = events;
+        state.pagination = pagination;
+
+        renderEvents(events, pagination);
+      } catch (err) {
+        console.error('[events] API error:', err);
+
+        // Fallback to hardcoded data
+        var fallbackData = filterFallbackEvents(FALLBACK_EVENTS, state.currentType, state.searchQuery, state.currentPage, state.limit);
+        renderEvents(fallbackData.events, fallbackData.pagination);
+
+        if (typeof showToast === 'function') {
+          showToast('Se afișează datele offline. Conectează-te la server pentru informații actualizate.', 'info', 4000);
+        }
+      }
+    }
+
+    /* ==================================================================
+       FILTER FALLBACK EVENTS
+       ================================================================== */
+    function filterFallbackEvents(allEvents, typeFilter, searchQuery, page, limit) {
+      var filtered = allEvents.slice();
+
+      // Filter by type
+      if (typeFilter && typeFilter !== 'all') {
+        filtered = filtered.filter(function (ev) {
+          return ev.type === typeFilter;
+        });
+      }
+
+      // Search
+      if (searchQuery && searchQuery.trim()) {
+        var q = searchQuery.trim().toLowerCase();
+        filtered = filtered.filter(function (ev) {
+          return (ev.title || '').toLowerCase().indexOf(q) !== -1 ||
+            (ev.location || '').toLowerCase().indexOf(q) !== -1 ||
+            (ev.description || '').toLowerCase().indexOf(q) !== -1 ||
+            (ev.type || '').toLowerCase().indexOf(q) !== -1;
+        });
+      }
+
+      var total = filtered.length;
+      var totalPages = Math.ceil(total / limit) || 1;
+      var offset = (page - 1) * limit;
+      var paginated = filtered.slice(offset, offset + limit);
+
+      return {
+        events: paginated,
+        pagination: { page: page, limit: limit, total: total, totalPages: totalPages }
+      };
+    }
+
+    /* ==================================================================
+       INIT FILTERS
+       ================================================================== */
+    function initFilters() {
+      // Type tabs
+      var tabs = document.querySelectorAll('.events-filters__tab');
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          // Update active state
+          tabs.forEach(function (t) {
+            t.classList.remove('events-filters__tab--active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          this.classList.add('events-filters__tab--active');
+          this.setAttribute('aria-selected', 'true');
+
+          // Update state
+          state.currentType = this.getAttribute('data-type') || 'all';
+          state.currentPage = 1;
+
+          // Reload
+          loadEvents();
+        });
+      });
+
+      // Search input
+      var searchInput = document.getElementById('events-search');
+      if (searchInput) {
+        searchInput.addEventListener('input', function () {
+          clearTimeout(state.searchDebounce);
+          state.searchDebounce = setTimeout(function () {
+            state.searchQuery = searchInput.value;
+            state.currentPage = 1;
+            loadEvents();
+          }, 400);
+        });
+      }
+    }
+
+    /* ==================================================================
+       STICKY FILTERS BAR
+       ================================================================== */
+    function initStickyFilters() {
+      var filtersBar = document.getElementById('events-filters');
+      if (!filtersBar) return;
+
+      var ticking = false;
+
+      window.addEventListener('scroll', function () {
+        if (!ticking) {
+          requestAnimationFrame(function () {
+            var scrollY = window.scrollY || window.pageYOffset;
+            if (scrollY > 120) {
+              filtersBar.classList.add('events-filters--scrolled');
+            } else {
+              filtersBar.classList.remove('events-filters--scrolled');
+            }
+            ticking = false;
+          });
+          ticking = true;
+        }
+      }, { passive: true });
+    }
+
+    /* ==================================================================
+       SET CURRENT YEAR
+       ================================================================== */
+    function setCurrentYear() {
+      var el = document.getElementById('current-year');
+      if (el) el.textContent = new Date().getFullYear();
+    }
+
+    /* ==================================================================
+       INIT ALL
+       ================================================================== */
+    function init() {
+      setCurrentYear();
+      initFilters();
+      initStickyFilters();
+      loadEvents();
+    }
+
+    domReady(init);
   })();
   </script>
+
 </body>
 </html>

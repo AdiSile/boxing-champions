@@ -3,375 +3,903 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Magazin Boxing Champions — Echipament premium de box, îmbrăcăminte, accesorii și nutriție sportivă. Glove, bandaje, saci și multe altele.">
+  <meta name="description" content="Boxing Champions Shop — Echipamente de box profesionale: mănuși, căști, încălțăminte, îmbrăcăminte și accesorii. Prețuri competitive, livrare rapidă.">
   <meta name="theme-color" content="#0a0a0a">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Magazin — Boxing Champions</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <link rel="preload" as="image" href="images/shop-hero-bg.jpg">
+  <meta name="robots" content="index, follow">
+  <link rel="icon" type="image/png" href="/images/badge.png">
+  <link rel="apple-touch-icon" href="/images/badge.png">
+
+  <title>Shop | Boxing Champions</title>
+
+  <link rel="stylesheet" href="/css/style.css">
+
+  <meta property="og:title" content="Shop | Boxing Champions">
+  <meta property="og:description" content="Echipamente de box profesionale: mănuși, căști, încălțăminte, îmbrăcăminte și accesorii.">
+  <meta property="og:image" content="/images/badge.png">
+  <meta property="og:url" content="">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Store",
+    "name": "Boxing Champions Shop",
+    "description": "Magazin online de echipamente de box. Mănuși, căști, încălțăminte și accesorii profesionale.",
+    "image": "/images/badge.png",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "București",
+      "addressCountry": "RO"
+    }
+  }
+  </script>
+
+  <style>
+    /* ============================================================
+       SHOP PAGE SPECIFIC STYLES
+       ============================================================ */
+
+    .shop-page-header {
+      position: relative;
+      min-height: 42vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: var(--black-deep);
+    }
+
+    .shop-page-header__bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .shop-page-header__bg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.28);
+    }
+
+    .shop-page-header__overlay {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 50%, rgba(212,168,67,0.06) 0%, transparent 60%),
+        linear-gradient(to top, var(--black-deep) 0%, transparent 50%);
+      z-index: 1;
+    }
+
+    .shop-page-header__content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      max-width: 800px;
+      padding: 3rem 2rem 2rem;
+    }
+
+    .shop-page-header__badge {
+      display: inline-block;
+      font-family: var(--font-heading);
+      font-size: clamp(0.75rem, 1.3vw, 0.9rem);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--gold-primary);
+      border: 1px solid var(--gold-primary);
+      padding: 0.45em 1.4em;
+      border-radius: 50px;
+      margin-bottom: 1.4rem;
+      backdrop-filter: blur(6px);
+      background: rgba(10,10,10,0.35);
+    }
+
+    .shop-page-header__title {
+      font-family: var(--font-display);
+      font-size: clamp(2.4rem, 6vw, 5rem);
+      line-height: 1;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.3em;
+    }
+
+    .shop-page-header__title .gold {
+      background: var(--gold-metallic);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    .shop-page-header__subtitle {
+      font-family: var(--font-body);
+      font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+      color: var(--gray-smoke);
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .shop-main {
+      background: var(--black-deep);
+      padding-top: clamp(2rem, 4vw, 3rem);
+      padding-bottom: var(--section-pad);
+    }
+
+    /* ---- Promo Banner Global ---- */
+    .shop-promo-global {
+      background: linear-gradient(135deg, var(--red-deep) 0%, #a00000 50%, var(--red-deep) 100%);
+      color: #fff;
+      text-align: center;
+      padding: 0.8rem 1.5rem;
+      font-family: var(--font-heading);
+      font-size: clamp(0.8rem, 1.2vw, 0.95rem);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      position: relative;
+      overflow: hidden;
+      animation: promoGlow 2.5s ease-in-out infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+
+    .shop-promo-global__icon {
+      font-size: 1.4rem;
+      animation: promoBounce 0.6s ease-in-out infinite alternate;
+    }
+
+    .shop-promo-global__text strong {
+      color: var(--gold-bright);
+    }
+
+    .shop-promo-global__code {
+      display: inline-block;
+      background: rgba(255,255,255,0.18);
+      padding: 0.25em 0.8em;
+      border-radius: 4px;
+      letter-spacing: 0.14em;
+      font-weight: 700;
+      border: 1px dashed rgba(255,255,255,0.4);
+    }
+
+    .shop-promo-global__countdown {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      background: rgba(0,0,0,0.3);
+      padding: 0.2em 0.8em;
+      border-radius: 50px;
+      white-space: nowrap;
+    }
+
+    @keyframes promoGlow {
+      0%, 100% { box-shadow: 0 0 18px rgba(255,60,60,0.2); }
+      50%      { box-shadow: 0 0 32px rgba(255,80,80,0.4); }
+    }
+
+    @keyframes promoBounce {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-4px); }
+    }
+
+    /* ---- Search & Sort Bar ---- */
+    .shop__toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+
+    .shop__search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 220px;
+      max-width: 420px;
+    }
+
+    .shop__search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray-smoke);
+      font-size: 1rem;
+      pointer-events: none;
+    }
+
+    .shop__search {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--glass-border-light);
+      border-radius: 50px;
+      padding: 0.7em 1em 0.7em 2.6em;
+      color: var(--white-soft);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color var(--dur-normal), box-shadow var(--dur-normal);
+    }
+
+    .shop__search:focus {
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 0 3px rgba(212,168,67,0.1);
+    }
+
+    .shop__search::placeholder {
+      color: rgba(255,255,255,0.25);
+    }
+
+    .shop__sort-select {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--glass-border-light);
+      border-radius: 50px;
+      padding: 0.7em 2.2em 0.7em 1.2em;
+      color: var(--white-soft);
+      font-size: 0.85rem;
+      font-family: var(--font-heading);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23d4a843' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      transition: border-color var(--dur-normal);
+    }
+
+    .shop__sort-select:focus {
+      border-color: var(--gold-primary);
+    }
+
+    .shop__sort-select option {
+      background: var(--black-card);
+      color: var(--white-soft);
+    }
+
+    .shop__count {
+      font-size: 0.82rem;
+      color: var(--gray-smoke);
+      margin-bottom: 1.4rem;
+      text-align: center;
+    }
+
+    .shop__count strong {
+      color: var(--gold-primary);
+    }
+
+    .shop__filters-wrap {
+      margin-bottom: 2.5rem;
+    }
+
+    .shop__filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+
+    .shop__filter {
+      font-family: var(--font-heading);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.5em 1.4em;
+      border: 1px solid var(--glass-border);
+      background: transparent;
+      color: var(--gray-smoke);
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all var(--dur-normal) var(--ease-smooth);
+      position: relative;
+      white-space: nowrap;
+    }
+
+    .shop__filter:hover {
+      border-color: var(--gold-primary);
+      color: var(--gold-primary);
+      background: rgba(212,168,67,0.06);
+    }
+
+    .shop__filter--active {
+      border-color: var(--gold-primary);
+      color: var(--black-deep);
+      background: var(--gold-metallic);
+      font-weight: 700;
+      box-shadow: 0 4px 18px rgba(212,168,67,0.25);
+    }
+
+    .shop__filter--active:hover {
+      color: var(--black-deep);
+      background: var(--gold-bright);
+    }
+
+    .shop__filter-count {
+      display: inline-block;
+      font-size: 0.7rem;
+      background: rgba(0,0,0,0.2);
+      padding: 0.15em 0.5em;
+      border-radius: 50px;
+      margin-left: 0.4em;
+      font-weight: 400;
+      opacity: 0.8;
+    }
+
+    .shop__filter--active .shop__filter-count {
+      background: rgba(0,0,0,0.3);
+    }
+
+    .shop__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+      gap: clamp(1.4rem, 3vw, 2rem);
+    }
+
+    .product-card {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .product-card__img {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+      position: relative;
+      background: var(--black-card);
+    }
+
+    .product-card__img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform var(--dur-slow) var(--ease-out-expo);
+    }
+
+    .product-card:hover .product-card__img img {
+      transform: scale(1.08);
+    }
+
+    .product-card__tags {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 2;
+    }
+
+    .product-card__tag {
+      display: inline-block;
+      font-family: var(--font-heading);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 0.25em 0.8em;
+      border-radius: 50px;
+      font-weight: 700;
+      white-space: nowrap;
+      line-height: 1.4;
+    }
+
+    .product-card__tag--promo {
+      background: var(--red-vivid);
+      color: #fff;
+      animation: tagPulse 1.8s ease-in-out infinite;
+    }
+
+    .product-card__tag--new {
+      background: #2196f3;
+      color: #fff;
+    }
+
+    .product-card__tag--bestseller {
+      background: var(--gold-primary);
+      color: var(--black-deep);
+    }
+
+    .product-card__tag--lowstock {
+      background: #ff9800;
+      color: #000;
+    }
+
+    .product-card__tag--outofstock {
+      background: var(--gray-dark);
+      color: var(--gray-smoke);
+    }
+
+    @keyframes tagPulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.75; }
+    }
+
+    .product-card__actions {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      opacity: 0;
+      transform: translateX(8px);
+      transition: opacity var(--dur-normal), transform var(--dur-normal);
+      z-index: 2;
+    }
+
+    .product-card:hover .product-card__actions {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .product-card__action-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid var(--glass-border-light);
+      background: rgba(10,10,10,0.75);
+      backdrop-filter: blur(8px);
+      color: var(--gold-primary);
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--dur-normal);
+    }
+
+    .product-card__action-btn:hover {
+      background: var(--gold-primary);
+      color: var(--black-deep);
+      border-color: var(--gold-primary);
+      box-shadow: 0 4px 16px rgba(212,168,67,0.3);
+    }
+
+    .product-card__category {
+      font-family: var(--font-body);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--gold-primary);
+      margin-bottom: 0.3rem;
+      opacity: 0.8;
+    }
+
+    .product-card__name {
+      font-family: var(--font-heading);
+      font-size: clamp(0.95rem, 1.3vw, 1.15rem);
+      margin-bottom: 0.5rem;
+      line-height: 1.25;
+    }
+
+    .product-card__pricing {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.6rem;
+    }
+
+    .product-card__price {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      line-height: 1;
+      color: var(--gold-primary);
+    }
+
+    .product-card__price .currency {
+      font-size: 0.6em;
+      vertical-align: super;
+    }
+
+    .product-card__price--old {
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      text-decoration: line-through;
+      color: var(--gray-smoke);
+      opacity: 0.6;
+    }
+
+    .product-card__discount-badge {
+      display: inline-block;
+      font-family: var(--font-heading);
+      font-size: 0.65rem;
+      background: var(--red-vivid);
+      color: #fff;
+      padding: 0.15em 0.7em;
+      border-radius: 50px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .product-card__stock {
+      font-size: 0.78rem;
+      color: #4caf50;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .product-card__stock--low {
+      color: #ff9800;
+    }
+
+    .product-card__stock--out {
+      color: var(--red-vivid);
+    }
+
+    .product-card__stock-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      display: inline-block;
+    }
+
+    .product-card__footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: auto;
+      padding-top: 0.8rem;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .product-card__add-btn {
+      font-family: var(--font-heading);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.5em 1.2em;
+      border-radius: 50px;
+      background: var(--gold-metallic);
+      color: var(--black-deep);
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      transition: all var(--dur-normal);
+      white-space: nowrap;
+    }
+
+    .product-card__add-btn:hover {
+      box-shadow: 0 4px 20px rgba(212,168,67,0.35);
+      transform: translateY(-1px);
+    }
+
+    .product-card__add-btn:disabled {
+      background: var(--gray-dark);
+      color: var(--gray-smoke);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .product-card__add-btn--added {
+      background: #4caf50 !important;
+      color: #fff !important;
+      box-shadow: 0 4px 16px rgba(76,175,80,0.3) !important;
+    }
+
+    .product-card-skeleton {
+      display: flex;
+      flex-direction: column;
+      padding: clamp(1rem, 2vw, 1.5rem);
+    }
+
+    .product-card-skeleton__img {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 12px;
+      background: var(--black-card);
+      margin-bottom: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .product-card-skeleton__img::after,
+    .product-card-skeleton__line::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+      animation: shimmer 1.6s infinite;
+    }
+
+    .product-card-skeleton__line {
+      height: 14px;
+      border-radius: 4px;
+      background: var(--black-card);
+      margin-bottom: 0.7rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .product-card-skeleton__line--lg { width: 75%; height: 22px; margin-bottom: 0.5rem; }
+    .product-card-skeleton__line--md { width: 50%; }
+    .product-card-skeleton__line--sm { width: 65%; }
+    .product-card-skeleton__line--price { width: 35%; height: 28px; margin-top: 0.3rem; border-radius: 6px; }
+
+    .shop-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: clamp(3rem, 6vw, 5rem) 2rem;
+    }
+
+    .shop-empty__icon {
+      font-size: 4rem;
+      margin-bottom: 1.4rem;
+      opacity: 0.5;
+    }
+
+    .shop-empty__title {
+      font-family: var(--font-heading);
+      font-size: clamp(1.4rem, 2.5vw, 2rem);
+      color: var(--gold-primary);
+      margin-bottom: 0.6rem;
+    }
+
+    .shop-empty__text {
+      color: var(--gray-smoke);
+      max-width: 440px;
+      margin: 0 auto 2rem;
+      font-size: 0.95rem;
+    }
+
+    .shop__pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 3rem;
+      flex-wrap: wrap;
+    }
+
+    .shop__page-btn {
+      font-family: var(--font-heading);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--glass-border);
+      background: transparent;
+      color: var(--gray-smoke);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--dur-normal);
+    }
+
+    .shop__page-btn:hover:not(:disabled) {
+      border-color: var(--gold-primary);
+      color: var(--gold-primary);
+    }
+
+    .shop__page-btn--active {
+      background: var(--gold-metallic);
+      color: var(--black-deep);
+      border-color: var(--gold-primary);
+      font-weight: 700;
+      box-shadow: 0 4px 14px rgba(212,168,67,0.25);
+    }
+
+    .shop__page-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .shop__page-ellipsis {
+      color: var(--gray-smoke);
+      padding: 0 0.3rem;
+    }
+
+    .shop__cart-toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      z-index: 5001;
+      background: rgba(10,10,10,0.95);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--gold-primary);
+      border-radius: 50px;
+      padding: 0.75em 1.8em;
+      font-family: var(--font-heading);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gold-primary);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s var(--ease-out-expo);
+      white-space: nowrap;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    .shop__cart-toast--visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 768px) {
+      .shop-page-header { min-height: 30vh; }
+      .shop__toolbar { flex-direction: column; align-items: stretch; }
+      .shop__search-wrap { max-width: 100%; }
+      .shop__grid { grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr)); gap: 1rem; }
+      .shop-promo-global { font-size: 0.75rem; padding: 0.7rem 1rem; }
+      .shop-promo-global__countdown { font-size: 0.9rem; }
+      .product-card__actions { opacity: 1; transform: translateX(0); }
+      .product-card__action-btn { width: 34px; height: 34px; font-size: 0.85rem; }
+    }
+
+    @media (max-width: 480px) {
+      .shop-page-header { min-height: 26vh; }
+      .shop__grid { grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
+      .shop__filters { gap: 0.35rem; }
+      .shop__filter { font-size: 0.7rem; padding: 0.4em 1em; }
+      .product-card__name { font-size: 0.85rem; }
+      .product-card__price { font-size: 1.2rem; }
+      .product-card__add-btn { font-size: 0.7rem; padding: 0.45em 1em; }
+      .shop__page-btn { width: 34px; height: 34px; font-size: 0.7rem; }
+    }
+
+    @media (max-width: 380px) {
+      .shop__grid { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+      .product-card { padding: 1rem; }
+    }
+
+    @media (max-width: 320px) {
+      .shop__grid { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
 
-  <!-- =======================================================================
-       PARTICLES CANVAS
-       ======================================================================= -->
-  <canvas id="particles-canvas"></canvas>
-
-  <!-- =======================================================================
-       CUSTOM CURSOR
-       ======================================================================= -->
-  <div class="cursor-dot"></div>
-  <div class="cursor-ring"></div>
-
-  <!-- =======================================================================
-       NAVBAR
-       ======================================================================= -->
-  <nav class="navbar z-content">
-    <div class="container">
-      <a href="/" class="nav-logo" aria-label="Boxing Champions — Acasă">
-        <i class="fa-solid fa-glove"></i> BOXING CHAMPIONS
-      </a>
-      <button class="nav-toggle" aria-label="Deschide meniul" aria-expanded="false">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-      <ul class="nav-links" role="menubar">
-        <li role="none"><a href="/" role="menuitem">Acasă</a></li>
-        <li role="none"><a href="/events" role="menuitem">Evenimente</a></li>
-        <li role="none"><a href="/schedule" role="menuitem">Program</a></li>
-        <li role="none"><a href="/pricing" role="menuitem">Abonamente</a></li>
-        <li role="none"><a href="/shop" role="menuitem" class="active">Magazin</a></li>
-        <li role="none"><a href="/contact" role="menuitem">Contact</a></li>
-      </ul>
-    </div>
-  </nav>
-
-  <!-- =======================================================================
-       SHOP HERO — imagine de fundal
-       ======================================================================= -->
-  <section class="hero" id="shop-hero" style="min-height: 55vh; max-height: 620px;">
-    <img src="images/shop-hero-bg.jpg" alt="" class="hero-video" aria-hidden="true"
-         style="object-fit: cover; filter: brightness(0.3);">
-    <div class="hero-overlay" aria-hidden="true"></div>
-    <div class="hero-content z-content" style="padding-top: var(--space-3xl); padding-bottom: var(--space-3xl);">
-      <span class="hero-badge">
-        <i class="fa-solid fa-store" style="margin-right: 0.4rem;"></i> Magazin Oficial
-      </span>
-      <h1 class="hero-title" style="font-size: clamp(2.5rem, 6vw, 5.5rem);">
-        ECHIPAMENT DE
-        <span class="gold">CAMPIONI</span>
-      </h1>
-      <p class="hero-subtitle">
-        Descoperă echipamentul oficial Boxing Champions. Mănuși, bandaje, saci de box,
-        îmbrăcăminte și nutriție sportivă — calitate garantată pentru antrenamente de elită.
-      </p>
-      <div class="btn-group">
-        <button class="btn btn-primary btn-lg" id="hero-cart-btn" type="button">
-          <i class="fa-solid fa-cart-shopping"></i> Vezi Coșul
-        </button>
-        <a href="#shop-grid" class="btn btn-outline btn-lg">
-          <i class="fa-solid fa-arrow-down"></i> Explorează Produsele
-        </a>
+  <div id="preloader" aria-hidden="true">
+    <div class="preloader__inner">
+      <div class="preloader__glove">
+        <img src="/images/gloves.jpg" alt="" aria-hidden="true">
       </div>
-    </div>
-  </section>
-
-  <!-- =======================================================================
-       SHOP SECTION — filtre, sortare, grid produse, schelet loading
-       ======================================================================= -->
-  <section class="section" id="shop-grid" style="padding-top: var(--space-2xl);">
-    <div class="container">
-
-      <!-- Categorii tabs -->
-      <div class="shop-categories fade-in" role="tablist" aria-label="Categorii produse">
-        <button class="shop-cat-tab active" data-category="all" role="tab"
-                aria-selected="true" type="button">
-          <i class="fa-solid fa-grid-2" style="margin-right: 0.35rem;"></i> Toate
-        </button>
-        <button class="shop-cat-tab" data-category="Îmbrăcăminte" role="tab"
-                aria-selected="false" type="button">
-          <i class="fa-solid fa-shirt" style="margin-right: 0.35rem;"></i> Îmbrăcăminte
-        </button>
-        <button class="shop-cat-tab" data-category="Echipament" role="tab"
-                aria-selected="false" type="button">
-          <i class="fa-solid fa-glove" style="margin-right: 0.35rem;"></i> Echipament
-        </button>
-        <button class="shop-cat-tab" data-category="Accesorii" role="tab"
-                aria-selected="false" type="button">
-          <i class="fa-solid fa-tag" style="margin-right: 0.35rem;"></i> Accesorii
-        </button>
-        <button class="shop-cat-tab" data-category="Nutriție" role="tab"
-                aria-selected="false" type="button">
-          <i class="fa-solid fa-bottle-droplet" style="margin-right: 0.35rem;"></i> Nutriție
-        </button>
+      <p class="preloader__text">BOXING CHAMPIONS</p>
+      <div class="preloader__bar">
+        <div class="preloader__bar-fill"></div>
       </div>
-
-      <!-- Toolbar: număr rezultate + sortare -->
-      <div class="shop-toolbar fade-in delay-100">
-        <div class="shop-hero-bar" style="margin-bottom: 0; flex: 1;">
-          <span class="shop-result-count" id="shop-result-count" aria-live="polite">
-            Se încarcă produsele...
-          </span>
-          <!-- Cart toggle button (desktop/tablet) -->
-          <button class="cart-toggle-btn" id="cart-toggle-btn" type="button"
-                  aria-label="Deschide coșul de cumpărături" aria-expanded="false">
-            <i class="fa-solid fa-cart-shopping"></i>
-            <span class="cart-count-badge" id="cart-count-badge" aria-hidden="true">0</span>
-          </button>
-        </div>
-        <div style="position: relative; display: inline-flex; align-items: center;">
-          <label for="shop-sort-select" class="sr-only">Sortează produsele</label>
-          <select class="shop-sort-select" id="shop-sort-select" aria-label="Sortează produsele">
-            <option value="newest">Cele mai noi</option>
-            <option value="price-asc">Preț: Crescător</option>
-            <option value="price-desc">Preț: Descrescător</option>
-            <option value="name-asc">Nume: A–Z</option>
-            <option value="name-desc">Nume: Z–A</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Schelet loading (afișat cât timp se încarcă produsele) -->
-      <div class="shop-loading-skeleton" id="shop-loading-skeleton" aria-hidden="true">
-        <div class="shop-skeleton-card">
-          <div class="shop-skeleton-img"></div>
-          <div class="shop-skeleton-body">
-            <div class="shop-skeleton-line"></div>
-            <div class="shop-skeleton-line"></div>
-            <div class="shop-skeleton-line"></div>
-            <div class="shop-skeleton-line"></div>
-          </div>
-        </div>
-        <div class="shop-skeleton-card">
-          <div class="shop-skeleton-img"></div>
-          <div class="shop-skeleton-body">
-            <div class="shop-skeleton-line"></div>
-            <div class="shop-skeleton-line"></div>
-            <div class="shop-skeleton-line"></div>
-            <div class="shop-skeleton-line"></div>
-          </div>
-        </div>
-        <div class="shop-skeleton-card">
-          <div class="shop-skeleton-img"></div>
-          <div class="shop-skeleton-body">
-            <div class="shop-skeleton-line"></div>
-            <div class="shop-skeleton-line"></div>
-            <div class="shop-skeleton-line"></div>
-            <div class="shop-skeleton-line"></div>
-          </div>
-        </div>
-        <div class="shop-skeleton-card">
-          <div class="shop-skeleton-img"></div>
-          <div class="shop-skeleton-body">
-            <div class="shop-skeleton-line"></div>
-            <div class="shop-skeleton-line"></div>
-            <div class="shop-skeleton-line"></div>
-            <div class="shop-skeleton-line"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Grid produse — populat dinamic de shop.js -->
-      <div class="shop-product-grid" id="shop-product-grid" role="region"
-           aria-label="Catalog de produse" aria-live="polite">
-        <!-- Populat dinamic de shop.js -->
-      </div>
-
-    </div>
-  </section>
-
-  <!-- =======================================================================
-       CART OFF-CANVAS + OVERLAY
-       ======================================================================= -->
-
-  <!-- Overlay semi-transparent -->
-  <div class="cart-overlay" id="cart-overlay" aria-hidden="true"></div>
-
-  <!-- Panoul off-canvas -->
-  <aside class="cart-offcanvas" id="cart-offcanvas" aria-hidden="true"
-         aria-label="Coș de cumpărături" role="dialog" aria-modal="true">
-    <!-- Header -->
-    <div class="cart-header">
-      <h2 class="cart-title">
-        <i class="fa-solid fa-cart-shopping" style="margin-right: 0.5rem; color: var(--color-gold);"></i>
-        Coșul Tău
-      </h2>
-      <button class="cart-close-btn" id="cart-close-btn" type="button"
-              aria-label="Închide coșul de cumpărături">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-
-    <!-- Conținut items -->
-    <div class="cart-items" id="cart-items-container">
-      <!-- Populat dinamic de shop.js -->
-    </div>
-
-    <!-- Footer cu total și butoane -->
-    <div class="cart-footer" id="cart-footer" style="display: none;">
-      <div class="cart-total-row">
-        <span>Total:</span>
-        <span id="cart-total-amount">0.00 RON</span>
-      </div>
-      <div class="cart-footer-buttons">
-        <button class="btn btn-primary btn-block" id="cart-checkout-btn" type="button">
-          <i class="fa-solid fa-lock"></i> Finalizează Comanda
-        </button>
-        <button class="btn btn-ghost btn-block btn-sm" id="cart-clear-btn" type="button">
-          <i class="fa-solid fa-trash-can" style="margin-right: 0.35rem;"></i> Golește Coșul
-        </button>
-      </div>
-    </div>
-  </aside>
-
-  <!-- =======================================================================
-       CHECKOUT MODAL (STRIPE)
-       ======================================================================= -->
-
-  <!-- Overlay modal -->
-  <div class="modal-overlay" id="checkout-modal-overlay" aria-hidden="true"></div>
-
-  <!-- Modal checkout -->
-  <div class="checkout-modal" id="checkout-modal" aria-hidden="true"
-       role="dialog" aria-modal="true" aria-labelledby="checkout-modal-title">
-    <!-- Header -->
-    <div class="checkout-modal-header">
-      <h2 class="checkout-modal-title" id="checkout-modal-title">
-        <i class="fa-solid fa-credit-card" style="margin-right: 0.5rem; color: var(--color-gold);"></i>
-        Finalizare Comandă
-      </h2>
-      <button class="checkout-modal-close" id="checkout-modal-close" type="button"
-              aria-label="Închide fereastra de checkout">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-
-    <!-- Body -->
-    <div class="checkout-modal-body">
-      <!-- Mesaje globale -->
-      <div class="checkout-global-message checkout-global-message--error"
-           id="checkout-global-error" role="alert" style="display: none;"></div>
-      <div class="checkout-global-message checkout-global-message--success"
-           id="checkout-global-success" role="status" style="display: none;"></div>
-
-      <!-- Rezumat comandă -->
-      <div id="checkout-summary" class="checkout-summary" style="margin-bottom: var(--space-xl);">
-        <!-- Populat dinamic de shop.js -->
-      </div>
-
-      <!-- Formular date client -->
-      <form id="checkout-form" novalidate>
-        <div class="checkout-form-group">
-          <label for="checkout-name">Nume complet <span style="color: var(--color-red-bright);">*</span></label>
-          <input type="text" id="checkout-name" name="name"
-                 placeholder="ex: Ion Popescu"
-                 autocomplete="name"
-                 required minlength="2" maxlength="200"
-                 aria-describedby="checkout-name-error">
-          <span class="checkout-error" id="checkout-name-error" role="alert"></span>
-        </div>
-
-        <div class="checkout-form-group">
-          <label for="checkout-email">Email <span style="color: var(--color-red-bright);">*</span></label>
-          <input type="email" id="checkout-email" name="email"
-                 placeholder="ex: ion@email.com"
-                 autocomplete="email"
-                 required
-                 aria-describedby="checkout-email-error">
-          <span class="checkout-error" id="checkout-email-error" role="alert"></span>
-        </div>
-
-        <div class="checkout-form-group">
-          <label for="checkout-phone">Telefon (opțional)</label>
-          <input type="tel" id="checkout-phone" name="phone"
-                 placeholder="ex: +40 721 234 567"
-                 autocomplete="tel"
-                 maxlength="30">
-        </div>
-
-        <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
-          <button type="submit" class="btn btn-primary btn-block"
-                  id="checkout-submit-btn" style="flex: 2;">
-            <i class="fa-solid fa-lock"></i> Plătește Acum
-          </button>
-          <button type="button" class="btn btn-outline"
-                  id="checkout-cancel-btn" style="flex: 1;">
-            Renunță
-          </button>
-        </div>
-      </form>
-
-      <p style="margin-top: var(--space-lg); font-size: 0.75rem; color: var(--color-gray-400); text-align: center;">
-        <i class="fa-solid fa-shield-halved" style="margin-right: 0.35rem; color: var(--color-success);"></i>
-        Plată securizată prin Stripe. Datele tale sunt protejate.
-      </p>
     </div>
   </div>
 
-  <!-- =======================================================================
-       FOOTER
-       ======================================================================= -->
-  <footer class="footer">
+  <canvas id="particles-canvas" aria-hidden="true"></canvas>
+
+  <nav class="nav" aria-label="Navigare principală">
+    <div class="nav__inner">
+      <a href="/" class="nav__logo" aria-label="Boxing Champions — Acasă">
+        <img src="/images/badge.png" alt="Boxing Champions Badge" width="48" height="48" loading="eager">
+        BOXING <span>CHAMPIONS</span>
+      </a>
+      <ul class="nav__links" role="menubar">
+        <li role="none"><a href="/#despre" class="nav__link" role="menuitem">Despre</a></li>
+        <li role="none"><a href="/#antrenori" class="nav__link" role="menuitem">Antrenori</a></li>
+        <li role="none"><a href="/schedule.html" class="nav__link" role="menuitem">Program</a></li>
+        <li role="none"><a href="/events.html" class="nav__link" role="menuitem">Evenimente</a></li>
+        <li role="none"><a href="/pricing.html" class="nav__link" role="menuitem">Abonamente</a></li>
+        <li role="none"><a href="/shop.html" class="nav__link nav__link--active" role="menuitem">Shop</a></li>
+        <li role="none"><a href="/#contact" class="nav__link" role="menuitem">Contact</a></li>
+      </ul>
+      <button class="nav__toggle" aria-label="Deschide meniul" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <section class="shop-page-header" aria-labelledby="shop-header-title">
+    <div class="shop-page-header__bg">
+      <img src="/images/shop-hero.jpg" alt="" aria-hidden="true" loading="eager">
+    </div>
+    <div class="shop-page-header__overlay" aria-hidden="true"></div>
+    <div class="shop-page-header__content reveal">
+      <div class="shop-page-header__badge">Echipamente Profesionale</div>
+      <h1 class="shop-page-header__title" id="shop-header-title">BOXING <span class="gold">SHOP</span></h1>
+      <p class="shop-page-header__subtitle">Echipament de calitate pentru fiecare campion. De la mănuși la încălțăminte — tot ce ai nevoie pentru ring.</p>
+    </div>
+  </section>
+
+  <section class="shop-main" aria-labelledby="shop-content-title">
     <div class="container">
-      <div class="footer-grid">
+      <h2 id="shop-content-title" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Catalog produse</h2>
+
+      <div class="shop-promo-global reveal" id="shop-promo-global" role="complementary" aria-label="Ofertă promoțională globală">
+        <span class="shop-promo-global__icon" aria-hidden="true">🔥</span>
+        <span class="shop-promo-global__text">
+          <strong id="promo-global-text">Promoție de vară: până la 35% reducere</strong> la echipamentele selectate
+        </span>
+        <span class="shop-promo-global__code" id="promo-global-code">Cod: CHAMP35</span>
+        <span class="shop-promo-global__countdown" id="promo-countdown" aria-live="polite"></span>
+      </div>
+
+      <div class="shop__toolbar reveal">
+        <div class="shop__search-wrap">
+          <span class="shop__search-icon" aria-hidden="true">🔍</span>
+          <input type="search" class="shop__search" id="shop-search" placeholder="Caută produse..." aria-label="Caută produse" maxlength="100">
+        </div>
+        <select class="shop__sort-select" id="shop-sort" aria-label="Sortează produsele">
+          <option value="">Sortează implicit</option>
+          <option value="price">Preț: crescător</option>
+          <option value="-price">Preț: descrescător</option>
+          <option value="name">Nume: A–Z</option>
+          <option value="-name">Nume: Z–A</option>
+          <option value="-created_at">Cele mai noi</option>
+        </select>
+      </div>
+
+      <div class="shop__filters-wrap reveal">
+        <div class="shop__filters" id="shop-filters" role="radiogroup" aria-label="Filtrează după categorie">
+          <button class="shop__filter shop__filter--active" data-category="" role="radio" aria-checked="true">Toate</button>
+        </div>
+      </div>
+
+      <div class="shop__count reveal" id="shop-count"><strong>0</strong> produse găsite</div>
+
+      <div class="shop__grid reveal-stagger" id="shop-grid"></div>
+
+      <nav class="shop__pagination" id="shop-pagination" aria-label="Paginație produse"></nav>
+
+      <div class="shop__cart-toast" id="cart-toast" aria-live="polite" aria-atomic="true"></div>
+    </div>
+  </section>
+
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer__grid">
         <div>
-          <p class="footer-brand"><i class="fa-solid fa-glove" style="margin-right: 0.4rem;"></i> BOXING CHAMPIONS</p>
-          <p class="footer-about">
-            Cel mai bun club de box din România. Tradiție, disciplină și excelență din 1998.
-          </p>
-          <div style="margin-top: var(--space-lg); display: flex; gap: var(--space-md);">
-            <a href="https://facebook.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-facebook-f"></i>
-            </a>
-            <a href="https://instagram.com/boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-instagram"></i>
-            </a>
-            <a href="https://tiktok.com/@boxingchampions" target="_blank" rel="noopener noreferrer" aria-label="TikTok" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold); transition: all var(--transition-fast);">
-              <i class="fa-brands fa-tiktok"></i>
-            </a>
-          </div>
+          <div class="footer__brand">BOXING <span>CHAMPIONS</span></div>
+          <p class="footer__desc">Club de box de elită — forjăm campioni din 2013. Antrenamente, competiții și o comunitate unită prin pasiunea pentru box.</p>
         </div>
         <div>
-          <h4>Navigare</h4>
-          <ul class="footer-links">
-            <li><a href="/">Acasă</a></li>
-            <li><a href="/events">Evenimente</a></li>
-            <li><a href="/schedule">Program</a></li>
-            <li><a href="/pricing">Abonamente</a></li>
-            <li><a href="/shop">Magazin</a></li>
-            <li><a href="/contact">Contact</a></li>
+          <h4 class="footer__heading">Link-uri Rapide</h4>
+          <ul class="footer__links">
+            <li><a href="/#despre">Despre Noi</a></li>
+            <li><a href="/#antrenori">Antrenori</a></li>
+            <li><a href="/schedule.html">Program</a></li>
+            <li><a href="/events.html">Evenimente</a></li>
+            <li><a href="/pricing.html">Abonamente</a></li>
+            <li><a href="/shop.html">Shop</a></li>
           </ul>
         </div>
         <div>
-          <h4>Legal</h4>
-          <ul class="footer-links">
+          <h4 class="footer__heading">Utile</h4>
+          <ul class="footer__links">
+            <li><a href="/#contact">Contact</a></li>
             <li><a href="#">Termeni &amp; Condiții</a></li>
-            <li><a href="#">Politica de Confidențialitate</a></li>
+            <li><a href="#">Confidențialitate</a></li>
             <li><a href="#">GDPR</a></li>
-            <li><a href="#">ANPC</a></li>
+            <li><a href="#">FAQ</a></li>
           </ul>
         </div>
         <div>
-          <h4>Contact</h4>
-          <ul class="footer-links">
-            <li><i class="fa-solid fa-location-dot text-gold" style="margin-right: 0.4rem;"></i> Strada Sportului nr. 10, București</li>
-            <li><i class="fa-solid fa-phone text-gold" style="margin-right: 0.4rem;"></i> +40 721 234 567</li>
-            <li><i class="fa-solid fa-envelope text-gold" style="margin-right: 0.4rem;"></i> contact@boxing-champions.com</li>
+          <h4 class="footer__heading">Urmărește-ne</h4>
+          <ul class="footer__links">
+            <li><a href="#" target="_blank" rel="noopener noreferrer">Instagram</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">Facebook</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">YouTube</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">X / Twitter</a></li>
           </ul>
         </div>
       </div>
-      <div class="footer-bottom">
-        <p>&copy; 2026 Boxing Champions. Toate drepturile rezervate. <span style="color: var(--color-gold);">#BoxingChampions</span></p>
+      <div class="footer__bottom">
+        <p>&copy; <span id="current-year">2025</span> Boxing Champions. Toate drepturile rezervate. | Construit cu 🥊 și pasiune.</p>
       </div>
     </div>
   </footer>
 
-  <!-- =======================================================================
-       SCRIPTS
-       ======================================================================= -->
-  <script src="js/main.js"></script>
-  <script src="js/shop.js"></script>
+  <script src="/js/shared.js"></script>
+  <script src="/js/shop.js"></script>
 </body>
 </html>

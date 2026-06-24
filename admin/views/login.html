@@ -1,546 +1,1086 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Autentificare - Boxing Champions Admin</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        :root {
-            --bg-dark: #0a0a0a;
-            --bg-panel: #111111;
-            --gold: #d4af37;
-            --gold-light: #f0c040;
-            --gold-dark: #b8941f;
-            --red: #c0392b;
-            --red-light: #e74c3c;
-            --text: #e0e0e0;
-            --text-muted: #999;
-            --glass-bg: rgba(17, 17, 17, 0.75);
-            --glass-border: rgba(212, 175, 55, 0.18);
-            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
-            --transition: 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Boxing Champions — Autentificare Panou de Administrare">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="/images/badge.png">
+  <link rel="apple-touch-icon" href="/images/badge.png">
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+  <title>Autentificare | Boxing Champions Admin</title>
 
-        body {
-            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-            line-height: 1.55;
-        }
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
 
-        /* Background image with overlay */
-        .login-bg {
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-        }
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800;900&family=Oswald:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-        .login-bg img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            opacity: 0.25;
-            filter: brightness(0.4);
-        }
+  <!-- Global styles (glassmorphism, buttons, typography) -->
+  <link rel="stylesheet" href="/css/style.css">
 
-        .login-bg::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(ellipse at center, rgba(10,10,10,0.5) 0%, rgba(10,10,10,0.9) 70%);
-        }
+  <style>
+    /* ============================================================
+       LOGIN PAGE — Immersive Overrides & Specifics
+       ============================================================ */
 
-        /* Particles canvas */
-        #particle-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1;
-        }
+    :root {
+      --gold-primary: #d4a843;
+      --gold-bright: #f0c75e;
+      --gold-metallic: linear-gradient(135deg, #bf953f, #fcf6b5, #b38728, #fbf5b7);
+      --red-blood: #c62828;
+      --red-vivid: #e53935;
+      --black-deep: #0a0a0a;
+      --glass-bg: rgba(18, 18, 18, 0.6);
+      --glass-border: rgba(212, 168, 67, 0.25);
+      --glass-blur: 20px;
+      --font-display: 'Bebas Neue', 'Oswald', sans-serif;
+      --font-heading: 'Oswald', 'Bebas Neue', sans-serif;
+      --font-body: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+      --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+      --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
-        /* Login card */
-        .login-wrapper {
-            position: relative;
-            z-index: 5;
-            width: 100%;
-            max-width: 440px;
-            padding: 20px;
-        }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        .login-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(18px) saturate(120%);
-            -webkit-backdrop-filter: blur(18px) saturate(120%);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 40px 36px;
-            box-shadow: var(--glass-shadow);
-        }
+    body {
+      font-family: var(--font-body);
+      background: var(--black-deep);
+      color: #f5f0eb;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      cursor: none;
+    }
 
-        .login-logo {
-            text-align: center;
-            margin-bottom: 28px;
-        }
+    /* ---- Skip to Content (WCAG 2.2 — 2.4.1 Bypass Blocks) ---- */
+    .skip-to-content {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%) translateY(-120%);
+      z-index: 10000;
+      background: var(--gold-primary);
+      color: #0a0a0a;
+      font-family: var(--font-heading);
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.75em 1.8em;
+      border-radius: 0 0 12px 12px;
+      text-decoration: none;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.6);
+      transition: transform 0.25s var(--ease-out-expo);
+      outline: none;
+    }
 
-        .login-logo i {
-            font-size: 3rem;
-            color: var(--gold);
-            filter: drop-shadow(0 0 14px rgba(212, 175, 55, 0.5));
-            margin-bottom: 8px;
-            display: block;
-        }
+    .skip-to-content:focus {
+      transform: translateX(-50%) translateY(0);
+    }
 
-        .login-logo h1 {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: var(--gold);
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-        }
+    .skip-to-content:focus-visible {
+      outline: 3px solid #fff;
+      outline-offset: 2px;
+    }
 
-        .login-logo p {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
+    /* ---- Login Background ---- */
+    .login-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+    }
 
-        .form-group {
-            margin-bottom: 18px;
-        }
+    .login-bg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.25) saturate(0.6);
+    }
 
-        .form-group label {
-            display: block;
-            font-weight: 600;
-            font-size: 0.82rem;
-            color: var(--gold-light);
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
+    .login-bg__overlay {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background:
+        radial-gradient(ellipse at 50% 40%, rgba(212,168,67,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse at 30% 70%, rgba(198,40,40,0.08) 0%, transparent 55%),
+        linear-gradient(to bottom, rgba(10,10,10,0.3) 0%, rgba(10,10,10,0.85) 100%);
+    }
 
-        .input-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
+    /* ---- Particles Canvas ---- */
+    #particles-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.3;
+    }
 
-        .input-wrapper i {
-            position: absolute;
-            left: 14px;
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            pointer-events: none;
-            transition: color var(--transition);
-        }
+    /* ---- Main Container ---- */
+    .login-container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 460px;
+      padding: 1.5rem;
+    }
 
-        .input-wrapper input {
-            width: 100%;
-            padding: 12px 14px 12px 42px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.04);
-            color: var(--text);
-            font-size: 0.95rem;
-            font-family: inherit;
-            transition: border var(--transition), box-shadow var(--transition);
-        }
+    /* ---- Login Card (Glassmorphism) ---- */
+    .login-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--glass-blur));
+      -webkit-backdrop-filter: blur(var(--glass-blur));
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: clamp(2rem, 5vw, 3rem);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.55), 0 0 0 1px rgba(212,168,67,0.08) inset;
+      animation: cardIn 0.7s var(--ease-out-expo) both;
+    }
 
-        .input-wrapper input:focus {
-            outline: none;
-            border-color: var(--gold);
-            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
-        }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(32px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
 
-        .input-wrapper input:focus + i,
-        .input-wrapper:focus-within i {
-            color: var(--gold-light);
-        }
+    /* ---- Logo & Brand ---- */
+    .login-brand {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
 
-        .input-wrapper input::placeholder {
-            color: rgba(255, 255, 255, 0.25);
-        }
+    .login-brand__badge {
+      display: inline-block;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 3px solid var(--gold-primary);
+      padding: 4px;
+      background: rgba(10,10,10,0.7);
+      box-shadow: 0 0 32px rgba(212,168,67,0.2);
+      margin-bottom: 1.2rem;
+      animation: badgePulse 3s ease-in-out infinite;
+    }
 
-        /* Error message */
-        .login-error {
-            background: rgba(192, 57, 43, 0.15);
-            border: 1px solid rgba(192, 57, 43, 0.45);
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 18px;
-            color: var(--red-light);
-            font-size: 0.88rem;
-            font-weight: 500;
-            display: none;
-            align-items: center;
-            gap: 10px;
-            animation: shake 0.45s ease-in-out;
-        }
+    @keyframes badgePulse {
+      0%, 100% { box-shadow: 0 0 24px rgba(212,168,67,0.15); }
+      50%      { box-shadow: 0 0 40px rgba(212,168,67,0.35); }
+    }
 
-        .login-error.visible {
-            display: flex;
-        }
+    .login-brand__badge img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: contain;
+    }
 
-        .login-error i {
-            flex-shrink: 0;
-            font-size: 1rem;
-        }
+    .login-brand__title {
+      font-family: var(--font-display);
+      font-size: clamp(1.8rem, 4vw, 2.4rem);
+      letter-spacing: 0.06em;
+      color: #f5f0eb;
+      line-height: 1;
+    }
 
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 50%, 90% { transform: translateX(-4px); }
-            30%, 70% { transform: translateX(4px); }
-        }
+    .login-brand__title span {
+      background: var(--gold-metallic);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
 
-        /* Submit button */
-        .btn-login {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: 100%;
-            padding: 13px 20px;
-            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
-            border: none;
-            border-radius: 8px;
-            color: #0a0a0a;
-            cursor: pointer;
-            font-size: 0.97rem;
-            font-weight: 700;
-            letter-spacing: 0.02em;
-            transition: all var(--transition);
-            box-shadow: 0 4px 14px rgba(212, 175, 55, 0.3);
-        }
+    .login-brand__subtitle {
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #b0b0b0;
+      margin-top: 0.5rem;
+    }
 
-        .btn-login:hover {
-            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
-            transform: translateY(-1px);
-        }
+    /* ---- Form ---- */
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.3rem;
+    }
 
-        .btn-login:active {
-            transform: translateY(0);
-        }
+    .login-form__group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
 
-        .btn-login:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
+    .login-form__label {
+      font-family: var(--font-heading);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--gold-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
 
-        /* Spinner */
-        .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(10, 10, 10, 0.25);
-            border-top-color: #0a0a0a;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
+    .login-form__label i {
+      font-size: 0.85rem;
+      color: var(--gold-primary);
+      width: 16px;
+      text-align: center;
+    }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+    .login-form__input-wrap {
+      position: relative;
+    }
 
-        /* Back link */
-        .back-link {
-            display: block;
-            text-align: center;
-            margin-top: 20px;
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            text-decoration: none;
-            transition: color var(--transition);
-        }
+    .login-form__input {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 0.9em 1.1em 0.9em 2.8em;
+      color: #f5f0eb;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      transition: all 0.3s var(--ease-smooth);
+      outline: none;
+    }
 
-        .back-link:hover {
-            color: var(--gold-light);
-        }
+    .login-form__input:focus {
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 0 4px rgba(212,168,67,0.08);
+      background: rgba(255,255,255,0.06);
+    }
 
-        .back-link i {
-            margin-right: 6px;
-        }
+    /* ---- WCAG 2.2 focus-visible for keyboard users ---- */
+    .login-form__input:focus-visible {
+      outline: 2px solid var(--gold-bright);
+      outline-offset: 2px;
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 0 4px rgba(212,168,67,0.15);
+      background: rgba(255,255,255,0.08);
+    }
 
-        /* Focus visible */
-        :focus-visible {
-            outline: 2px solid var(--gold-light);
-            outline-offset: 2px;
-        }
+    .login-form__input::placeholder {
+      color: rgba(255,255,255,0.22);
+    }
 
-        /* Responsive */
-        @media (max-width: 480px) {
-            .login-card {
-                padding: 28px 20px;
-            }
+    .login-form__input--error {
+      border-color: var(--red-vivid) !important;
+      box-shadow: 0 0 0 4px rgba(198,40,40,0.1) !important;
+    }
 
-            .login-logo i {
-                font-size: 2.4rem;
-            }
+    .login-form__input--error:focus-visible {
+      outline-color: var(--red-vivid);
+    }
 
-            .login-logo h1 {
-                font-size: 1.1rem;
-            }
-        }
-    </style>
+    .login-form__icon {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255,255,255,0.25);
+      font-size: 0.95rem;
+      pointer-events: none;
+      transition: color 0.3s;
+    }
+
+    .login-form__input:focus ~ .login-form__icon {
+      color: var(--gold-primary);
+    }
+
+    /* Password toggle */
+    .login-form__toggle-pw {
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.3);
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 0.3rem;
+      transition: color 0.3s;
+      z-index: 2;
+    }
+
+    .login-form__toggle-pw:hover {
+      color: var(--gold-primary);
+    }
+
+    .login-form__toggle-pw:focus-visible {
+      outline: 2px solid var(--gold-bright);
+      outline-offset: 2px;
+      color: var(--gold-primary);
+      border-radius: 4px;
+    }
+
+    /* ---- Error message ---- */
+    .login-error {
+      background: rgba(198,40,40,0.12);
+      border: 1px solid rgba(198,40,40,0.3);
+      border-radius: 12px;
+      padding: 0.8em 1em;
+      color: #f5a5a5;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      animation: shakeError 0.5s ease;
+      display: none;
+    }
+
+    .login-error--visible {
+      display: flex;
+    }
+
+    .login-error i {
+      font-size: 1rem;
+      color: var(--red-vivid);
+      flex-shrink: 0;
+    }
+
+    @keyframes shakeError {
+      0%, 100% { transform: translateX(0); }
+      15%  { transform: translateX(-6px); }
+      30%  { transform: translateX(6px); }
+      45%  { transform: translateX(-4px); }
+      60%  { transform: translateX(4px); }
+      75%  { transform: translateX(-2px); }
+      90%  { transform: translateX(2px); }
+    }
+
+    /* ---- Submit Button ---- */
+    .login-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6em;
+      width: 100%;
+      font-family: var(--font-heading);
+      font-size: 1rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 0.95em 2em;
+      border: none;
+      border-radius: 50px;
+      background: var(--gold-metallic);
+      color: #0a0a0a;
+      cursor: pointer;
+      transition: all 0.35s var(--ease-smooth);
+      box-shadow: 0 4px 20px rgba(212,168,67,0.25);
+      position: relative;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+
+    .login-btn:hover {
+      box-shadow: 0 8px 32px rgba(212,168,67,0.4);
+      transform: translateY(-2px);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 12px rgba(212,168,67,0.3);
+    }
+
+    .login-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    .login-btn:focus-visible {
+      outline: 3px solid #fff;
+      outline-offset: 3px;
+      box-shadow: 0 0 0 6px rgba(212,168,67,0.3);
+    }
+
+    .login-btn__spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid transparent;
+      border-top-color: #0a0a0a;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    .login-btn--loading .login-btn__spinner {
+      display: inline-block;
+    }
+
+    .login-btn--loading .login-btn__text {
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ---- Footer links ---- */
+    .login-footer {
+      text-align: center;
+      margin-top: 1.6rem;
+    }
+
+    .login-footer__link {
+      font-size: 0.8rem;
+      color: #b0b0b0;
+      text-decoration: none;
+      transition: color 0.3s;
+    }
+
+    .login-footer__link:hover {
+      color: var(--gold-primary);
+    }
+
+    .login-footer__link:focus-visible {
+      outline: 2px solid var(--gold-bright);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+
+    .login-footer__link i {
+      margin-right: 0.35em;
+    }
+
+    /* ---- Toast (positioned in login context) ---- */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 5000;
+      padding: 0.9em 1.8em;
+      border-radius: 14px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: 0 10px 36px rgba(0,0,0,0.55);
+      animation: toastSlideIn 0.4s var(--ease-out-expo);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      gap: 0.6em;
+    }
+
+    .toast--success {
+      background: rgba(46,125,50,0.92);
+      color: #fff;
+      border: 1px solid rgba(76,175,80,0.4);
+    }
+
+    .toast--error {
+      background: rgba(198,40,40,0.92);
+      color: #fff;
+      border: 1px solid rgba(229,57,53,0.4);
+    }
+
+    .toast--info {
+      background: rgba(212,168,67,0.92);
+      color: #0a0a0a;
+      border: 1px solid rgba(240,199,94,0.4);
+    }
+
+    @keyframes toastSlideIn {
+      from { opacity: 0; transform: translateX(60px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 520px) {
+      .login-container {
+        padding: 1rem;
+      }
+
+      .login-card {
+        padding: 1.8rem 1.4rem;
+        border-radius: 20px;
+      }
+
+      .login-brand__badge {
+        width: 64px;
+        height: 64px;
+      }
+
+      .login-brand__title {
+        font-size: 1.5rem;
+      }
+
+      .toast {
+        left: 1rem;
+        right: 1rem;
+        bottom: 1rem;
+        font-size: 0.82rem;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .login-card {
+        padding: 1.4rem 1rem;
+      }
+
+      .login-form__input {
+        padding: 0.8em 0.8em 0.8em 2.4em;
+        font-size: 0.88rem;
+      }
+
+      .login-btn {
+        font-size: 0.9rem;
+        padding: 0.8em 1.6em;
+      }
+    }
+
+    /* ---- Reduced motion ---- */
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+
+      /* Restore visible cursor for users who need it */
+      body {
+        cursor: auto;
+      }
+    }
+
+    /* ---- High Contrast / Windows High Contrast Mode ---- */
+    @media (forced-colors: active) {
+      .login-card {
+        border: 2px solid ButtonText;
+      }
+
+      .login-form__input {
+        border: 1px solid ButtonText;
+      }
+
+      .login-form__input:focus-visible {
+        outline: 3px solid Highlight;
+      }
+
+      .login-btn:focus-visible {
+        outline: 3px solid Highlight;
+      }
+
+      .login-form__toggle-pw:focus-visible {
+        outline: 2px solid Highlight;
+      }
+
+      .login-footer__link:focus-visible {
+        outline: 2px solid Highlight;
+      }
+    }
+  </style>
 </head>
 <body>
-    <!-- Background -->
-    <div class="login-bg" aria-hidden="true">
-        <img src="../images/login-bg.jpg" alt="">
-    </div>
 
-    <!-- Particles -->
-    <canvas id="particle-canvas" aria-hidden="true"></canvas>
+  <!-- ============================================================
+       SKIP TO CONTENT (WCAG 2.2 — 2.4.1 Bypass Blocks)
+  ============================================================ -->
+  <a href="#login-form" class="skip-to-content">
+    <i class="fa-solid fa-arrow-down" aria-hidden="true"></i> Sari la formularul de autentificare
+  </a>
 
-    <!-- Login Card -->
-    <div class="login-wrapper">
-        <div class="login-card">
-            <div class="login-logo">
-                <i class="fa-solid fa-glove"></i>
-                <h1>Boxing Champions</h1>
-                <p>Panou de Administrare</p>
-            </div>
+  <!-- ============================================================
+       BACKGROUND
+  ============================================================ -->
+  <div class="login-bg" aria-hidden="true">
+    <img src="/images/login-bg.jpg" alt="" loading="eager">
+  </div>
+  <div class="login-bg__overlay" aria-hidden="true"></div>
 
-            <!-- Error message area -->
-            <div class="login-error" id="loginError" role="alert" aria-live="assertive">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <span id="loginErrorMessage"></span>
-            </div>
+  <!-- ============================================================
+       PARTICLES CANVAS
+  ============================================================ -->
+  <canvas id="particles-canvas" aria-hidden="true"></canvas>
 
-            <form id="loginForm" novalidate>
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    <div class="input-wrapper">
-                        <i class="fa-solid fa-envelope"></i>
-                        <input type="email" id="email" name="email" placeholder="admin@boxing-champions.ro" required autocomplete="email" autofocus>
-                    </div>
-                </div>
+  <!-- ============================================================
+       LOGIN CONTAINER
+  ============================================================ -->
+  <main class="login-container" aria-labelledby="login-heading">
 
-                <div class="form-group">
-                    <label for="password">Parolă</label>
-                    <div class="input-wrapper">
-                        <i class="fa-solid fa-lock"></i>
-                        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
-                    </div>
-                </div>
+    <div class="login-card">
 
-                <button type="submit" class="btn-login" id="btnLogin">
-                    <i class="fa-solid fa-right-to-bracket"></i> Autentificare
-                </button>
-            </form>
+      <!-- Brand -->
+      <div class="login-brand">
+        <div class="login-brand__badge">
+          <img src="/images/badge.png" alt="Boxing Champions Badge" width="80" height="80">
+        </div>
+        <h1 class="login-brand__title" id="login-heading">
+          BOXING <span>CHAMPIONS</span>
+        </h1>
+        <p class="login-brand__subtitle">Panou de Administrare</p>
+      </div>
+
+      <!-- Error (WCAG 2.2 — 4.1.3 Status Messages via role="alert" + aria-live="assertive") -->
+      <div
+        class="login-error"
+        id="login-error"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        <span id="login-error-msg"></span>
+      </div>
+
+      <!-- Form -->
+      <form
+        class="login-form"
+        id="login-form"
+        novalidate
+        autocomplete="on"
+        aria-label="Formular de autentificare"
+      >
+        <!-- Email -->
+        <div class="login-form__group">
+          <label class="login-form__label" for="login-email">
+            <i class="fa-solid fa-envelope" aria-hidden="true"></i> Email
+          </label>
+          <div class="login-form__input-wrap">
+            <input
+              class="login-form__input"
+              type="email"
+              id="login-email"
+              name="email"
+              placeholder="admin@boxingchampions.ro"
+              required
+              autocomplete="email"
+              inputmode="email"
+              aria-required="true"
+              aria-describedby="login-error-msg"
+            >
+            <i class="fa-solid fa-envelope login-form__icon" aria-hidden="true"></i>
+          </div>
         </div>
 
-        <a href="/" class="back-link"><i class="fa-solid fa-arrow-left"></i> Înapoi la site</a>
+        <!-- Password -->
+        <div class="login-form__group">
+          <label class="login-form__label" for="login-password">
+            <i class="fa-solid fa-lock" aria-hidden="true"></i> Parolă
+          </label>
+          <div class="login-form__input-wrap">
+            <input
+              class="login-form__input"
+              type="password"
+              id="login-password"
+              name="password"
+              placeholder="••••••••••"
+              required
+              autocomplete="current-password"
+              aria-required="true"
+              aria-describedby="login-error-msg"
+              minlength="6"
+            >
+            <i class="fa-solid fa-lock login-form__icon" aria-hidden="true"></i>
+            <button
+              type="button"
+              class="login-form__toggle-pw"
+              id="toggle-password"
+              aria-label="Arată parola"
+              title="Arată / Ascunde parola"
+            >
+              <i class="fa-solid fa-eye" id="toggle-pw-icon" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="login-btn" id="login-submit">
+          <span class="login-btn__text">
+            <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Autentificare
+          </span>
+          <span class="login-btn__spinner" role="status" aria-label="Se procesează autentificarea"></span>
+        </button>
+      </form>
+
+      <!-- Footer -->
+      <div class="login-footer">
+        <a href="/" class="login-footer__link">
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Înapoi la site
+        </a>
+      </div>
+
     </div>
+  </main>
 
-    <script nonce="%NONCE%">
-        (function () {
-            'use strict';
+  <!-- ============================================================
+       SCRIPTS
+  ============================================================ -->
+  <!-- Global shared.js (particles, cursor, toast) -->
+  <script src="/js/shared.js"></script>
 
-            // DOM elements
-            var loginForm = document.getElementById('loginForm');
-            var loginError = document.getElementById('loginError');
-            var loginErrorMessage = document.getElementById('loginErrorMessage');
-            var btnLogin = document.getElementById('btnLogin');
-            var emailInput = document.getElementById('email');
-            var passwordInput = document.getElementById('password');
-            var particleCanvas = document.getElementById('particle-canvas');
+  <script>
+  (function () {
+    'use strict';
 
-            // -------------------------------------------------------------------
-            // Particles background
-            // -------------------------------------------------------------------
-            function initParticles() {
-                var ctx = particleCanvas.getContext('2d');
-                var particles = [];
-                var COUNT = 50;
-                var PALETTE = [
-                    'rgba(212,175,55,0.22)',
-                    'rgba(240,192,64,0.18)',
-                    'rgba(184,148,31,0.24)',
-                    'rgba(230,180,50,0.16)',
-                    'rgba(200,160,40,0.20)'
-                ];
+    /* ==================================================================
+       DOM References
+       ================================================================== */
+    var form          = document.getElementById('login-form');
+    var emailInput    = document.getElementById('login-email');
+    var passwordInput = document.getElementById('login-password');
+    var submitBtn     = document.getElementById('login-submit');
+    var errorBox      = document.getElementById('login-error');
+    var errorMsg      = document.getElementById('login-error-msg');
+    var togglePwBtn   = document.getElementById('toggle-password');
+    var togglePwIcon  = document.getElementById('toggle-pw-icon');
 
-                function resize() {
-                    particleCanvas.width = window.innerWidth;
-                    particleCanvas.height = window.innerHeight;
-                }
-                window.addEventListener('resize', resize);
-                resize();
+    /* ==================================================================
+       Helpers
+       ================================================================== */
+    var BC = window.BoxingChampions || {};
+    var showToast = BC.showToast || function (msg, type, dur) {
+      type = type || 'info';
+      dur = dur || 4000;
 
-                function mk() {
-                    return {
-                        x: Math.random() * particleCanvas.width,
-                        y: Math.random() * particleCanvas.height,
-                        radius: Math.random() * 2.8 + 0.8,
-                        speedX: (Math.random() - 0.5) * 0.35,
-                        speedY: (Math.random() - 0.5) * 0.35,
-                        color: PALETTE[Math.floor(Math.random() * PALETTE.length)],
-                        opacity: Math.random() * 0.6 + 0.2,
-                        pulse: Math.random() * Math.PI * 2,
-                        pulseSpeed: Math.random() * 0.015 + 0.005
-                    };
-                }
+      var existing = document.querySelector('.toast');
+      if (existing) existing.remove();
 
-                for (var i = 0; i < COUNT; i++) {
-                    particles.push(mk());
-                }
+      var icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+      var toast = document.createElement('div');
+      toast.className = 'toast toast--' + type;
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      toast.innerHTML = '<i class="fa-solid ' + (icons[type] || icons.info) + '" aria-hidden="true"></i> ' + escapeHTML(msg);
+      document.body.appendChild(toast);
 
-                function animate() {
-                    ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+      setTimeout(function () {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(30px)';
+        toast.style.transition = 'opacity 0.3s, transform 0.3s';
+        toast.addEventListener('transitionend', function () {
+          if (toast.parentNode) toast.parentNode.removeChild(toast);
+        });
+        setTimeout(function () {
+          if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 350);
+      }, dur);
+    };
 
-                    for (var i = 0; i < particles.length; i++) {
-                        var p = particles[i];
-                        p.x += p.speedX;
-                        p.y += p.speedY;
-                        p.pulse += p.pulseSpeed;
-                        var o = p.opacity + Math.sin(p.pulse) * 0.12;
+    function escapeHTML(str) {
+      if (!str) return '';
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
 
-                        if (p.x < -10) p.x = particleCanvas.width + 10;
-                        if (p.x > particleCanvas.width + 10) p.x = -10;
-                        if (p.y < -10) p.y = particleCanvas.height + 10;
-                        if (p.y > particleCanvas.height + 10) p.y = -10;
+    /**
+     * Show error with WCAG 2.2 support:
+     * - Sets the error message text
+     * - Toggles aria-invalid on relevant inputs
+     * - Shows the error container (role="alert")
+     */
+    function showError(message) {
+      errorMsg.textContent = message;
+      errorBox.classList.add('login-error--visible');
+    }
 
-                        ctx.beginPath();
-                        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                        ctx.fillStyle = p.color.replace(/[\d.]+\)$/, Math.max(0.04, Math.min(0.5, o)) + ')');
-                        ctx.fill();
-                    }
+    function hideError() {
+      errorBox.classList.remove('login-error--visible');
+      errorMsg.textContent = '';
 
-                    for (var i2 = 0; i2 < particles.length; i2++) {
-                        for (var j = i2 + 1; j < particles.length; j++) {
-                            var dx = particles[i2].x - particles[j].x;
-                            var dy = particles[i2].y - particles[j].y;
-                            var dist = Math.sqrt(dx * dx + dy * dy);
-                            if (dist < 100) {
-                                ctx.beginPath();
-                                ctx.moveTo(particles[i2].x, particles[i2].y);
-                                ctx.lineTo(particles[j].x, particles[j].y);
-                                ctx.strokeStyle = 'rgba(212,175,55,' + (0.06 * (1 - dist / 100)) + ')';
-                                ctx.lineWidth = 0.5;
-                                ctx.stroke();
-                            }
-                        }
-                    }
+      // Clear aria-invalid on all inputs
+      setFieldInvalid(emailInput, false);
+      setFieldInvalid(passwordInput, false);
+    }
 
-                    requestAnimationFrame(animate);
-                }
+    /**
+     * Set aria-invalid and visually mark a field as errored (WCAG 2.2 — 3.3.1 Error Identification).
+     * @param {HTMLInputElement} input
+     * @param {boolean} invalid
+     */
+    function setFieldInvalid(input, invalid) {
+      if (invalid) {
+        input.setAttribute('aria-invalid', 'true');
+        input.classList.add('login-form__input--error');
+      } else {
+        input.removeAttribute('aria-invalid');
+        input.classList.remove('login-form__input--error');
+      }
+    }
 
-                animate();
-            }
+    function markFieldError(input) {
+      setFieldInvalid(input, true);
+      // Automatically clear error state on first input change (WCAG 2.2 — 3.3.4 Error Prevention)
+      input.addEventListener('input', function clearError() {
+        setFieldInvalid(input, false);
+        // If no other field has errors, hide the global error box
+        if (!emailInput.classList.contains('login-form__input--error') &&
+            !passwordInput.classList.contains('login-form__input--error')) {
+          hideError();
+        }
+        input.removeEventListener('input', clearError);
+      }, { once: true });
+    }
 
-            // -------------------------------------------------------------------
-            // Error display
-            // -------------------------------------------------------------------
-            function showError(message) {
-                loginErrorMessage.textContent = message;
-                // Re-trigger shake animation by removing and re-adding the class
-                loginError.classList.remove('visible');
-                // Force reflow to restart animation
-                void loginError.offsetWidth;
-                loginError.classList.add('visible');
-            }
+    function setLoading(isLoading) {
+      if (isLoading) {
+        submitBtn.classList.add('login-btn--loading');
+        submitBtn.disabled = true;
+        submitBtn.setAttribute('aria-busy', 'true');
+      } else {
+        submitBtn.classList.remove('login-btn--loading');
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('aria-busy');
+      }
+    }
 
-            function hideError() {
-                loginError.classList.remove('visible');
-                loginErrorMessage.textContent = '';
-            }
+    /* ==================================================================
+       Password Toggle (WCAG 2.2 — 4.1.2 Name, Role, Value)
+       ================================================================== */
+    if (togglePwBtn && togglePwIcon) {
+      togglePwBtn.addEventListener('click', function () {
+        var isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        togglePwIcon.className = isPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        togglePwBtn.setAttribute('aria-label', isPassword ? 'Ascunde parola' : 'Arată parola');
+      });
+    }
 
-            // -------------------------------------------------------------------
-            // Loading state
-            // -------------------------------------------------------------------
-            function setLoading(isLoading) {
-                if (isLoading) {
-                    btnLogin.disabled = true;
-                    btnLogin.innerHTML = '<span class="spinner"></span> Se autentifică...';
-                } else {
-                    btnLogin.disabled = false;
-                    btnLogin.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Autentificare';
-                }
-            }
+    /* ==================================================================
+       Form Submit
+       ================================================================== */
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      hideError();
 
-            // -------------------------------------------------------------------
-            // Form submit handler
-            // -------------------------------------------------------------------
-            loginForm.addEventListener('submit', function (e) {
-                e.preventDefault();
-                hideError();
+      // --- Client-side validation (WCAG 2.2 — 3.3.1 Error Identification) ---
+      var email = emailInput.value.trim();
+      var password = passwordInput.value;
 
-                var email = emailInput.value.trim();
-                var password = passwordInput.value;
+      var hasError = false;
 
-                // Basic client-side validation
-                if (!email || !password) {
-                    showError('Completează email-ul și parola.');
-                    return;
-                }
+      if (!email) {
+        markFieldError(emailInput);
+        showError('Te rugăm să introduci adresa de email.');
+        hasError = true;
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        markFieldError(emailInput);
+        showError('Adresa de email nu este validă.');
+        hasError = true;
+      } else {
+        setFieldInvalid(emailInput, false);
+      }
 
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(email)) {
-                    showError('Adresa de email nu este validă.');
-                    return;
-                }
+      if (!password) {
+        markFieldError(passwordInput);
+        if (!hasError) showError('Te rugăm să introduci parola.');
+        hasError = true;
+      } else if (password.length < 6) {
+        markFieldError(passwordInput);
+        if (!hasError) showError('Parola trebuie să aibă cel puțin 6 caractere.');
+        hasError = true;
+      } else {
+        setFieldInvalid(passwordInput, false);
+      }
 
-                setLoading(true);
+      if (hasError) {
+        // Move focus to the first invalid field (WCAG 2.2 — 3.3.1)
+        var firstInvalid = document.querySelector('.login-form__input--error');
+        if (firstInvalid) {
+          firstInvalid.focus();
+        }
+        return;
+      }
 
-                fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ email: email, password: password })
-                })
-                .then(function (response) {
-                    return response.json().then(function (data) {
-                        return { status: response.status, data: data };
-                    });
-                })
-                .then(function (result) {
-                    if (result.data && result.data.success === true) {
-                        // Autentificare reușită – redirect strict la /admin/dashboard
-                        window.location.href = '/admin/dashboard';
-                        return;
-                    }
+      // --- API Call ---
+      setLoading(true);
 
-                    // Autentificare eșuată – citește atât `message` cât și `error`
-                    var msg = (result.data && (result.data.message || result.data.error))
-                        ? (result.data.message || result.data.error)
-                        : 'Email sau parolă incorecte.';
+      try {
+        var response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          body: JSON.stringify({ email: email, password: password }),
+          credentials: 'same-origin',
+        });
 
-                    showError(msg);
-                    setLoading(false);
-                })
-                .catch(function (err) {
-                    // Eroare de rețea sau JSON invalid
-                    showError('Eroare de conexiune. Verifică internetul și reîncearcă.');
-                    setLoading(false);
-                });
-            });
+        var data;
+        var contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          var text = await response.text();
+          try { data = JSON.parse(text); } catch (_) { data = { _raw: text }; }
+        }
 
-            // -------------------------------------------------------------------
-            // Hide error on input
-            // -------------------------------------------------------------------
-            emailInput.addEventListener('input', hideError);
-            passwordInput.addEventListener('input', hideError);
+        if (!response.ok) {
+          throw new Error(
+            data?.error || 'Email sau parolă incorecte. Încearcă din nou.'
+          );
+        }
 
-            // -------------------------------------------------------------------
-            // Init
-            // -------------------------------------------------------------------
-            initParticles();
-        })();
-    </script>
+        // Success
+        showToast(
+          data?.message || 'Autentificare reușită! Redirecționare...',
+          'success',
+          2000
+        );
+
+        // Redirect to dashboard after a short delay
+        setTimeout(function () {
+          window.location.href = 'dashboard.html';
+        }, 800);
+
+      } catch (err) {
+        console.error('[login] Error:', err.message);
+
+        var errMsg = err.message || 'A apărut o eroare. Încearcă din nou.';
+
+        // Generic error for non-network issues
+        if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+          errMsg = 'Nu s-a putut conecta la server. Verifică conexiunea la internet.';
+        }
+
+        showError(errMsg);
+        showToast(errMsg, 'error', 4000);
+
+        // Shake the card on error (only if no reduced-motion preference)
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          var card = document.querySelector('.login-card');
+          if (card) {
+            card.style.animation = 'none';
+            card.offsetHeight; // Trigger reflow
+            card.style.animation = 'shakeError 0.5s ease';
+          }
+        }
+
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    /* ==================================================================
+       Particles Canvas (inline fallback if shared.js not loaded)
+       ================================================================== */
+    function initParticlesFallback() {
+      var canvas = document.getElementById('particles-canvas');
+      if (!canvas) return;
+
+      // If BoxingChampions.Particles already initialized, skip
+      if (BC.Particles && BC.Particles.canvas) return;
+
+      var ctx = canvas.getContext('2d');
+      var width, height;
+      var particles = [];
+      var mouse = { x: -1000, y: -1000 };
+      var animFrame;
+
+      function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+      }
+
+      function createParticles() {
+        particles = [];
+        var count = Math.floor(40 * (width * height) / (1920 * 1080));
+        for (var i = 0; i < count; i++) {
+          particles.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            vx: (Math.random() - 0.5) * 0.35,
+            vy: (Math.random() - 0.5) * 0.35,
+            radius: Math.random() * 2 + 0.3,
+            originalRadius: Math.random() * 2 + 0.3,
+          });
+        }
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, width, height);
+        for (var i = 0; i < particles.length; i++) {
+          var p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+
+          if (p.x < -20) p.x = width + 20;
+          if (p.x > width + 20) p.x = -20;
+          if (p.y < -20) p.y = height + 20;
+          if (p.y > height + 20) p.y = -20;
+
+          var dxM = p.x - mouse.x;
+          var dyM = p.y - mouse.y;
+          var distM = Math.sqrt(dxM * dxM + dyM * dyM);
+          if (distM < 120) {
+            p.radius = p.originalRadius + (1 - distM / 120) * 1.5;
+          } else {
+            p.radius += (p.originalRadius - p.radius) * 0.08;
+          }
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(212, 168, 67, 0.28)';
+          ctx.fill();
+        }
+
+        animFrame = requestAnimationFrame(animate);
+      }
+
+      resize();
+      createParticles();
+
+      window.addEventListener('resize', function () {
+        resize();
+        createParticles();
+      });
+
+      document.addEventListener('mousemove', function (e) {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+      });
+
+      document.addEventListener('mouseleave', function () {
+        mouse.x = -1000;
+        mouse.y = -1000;
+      });
+
+      animate();
+    }
+
+    /* ==================================================================
+       Init
+       ================================================================== */
+    function init() {
+      // Focus first field (with a small delay for animation)
+      if (emailInput) {
+        setTimeout(function () {
+          emailInput.focus();
+        }, 600);
+      }
+
+      // Start particles (as fallback)
+      setTimeout(initParticlesFallback, 300);
+    }
+
+    // Run on DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+
+  })();
+  </script>
+
 </body>
 </html>
