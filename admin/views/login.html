@@ -500,7 +500,7 @@
                 .then(function (result) {
                     if (result.data && result.data.success) {
                         // Autentificare reușită
-                        window.location.href = result.data.redirect || '/admin';
+                        window.location.href = result.data.redirect || '/admin/dashboard';
                         return;
                     }
 

@@ -151,8 +151,12 @@ function verifyToken(req, res, next) {
  * Body (JSON):
  *   { "email": "...", "password": "..." }
  *
- * On success returns: { success: true, redirect: "/admin", message: "Autentificare reușită.", admin: { id, email } }
+ * On success returns: { success: true, redirect: "/admin/dashboard", message: "Autentificare reușită.", admin: { id, email } }
  * Also sets the token cookie.
+ *
+ * Dacă nu există niciun admin în baza de date, creează automat un admin default:
+ *   email: admin@boxingchampions.ro
+ *   parola: admin2026
  */
 router.post('/login', (req, res) => {
   // --- 1. Input presence ---
@@ -173,7 +177,26 @@ router.post('/login', (req, res) => {
 
   // --- 3. Look up admin ---
   const normalizedEmail = email.trim().toLowerCase();
-  const admin = db.getAdminByEmail(normalizedEmail);
+  let admin = db.getAdminByEmail(normalizedEmail);
+
+  // --- 3a. Dacă nu există niciun admin în sistem, creează automat admin-ul default ---
+  if (!admin) {
+    const database = db.getDb();
+    const adminCount = database.prepare('SELECT COUNT(*) AS cnt FROM admins').get();
+
+    if (adminCount.cnt === 0) {
+      const defaultEmail = process.env.ADMIN_EMAIL || 'admin@boxingchampions.ro';
+      const defaultPassword = process.env.ADMIN_PASSWORD || 'admin2026';
+      const hash = bcrypt.hashSync(defaultPassword, SALT_ROUNDS);
+      database.prepare('INSERT INTO admins (email, password) VALUES (?, ?)').run(defaultEmail, hash);
+      console.log('[AUTH] Admin default creat:', defaultEmail);
+
+      // Dacă email-ul din cerere se potrivește cu cel default, folosește noul admin
+      if (normalizedEmail === defaultEmail.toLowerCase()) {
+        admin = { id: 1, email: defaultEmail, password: hash };
+      }
+    }
+  }
 
   if (!admin) {
     // Use a generic message to avoid user enumeration
@@ -207,7 +230,7 @@ router.post('/login', (req, res) => {
   // --- 7. Respond ---
   return res.json({
     success: true,
-    redirect: '/admin',
+    redirect: '/admin/dashboard',
     message: 'Autentificare reușită.',
     admin: {
       id: admin.id,
@@ -262,7 +285,7 @@ router.get('/check', (req, res) => {
  */
 router.post('/logout', (_req, res) => {
   clearAuthCookie(res);
-  return res.json({ success: true, redirect: '/login', message: 'Deconectare reușită.' });
+  return res.json({ success: true, redirect: '/admin', message: 'Deconectare reușită.' });
 });
 
 // ---------------------------------------------------------------------------
