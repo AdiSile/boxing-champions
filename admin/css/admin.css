@@ -223,12 +223,47 @@ img {
   transition: all var(--dur-fast) var(--ease-out);
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
   border: none;
   background: transparent;
   width: 100%;
+  max-width: 100%;
   text-align: left;
   font-family: inherit;
+  position: relative;
+}
+
+/* Prevent link label text overflow on narrow sidebars */
+.sidebar-link span.link-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar-link .link-icon {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.1rem;
+}
+
+.sidebar-link .link-badge {
+  margin-left: auto;
+  background: var(--red-500);
+  color: var(--white);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  min-width: 20px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .sidebar-link:hover {
@@ -252,28 +287,6 @@ img {
   height: 20px;
   background: var(--gold-500);
   border-radius: 0 3px 3px 0;
-}
-
-.sidebar-link .link-icon {
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 1.1rem;
-}
-
-.sidebar-link .link-badge {
-  margin-left: auto;
-  background: var(--red-500);
-  color: var(--white);
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  min-width: 20px;
-  text-align: center;
 }
 
 .link-badge.warn {
@@ -1983,6 +1996,17 @@ img {
   .admin-sidebar.mobile-open .sidebar-link {
     justify-content: flex-start;
     padding: 10px 14px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .admin-sidebar.mobile-open .sidebar-link span.link-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1;
   }
 
   .admin-main {

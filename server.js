@@ -1,5 +1,7 @@
 'use strict';
 
+require('dotenv').config();
+
 // ---------------------------------------------------------------------------
 // server.js — Boxing Champions Express Server
 //

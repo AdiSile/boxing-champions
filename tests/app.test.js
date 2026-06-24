@@ -8,7 +8,19 @@
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// 0. Mock bcrypt — modul nativ care nu se compilează fără build tools.
+// 0. Setează variabilele de mediu necesare înainte de orice import.
+//    Acestea sunt folosite de server.js și de modulele rutiere (auth, stripe).
+//    Le setăm manual pentru a nu depinde de fișierul .env la rularea testelor.
+// ---------------------------------------------------------------------------
+process.env.JWT_SECRET = 'test-jwt-secret-for-jest';
+process.env.PORT = '0'; // port 0 = sistemul de operare alege un port liber
+process.env.NODE_ENV = 'test';
+process.env.STRIPE_KEY = 'sk_test_mock_stripe_key';
+process.env.ADMIN_EMAIL = 'admin@boxing-champions.ro';
+process.env.ADMIN_PASSWORD = 'password123456';
+
+// ---------------------------------------------------------------------------
+// 1. Mock bcrypt — modul nativ care nu se compilează fără build tools.
 //    jest.mock este hoisted — se execută înaintea oricărui import.
 // ---------------------------------------------------------------------------
 jest.mock('bcrypt', () => ({
@@ -17,7 +29,7 @@ jest.mock('bcrypt', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// 1. Mock baza de date înainte de a încărca serverul
+// 2. Mock baza de date înainte de a încărca serverul
 //    jest.mock este hoisted — se execută înaintea oricărui import.
 // ---------------------------------------------------------------------------
 jest.mock('../db', () => {
@@ -117,7 +129,7 @@ jest.mock('../db', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2. Înlocuiește app.listen cu un mock înainte ca server.js să fie încărcat,
+// 3. Înlocuiește app.listen cu un mock înainte ca server.js să fie încărcat,
 //    pentru a preveni ascultarea efectivă pe portul 3000.
 // ---------------------------------------------------------------------------
 const express = require('express');
@@ -127,12 +139,12 @@ express.application.listen = jest.fn(function (port, cb) {
 });
 
 // ---------------------------------------------------------------------------
-// 3. Încarcă serverul (acum listen-ul e mock-uit iar baza de date e mock-uită)
+// 4. Încarcă serverul (acum listen-ul e mock-uit iar baza de date e mock-uită)
 // ---------------------------------------------------------------------------
 const app = require('../server');
 
 // ---------------------------------------------------------------------------
-// 4. Modul http pentru a crea un server de test izolat
+// 5. Modul http pentru a crea un server de test izolat
 // ---------------------------------------------------------------------------
 const http = require('node:http');
 

@@ -3,314 +3,151 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex, nofollow">
-  <title>Dashboard Admin — Boxing Champions</title>
-
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
-        crossorigin="anonymous"
-        referrerpolicy="no-referrer">
-
+  <title>Panou Admin — Boxing Champions</title>
+  <link rel="stylesheet" href="/admin/css/admin.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="/admin/css/admin.css">
-
-  <style nonce="%NONCE%">
-    :root {
-      --font-sans: 'Outfit', 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-    }
-    body { font-family: var(--font-sans); }
-    .admin-layout::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: url('/admin/images/dashboard-bg.jpg') center / cover no-repeat;
-      filter: brightness(0.15) saturate(0.6);
-      z-index: -1;
-    }
-
-    .toggle-switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; vertical-align: middle; }
-    .toggle-switch .toggle-input { display: none; }
-    .toggle-switch .toggle-slider {
-      width: 46px; height: 26px; background: rgba(255,255,255,0.12);
-      border-radius: 9999px; position: relative;
-      transition: background 0.25s cubic-bezier(0.4,0,0.2,1); flex-shrink: 0;
-    }
-    .toggle-switch .toggle-slider::after {
-      content: ''; position: absolute; top: 3px; left: 3px;
-      width: 20px; height: 20px; background: #fff; border-radius: 50%;
-      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-    }
-    .toggle-switch .toggle-input:checked + .toggle-slider { background: var(--gold-500); }
-    .toggle-switch .toggle-input:checked + .toggle-slider::after { transform: translateX(20px); }
-
-    .badge--active { background: rgba(52,211,153,0.12); color: #34d399; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
-    .badge--active::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #34d399; flex-shrink: 0; }
-    .badge--inactive { background: rgba(107,114,128,0.12); color: #6b7280; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
-    .badge--inactive::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #6b7280; flex-shrink: 0; }
-    .badge--unread { background: rgba(239,68,68,0.15); color: #ef4444; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; }
-    .badge--unread::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #ef4444; flex-shrink: 0; }
-    .badge--read { background: rgba(52,211,153,0.1); color: #34d399; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; }
-    .badge--gold { background: rgba(240,192,96,0.15); color: #f0c060; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; }
-
-    .row--unread { background: rgba(239,68,68,0.04); border-left: 2px solid #ef4444; }
-    .row--unread:hover { background: rgba(239,68,68,0.08) !important; }
-
-    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
-    .section-header-info { flex: 1; min-width: 200px; }
-    .section-title { font-size: 1.4rem; font-weight: 700; color: var(--white); letter-spacing: -0.01em; }
-    .section-subtitle { font-size: 0.85rem; color: var(--dark-300); margin-top: 4px; }
-
-    .data-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-md); }
-    .data-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-    .data-table thead { background: rgba(255,255,255,0.03); border-bottom: 2px solid rgba(255,255,255,0.06); }
-    .data-table th { padding: 12px 16px; text-align: left; font-weight: 600; color: var(--gray-200); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
-    .data-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--gray-100); vertical-align: middle; }
-    .data-table tbody tr { transition: background 0.15s ease; }
-    .data-table tbody tr:hover { background: rgba(255,255,255,0.025); }
-    .data-table tbody tr:last-child td { border-bottom: none; }
-
-    .table-img { width: 48px; height: 48px; border-radius: 8px; overflow: hidden; }
-    .table-img img { width: 100%; height: 100%; object-fit: cover; }
-    .table-img-placeholder { width: 48px; height: 48px; border-radius: 8px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; color: var(--dark-400); font-size: 1.2rem; }
-
-    .img-upload { display: flex; flex-direction: column; gap: 12px; }
-    .img-upload-preview { width: 160px; height: 160px; border-radius: var(--radius-md); border: 2px dashed rgba(255,255,255,0.12); overflow: hidden; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.02); }
-    .img-upload-thumb { width: 100%; height: 100%; object-fit: cover; }
-    .img-upload-placeholder { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--dark-300); font-size: 0.78rem; }
-    .img-upload-placeholder i { font-size: 2rem; opacity: 0.5; }
-    .img-upload-actions { display: flex; gap: 8px; align-items: center; }
-    .img-upload-error { color: var(--red-400); font-size: 0.78rem; }
-
-    .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
-    .photo-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-md); overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease; }
-    .photo-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-    .photo-card img { width: 100%; height: 140px; object-fit: cover; }
-    .photo-card-info { padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .photo-card-info p { font-size: 0.78rem; color: var(--gray-200); margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-    .admin-form { display: flex; flex-direction: column; gap: 0; }
-    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
-    .form-group--full { grid-column: 1 / -1; }
-    .form-actions { display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 8px; }
-    .checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.88rem; color: var(--gray-100); font-weight: 500; }
-    .checkbox-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--gold-500); cursor: pointer; }
-
-    .field-error { display: none; font-size: 0.75rem; color: var(--red-400); margin-top: 4px; align-items: center; gap: 4px; }
-    .field-error.visible { display: flex; }
-    .input-wrapper.error input, .input-wrapper.error select, .input-wrapper.error textarea { border-color: var(--red-500); box-shadow: 0 0 0 3px rgba(224,64,64,0.1); }
-
-    .btn-primary { background: linear-gradient(135deg, var(--gold-500), var(--gold-600)); color: var(--dark-900); border-color: var(--gold-600); display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; font-size: 0.88rem; font-weight: 600; font-family: var(--font-sans); border-radius: var(--radius-md); border: 1px solid transparent; cursor: pointer; transition: all 0.15s ease; white-space: nowrap; text-decoration: none; line-height: 1.3; }
-    .btn-primary:hover { background: linear-gradient(135deg, var(--gold-400), var(--gold-500)); box-shadow: 0 4px 16px rgba(228,176,64,0.3); transform: translateY(-1px); }
-    .btn-primary:active { transform: translateY(0); box-shadow: none; }
-    .btn-outline { background: transparent; color: var(--gold-400); border: 1px solid var(--gold-500); display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; font-size: 0.88rem; font-weight: 600; font-family: var(--font-sans); border-radius: var(--radius-md); cursor: pointer; transition: all 0.15s ease; white-space: nowrap; text-decoration: none; line-height: 1.3; }
-    .btn-outline:hover { background: rgba(240,192,96,0.08); box-shadow: 0 0 0 1px rgba(228,176,64,0.2); }
-    .btn-outline.btn-sm { padding: 7px 14px; font-size: 0.8rem; }
-    .btn-primary.btn-sm { padding: 7px 14px; font-size: 0.8rem; }
-
-    .modal-overlay--visible { opacity: 1; pointer-events: auto; }
-    .modal--open { opacity: 1; transform: scale(1); pointer-events: auto; }
-    .modal--sm .modal-dialog { max-width: 380px; }
-    .modal--lg .modal-dialog { max-width: 800px; }
-    .modal { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; transform: scale(0.95); pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; }
-
-    .toast--visible { opacity: 1; transform: translateX(0); }
-    .toast--success { border-left: 3px solid #34d399; }
-    .toast--error { border-left: 3px solid #ef4444; }
-    .toast--info { border-left: 3px solid #60a5fa; }
-    .toast--warning { border-left: 3px solid #f0c060; }
-
-    .skeleton-wrapper { display: flex; flex-direction: column; gap: 12px; padding: 24px; }
-    .skeleton--title { height: 28px; width: 40%; background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
-    .skeleton--text { height: 14px; width: 100%; background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
-    .skeleton--short { width: 60%; }
-    .skeleton--card { height: 160px; background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 12px; }
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-
-    .empty-state-desc { font-size: 0.88rem; color: var(--dark-300); max-width: 400px; margin: 0 auto; }
-    .empty-state--error .empty-state-icon { color: var(--red-400); }
-
-    .order-details { display: flex; flex-direction: column; gap: 10px; }
-    .order-detail-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.88rem; }
-    .order-detail-row strong { color: var(--gray-200); margin-right: 8px; }
-    .order-item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.02); border-radius: 6px; margin-bottom: 4px; font-size: 0.85rem; }
-
-    .message-details { display: flex; flex-direction: column; gap: 8px; }
-    .message-detail-row { font-size: 0.88rem; color: var(--gray-200); }
-    .message-detail-row strong { color: var(--text-primary); }
-    .message-body { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-md); padding: 16px; font-size: 0.9rem; line-height: 1.7; color: var(--gray-100); white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
-
-    .seo-layout { display: grid; grid-template-columns: 240px 1fr; gap: 24px; min-height: 400px; }
-    .seo-page-list { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-md); padding: 12px 0; display: flex; flex-direction: column; }
-    .seo-page-list-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dark-300); padding: 8px 16px 12px; font-weight: 600; }
-    .seo-page-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 16px; background: transparent; border: none; border-left: 3px solid transparent; color: var(--gray-200); font-size: 0.88rem; font-family: var(--font-sans); cursor: pointer; transition: all 0.15s ease; }
-    .seo-page-item:hover { background: rgba(255,255,255,0.03); color: var(--white); }
-    .seo-page-item.active { background: rgba(240,192,96,0.08); border-left-color: var(--gold-500); color: var(--gold-400); font-weight: 600; }
-    .seo-page-icon { width: 28px; height: 28px; border-radius: 6px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; color: var(--dark-300); }
-    .seo-page-item.active .seo-page-icon { background: rgba(240,192,96,0.12); color: var(--gold-400); }
-    .seo-page-label { flex: 1; }
-    .seo-page-badge { color: #34d399; font-size: 0.6rem; flex-shrink: 0; }
-    .seo-editor-panel { min-width: 0; }
-    .seo-page-form { gap: 16px; }
-    .seo-page-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
-    .seo-page-title { font-size: 1.1rem; font-weight: 700; color: var(--white); display: flex; align-items: center; gap: 8px; margin: 0; }
-    .seo-page-slug { font-size: 0.78rem; color: var(--dark-400); background: rgba(255,255,255,0.04); padding: 3px 10px; border-radius: 9999px; font-family: monospace; }
-
-    .seo-char-counter { font-size: 0.72rem; color: var(--dark-300); display: flex; align-items: center; gap: 2px; margin-top: 2px; }
-    .seo-char-counter.warn { color: #f0c060; }
-    .seo-char-counter.danger { color: #ef4444; }
-
-    .seo-preview-card { background: #1a1a2e; border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-md); padding: 16px; margin-top: 8px; }
-    .seo-preview-card .preview-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dark-400); margin-bottom: 10px; font-weight: 600; }
-    .seo-preview-url { font-size: 0.78rem; color: #8ab4f8; margin-bottom: 4px; font-family: Arial, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .seo-preview-title { font-size: 1.05rem; color: #8ab4f8; font-family: Arial, sans-serif; margin-bottom: 5px; line-height: 1.3; text-decoration: none; }
-    .seo-preview-desc { font-size: 0.82rem; color: #bdc1c6; font-family: Arial, sans-serif; line-height: 1.45; }
-
-    @media (max-width: 768px) {
-      .form-grid { grid-template-columns: 1fr; }
-      .section-title { font-size: 1.15rem; }
-      .photo-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-      .modal--lg .modal-dialog { max-width: 100%; }
-      .seo-layout { grid-template-columns: 1fr; }
-      .seo-page-list { flex-direction: row; flex-wrap: wrap; gap: 4px; padding: 8px; overflow-x: auto; }
-      .seo-page-list-title { display: none; }
-      .seo-page-item { border-left: none; border-bottom: 2px solid transparent; padding: 8px 12px; font-size: 0.78rem; flex-shrink: 0; }
-      .seo-page-item.active { border-bottom-color: var(--gold-500); }
-      .seo-preview-card { display: none; }
-    }
-
-    @media (max-width: 480px) {
-      .section-header { flex-direction: column; align-items: flex-start; }
-      .data-table th, .data-table td { padding: 8px 10px; font-size: 0.75rem; }
-      .table-img, .table-img-placeholder { width: 36px; height: 36px; }
-      .img-upload-preview { width: 120px; height: 120px; }
-      .photo-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
+  <div class="admin-layout">
 
-<div class="admin-layout">
+    <!-- OVERLAY PENTRU MOBILE SIDEBAR -->
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
 
-  <aside class="admin-sidebar sidebar" id="adminSidebar" role="navigation" aria-label="Navigare principală">
-    <div class="sidebar-brand">
-      <div class="brand-icon" aria-hidden="true"><i class="fa-solid fa-glove"></i></div>
-      <div>
-        <div class="brand-text">Boxing Champions</div>
-        <div class="brand-sub">Panou Admin</div>
-      </div>
-    </div>
-
-    <nav class="sidebar-nav">
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">Principal</div>
-        <button class="sidebar-link sidebar-nav-item active" data-section="settings" aria-current="page">
-          <span class="link-icon"><i class="fa-solid fa-gear"></i></span>
-          <span>Setări Generale</span>
-        </button>
-      </div>
-
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">Conținut</div>
-        <button class="sidebar-link sidebar-nav-item" data-section="coaches">
-          <span class="link-icon"><i class="fa-solid fa-user-graduate"></i></span>
-          <span>Antrenori</span>
-        </button>
-        <button class="sidebar-link sidebar-nav-item" data-section="events">
-          <span class="link-icon"><i class="fa-solid fa-calendar-star"></i></span>
-          <span>Evenimente</span>
-        </button>
-        <button class="sidebar-link sidebar-nav-item" data-section="schedule">
-          <span class="link-icon"><i class="fa-solid fa-clock"></i></span>
-          <span>Program</span>
-        </button>
-      </div>
-
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">Comercial</div>
-        <button class="sidebar-link sidebar-nav-item" data-section="subscriptions">
-          <span class="link-icon"><i class="fa-solid fa-ticket"></i></span>
-          <span>Abonamente</span>
-        </button>
-        <button class="sidebar-link sidebar-nav-item" data-section="products">
-          <span class="link-icon"><i class="fa-solid fa-box"></i></span>
-          <span>Produse</span>
-        </button>
-        <button class="sidebar-link sidebar-nav-item" data-section="orders">
-          <span class="link-icon"><i class="fa-solid fa-receipt"></i></span>
-          <span>Comenzi</span>
-          <span class="link-badge warn" id="badge-orders" style="display:none;">0</span>
-        </button>
-      </div>
-
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">Comunicare</div>
-        <button class="sidebar-link sidebar-nav-item" data-section="messages">
-          <span class="link-icon"><i class="fa-solid fa-envelope"></i></span>
-          <span>Mesaje</span>
-          <span class="link-badge" id="badge-messages" style="display:none;">0</span>
-        </button>
-      </div>
-
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">Marketing</div>
-        <button class="sidebar-link sidebar-nav-item" data-section="seo">
-          <span class="link-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></span>
-          <span>SEO</span>
-        </button>
-      </div>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="sidebar-user" id="sidebarUser" title="Administrator">
-        <div class="user-avatar" aria-hidden="true"><i class="fa-solid fa-user-shield"></i></div>
-        <div class="user-info">
-          <div class="user-name">Administrator</div>
-          <div class="user-role">Super Admin</div>
+    <!-- SIDEBAR -->
+    <aside class="admin-sidebar" id="adminSidebar" aria-label="Navigare principală">
+      <!-- Brand -->
+      <div class="sidebar-brand">
+        <div class="brand-icon">BC</div>
+        <div>
+          <div class="brand-text">Boxing Champions</div>
+          <div class="brand-sub">Panou Admin</div>
         </div>
       </div>
-      <button class="sidebar-link" id="btnLogout" style="margin-top:8px;width:100%;" title="Deconectare">
-        <span class="link-icon"><i class="fa-solid fa-right-from-bracket"></i></span>
-        <span>Deconectare</span>
-      </button>
-    </div>
-  </aside>
 
-  <main class="admin-main" id="adminMain">
-    <header class="admin-topbar">
-      <div class="topbar-left">
-        <button class="hamburger" id="hamburgerMenu" aria-label="Comută sidebar" type="button">
-          <i class="fa-solid fa-bars"></i>
-        </button>
-        <h1 class="page-title" id="pageTitle">Setări Generale</h1>
-      </div>
-      <div class="topbar-right">
-        <div class="topbar-search">
-          <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
-          <input type="search" id="globalSearch" placeholder="Caută..." aria-label="Caută în dashboard">
+      <!-- Navigare -->
+      <nav class="sidebar-nav" aria-label="Secțiuni administrare">
+        <!-- Principal -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Principal</div>
+          <button class="sidebar-link sidebar-nav-item active" data-section="settings" aria-current="page">
+            <span class="link-icon"><i class="fa-solid fa-gear"></i></span>
+            <span class="link-label">Setări Generale</span>
+          </button>
         </div>
-        <button class="btn btn-gold btn-sm" id="btnRefresh" title="Reîncarcă secțiunea" type="button">
-          <i class="fa-solid fa-rotate-right"></i>
+
+        <!-- Conținut -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Conținut</div>
+          <button class="sidebar-link sidebar-nav-item" data-section="coaches">
+            <span class="link-icon"><i class="fa-solid fa-user-graduate"></i></span>
+            <span class="link-label">Antrenori</span>
+          </button>
+          <button class="sidebar-link sidebar-nav-item" data-section="events">
+            <span class="link-icon"><i class="fa-solid fa-calendar-star"></i></span>
+            <span class="link-label">Evenimente</span>
+          </button>
+          <button class="sidebar-link sidebar-nav-item" data-section="achievements">
+            <span class="link-icon"><i class="fa-solid fa-trophy"></i></span>
+            <span class="link-label">Realizări</span>
+          </button>
+          <button class="sidebar-link sidebar-nav-item" data-section="schedule">
+            <span class="link-icon"><i class="fa-solid fa-clock"></i></span>
+            <span class="link-label">Program</span>
+          </button>
+        </div>
+
+        <!-- Comercial -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Comercial</div>
+          <button class="sidebar-link sidebar-nav-item" data-section="subscriptions">
+            <span class="link-icon"><i class="fa-solid fa-ticket"></i></span>
+            <span class="link-label">Abonamente</span>
+          </button>
+          <button class="sidebar-link sidebar-nav-item" data-section="products">
+            <span class="link-icon"><i class="fa-solid fa-store"></i></span>
+            <span class="link-label">Produse</span>
+          </button>
+          <button class="sidebar-link sidebar-nav-item" data-section="orders">
+            <span class="link-icon"><i class="fa-solid fa-receipt"></i></span>
+            <span class="link-label">Comenzi</span>
+            <span class="link-badge" id="badge-orders" style="display:none;">0</span>
+          </button>
+        </div>
+
+        <!-- Comunicare -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Comunicare</div>
+          <button class="sidebar-link sidebar-nav-item" data-section="messages">
+            <span class="link-icon"><i class="fa-solid fa-envelope"></i></span>
+            <span class="link-label">Mesaje</span>
+            <span class="link-badge" id="badge-messages" style="display:none;">0</span>
+          </button>
+        </div>
+
+        <!-- Marketing -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Marketing</div>
+          <button class="sidebar-link sidebar-nav-item" data-section="seo">
+            <span class="link-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></span>
+            <span class="link-label">SEO</span>
+          </button>
+        </div>
+      </nav>
+
+      <!-- Footer sidebar -->
+      <div class="sidebar-footer">
+        <div class="sidebar-user" id="sidebarUser" title="Utilizator autentificat">
+          <div class="user-avatar">A</div>
+          <div class="user-info">
+            <div class="user-name">Admin</div>
+            <div class="user-role">Administrator</div>
+          </div>
+        </div>
+        <button class="sidebar-link" id="btnLogout" style="margin-top:8px;color:var(--red-400);" type="button">
+          <span class="link-icon"><i class="fa-solid fa-right-from-bracket"></i></span>
+          <span class="link-label">Deconectare</span>
         </button>
       </div>
-    </header>
+    </aside>
 
-    <div class="admin-content">
-      <div class="main-content" id="mainContent" role="main">
-        <!-- Conținutul se încarcă dinamic -->
+    <!-- CONȚINUT PRINCIPAL -->
+    <main class="admin-main" id="adminMain">
+      <!-- Top Bar -->
+      <header class="admin-topbar">
+        <div class="topbar-left">
+          <button class="hamburger" id="hamburgerMenu" aria-label="Deschide/închide meniul" type="button">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <h1 class="page-title" id="pageTitle">Setări Generale</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="topbar-search">
+            <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input type="search" id="globalSearch" placeholder="Caută..." aria-label="Căutare globală">
+          </div>
+          <button class="btn btn-ghost btn-icon" id="btnRefresh" title="Reîmprospătează" type="button" aria-label="Reîmprospătează secțiunea">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Conținut dinamic -->
+      <div class="admin-content main-content" id="mainContent" aria-live="polite">
+        <!-- Încărcare inițială -->
+        <div class="skeleton-wrapper">
+          <div class="skeleton skeleton--title"></div>
+          <div class="skeleton skeleton--text"></div>
+          <div class="skeleton skeleton--text skeleton--short"></div>
+          <div class="skeleton skeleton--card"></div>
+        </div>
       </div>
-    </div>
-  </main>
-</div>
+    </main>
 
-<div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
-<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+  </div>
 
-<script nonce="%NONCE%" src="/admin/js/admin.js"></script>
-
+  <script src="/admin/js/admin.js"></script>
 </body>
 </html>

@@ -1,5 +1,9 @@
 'use strict';
 
+// Load environment variables from .env (ensures ADMIN_EMAIL and ADMIN_PASSWORD
+// are available even when db.js is loaded directly)
+require('dotenv').config();
+
 // ---------------------------------------------------------------------------
 // db.js — Boxing Champions SQLite Database Module
 // Schema: settings, coaches, events, event_photos, schedule, subscriptions,
