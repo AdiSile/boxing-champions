@@ -186,8 +186,20 @@ app.get('/admin', (_req, res) => {
   if (!fs.existsSync(filePath)) {
     return res.status(404).send('Pagina de autentificare nu a fost găsită.');
   }
-  let html = fs.readFileSync(filePath, 'utf-8');
-  // Nu e nevoie de nonce aici — login.html nu folosește %NONCE%
+  const html = fs.readFileSync(filePath, 'utf-8');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
+});
+
+/**
+ * GET /admin/login.html — aceeași pagină de login
+ */
+app.get('/admin/login.html', (_req, res) => {
+  const filePath = path.join(__dirname, 'admin', 'views', 'login.html');
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send('Pagina de autentificare nu a fost găsită.');
+  }
+  const html = fs.readFileSync(filePath, 'utf-8');
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(html);
 });

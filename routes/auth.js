@@ -156,7 +156,7 @@ function verifyToken(req, res, next) {
  *
  * Dacă nu există niciun admin în baza de date, creează automat un admin default:
  *   email: admin@boxingchampions.ro
- *   parola: admin2026
+ *   parola: boxing2026
  */
 router.post('/login', (req, res) => {
   // --- 1. Input presence ---
@@ -186,7 +186,7 @@ router.post('/login', (req, res) => {
 
     if (adminCount.cnt === 0) {
       const defaultEmail = process.env.ADMIN_EMAIL || 'admin@boxingchampions.ro';
-      const defaultPassword = process.env.ADMIN_PASSWORD || 'admin2026';
+      const defaultPassword = process.env.ADMIN_PASSWORD || 'boxing2026';
       const hash = bcrypt.hashSync(defaultPassword, SALT_ROUNDS);
       database.prepare('INSERT INTO admins (email, password) VALUES (?, ?)').run(defaultEmail, hash);
       console.log('[AUTH] Admin default creat:', defaultEmail);

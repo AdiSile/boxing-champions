@@ -1142,7 +1142,7 @@ function seedDefaultAdmin(database) {
   const count = database.prepare('SELECT COUNT(*) AS cnt FROM admins').get();
   if (count.cnt === 0) {
     const email = process.env.ADMIN_EMAIL || 'admin@boxingchampions.ro';
-    const password = process.env.ADMIN_PASSWORD || 'admin2026';
+    const password = process.env.ADMIN_PASSWORD || 'boxing2026';
     const hash = bcrypt.hashSync(password, 12);
     database.prepare('INSERT INTO admins (email, password) VALUES (?, ?)').run(email, hash);
   }

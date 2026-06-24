@@ -174,8 +174,8 @@
 
         /* Error message */
         .login-error {
-            background: rgba(192, 57, 43, 0.12);
-            border: 1px solid rgba(192, 57, 43, 0.35);
+            background: rgba(192, 57, 43, 0.15);
+            border: 1px solid rgba(192, 57, 43, 0.45);
             border-radius: 8px;
             padding: 12px 16px;
             margin-bottom: 18px;
@@ -185,6 +185,7 @@
             display: none;
             align-items: center;
             gap: 10px;
+            animation: shake 0.45s ease-in-out;
         }
 
         .login-error.visible {
@@ -194,6 +195,12 @@
         .login-error i {
             flex-shrink: 0;
             font-size: 1rem;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 50%, 90% { transform: translateX(-4px); }
+            30%, 70% { transform: translateX(4px); }
         }
 
         /* Submit button */
@@ -439,6 +446,10 @@
             // -------------------------------------------------------------------
             function showError(message) {
                 loginErrorMessage.textContent = message;
+                // Re-trigger shake animation by removing and re-adding the class
+                loginError.classList.remove('visible');
+                // Force reflow to restart animation
+                void loginError.offsetWidth;
                 loginError.classList.add('visible');
             }
 
@@ -498,13 +509,13 @@
                     });
                 })
                 .then(function (result) {
-                    if (result.data && result.data.success) {
-                        // Autentificare reușită
-                        window.location.href = result.data.redirect || '/admin/dashboard';
+                    if (result.data && result.data.success === true) {
+                        // Autentificare reușită – redirect strict la /admin/dashboard
+                        window.location.href = '/admin/dashboard';
                         return;
                     }
 
-                    // Autentificare eșuată — citește atât `message` cât și `error`
+                    // Autentificare eșuată – citește atât `message` cât și `error`
                     var msg = (result.data && (result.data.message || result.data.error))
                         ? (result.data.message || result.data.error)
                         : 'Email sau parolă incorecte.';
