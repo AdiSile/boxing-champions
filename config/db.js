@@ -175,14 +175,33 @@ function initializeDatabase() {
     );
   `);
 
+  // ── promotions ────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS promotions (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      code          TEXT    NOT NULL UNIQUE,
+      description   TEXT    DEFAULT NULL,
+      discount_type TEXT    NOT NULL DEFAULT 'percentage' CHECK(discount_type IN ('percentage','fixed')),
+      discount_value REAL   NOT NULL DEFAULT 0,
+      applies_to    TEXT    DEFAULT 'all' CHECK(applies_to IN ('all','plans','products','events')),
+      start_date    TEXT    DEFAULT NULL,
+      end_date      TEXT    DEFAULT NULL,
+      usage_limit   INTEGER DEFAULT NULL,
+      usage_count   INTEGER NOT NULL DEFAULT 0,
+      is_active     INTEGER NOT NULL DEFAULT 1,
+      created_at    TEXT    DEFAULT (datetime('now')),
+      updated_at    TEXT    DEFAULT (datetime('now'))
+    );
+  `);
+
   // ── Seed: default settings ────────────────────────────────
   const seedSettings = db.prepare(`
     INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)
   `);
 
-  seedSettings.run('site_name', 'Everything Claude Code', 'Site title');
-  seedSettings.run('site_description', 'A modern full-stack application', 'Meta description');
-  seedSettings.run('admin_email', 'admin@example.com', 'Administrator email');
+  seedSettings.run('site_name', 'Boxing Champions', 'Site title');
+  seedSettings.run('site_description', 'Club de box și arte marțiale - Performanță, disciplină și tradiție', 'Meta description');
+  seedSettings.run('admin_email', 'admin@boxingchampions.ro', 'Administrator email');
   seedSettings.run('timezone', 'Europe/Bucharest', 'Default timezone');
   seedSettings.run('locale', 'ro', 'Default locale');
   seedSettings.run('items_per_page', '12', 'Pagination limit');
@@ -193,17 +212,17 @@ function initializeDatabase() {
   seedSettings.run('maintenance_mode', '0', 'Site under maintenance');
 
   // ── Seed: admin user ─────────────────────────────────────
-  const existingAdmin = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@example.com');
+  const existingAdmin = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@boxingchampions.ro');
   if (!existingAdmin) {
     const saltRounds = 10;
-    const hashedPassword = bcrypt.hashSync('Admin123!', saltRounds);
+    const hashedPassword = bcrypt.hashSync('boxing2026', saltRounds);
 
     db.prepare(`
       INSERT INTO users (name, email, password, role, is_active, email_verified_at)
       VALUES (?, ?, ?, 'admin', 1, datetime('now'))
-    `).run('Administrator', 'admin@example.com', hashedPassword);
+    `).run('Boxing Champions Admin', 'admin@boxingchampions.ro', hashedPassword);
 
-    console.log('[DB] Admin user seeded: admin@example.com / Admin123!');
+    console.log('[DB] Admin user seeded: admin@boxingchampions.ro / boxing2026');
   }
 
   console.log('[DB] Database initialized successfully.');

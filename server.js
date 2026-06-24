@@ -81,16 +81,21 @@ app.use(require('./routes/products'));
 app.use(require('./routes/contact'));
 app.use(require('./routes/orders'));
 app.use(require('./routes/checkout'));
+app.use(require('./routes/promotions'));
 
 // ---------------------------------------------------------------------------
-// Fallback SPA — trimite index.html pentru rutele publice necunoscute
+// Fallback SPA — trimite index.html doar pentru rutele publice necunoscute
 // ---------------------------------------------------------------------------
 app.get('*', (req, res, next) => {
-  // Nu interfera cu rutele API
-  if (req.path.startsWith('/api/')) {
+  // Nu interfera cu rutele API sau admin
+  if (req.path.startsWith('/api/') || req.path.startsWith('/admin/')) {
     return next();
   }
-  // Trimite index.html ca fallback pentru rute publice
+  // Nu servi index.html pentru cereri ce par a fi fișiere statice (au extensie)
+  if (path.extname(req.path) !== '') {
+    return next();
+  }
+  // Trimite index.html ca fallback pentru rutele SPA (ex: /about, /contact)
   res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
     if (err) next();
   });

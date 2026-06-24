@@ -988,6 +988,218 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
   min-width: 140px;
 }
 
+/* ---- Inline Group (Label + Input în același rând) ---- */
+.form-group--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.form-group--inline .form-label {
+  flex-shrink: 0;
+  min-width: 100px;
+  margin-bottom: 0;
+}
+
+/* ---- Input Size Variants ---- */
+.form-input--lg,
+.form-select--lg,
+.form-textarea--lg {
+  padding: 0.85em 1.1em;
+  font-size: 0.98rem;
+}
+
+.form-input--sm,
+.form-select--sm,
+.form-textarea--sm {
+  padding: 0.45em 0.7em;
+  font-size: 0.78rem;
+}
+
+/* ---- Input Success State ---- */
+.form-input--success {
+  border-color: var(--green-success) !important;
+  box-shadow: 0 0 0 3px rgba(76,175,80,0.1) !important;
+}
+
+.form-input--success:focus-visible {
+  outline-color: var(--green-bright);
+}
+
+.form-feedback {
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.15rem;
+}
+
+.form-feedback--success {
+  color: var(--green-bright);
+}
+
+.form-feedback--error {
+  color: var(--red-vivid);
+}
+
+/* ---- Disabled & Readonly ---- */
+.form-input:disabled,
+.form-select:disabled,
+.form-textarea:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: rgba(255,255,255,0.02);
+  border-color: rgba(255,255,255,0.04);
+}
+
+.form-input[readonly],
+.form-textarea[readonly] {
+  background: rgba(255,255,255,0.02);
+  border-style: dashed;
+  cursor: default;
+  color: var(--gray-smoke);
+}
+
+/* ---- Input with Icon ---- */
+.form-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.form-input-wrap .form-input {
+  padding-left: 2.6em;
+}
+
+.form-input-wrap--right .form-input {
+  padding-left: 0.9em;
+  padding-right: 2.6em;
+}
+
+.form-input-icon {
+  position: absolute;
+  left: 0.9em;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-muted);
+  font-size: 0.95rem;
+  pointer-events: none;
+  transition: color var(--dur-fast);
+}
+
+.form-input-wrap--right .form-input-icon {
+  left: auto;
+  right: 0.9em;
+}
+
+.form-input-wrap:focus-within .form-input-icon {
+  color: var(--gold-primary);
+}
+
+.form-input-wrap--error .form-input-icon {
+  color: var(--red-vivid);
+}
+
+/* ---- Input Group (Append / Prepend) ---- */
+.form-input-group {
+  display: flex;
+  align-items: stretch;
+}
+
+.form-input-group .form-input,
+.form-input-group .form-select {
+  flex: 1;
+  border-radius: 0;
+}
+
+.form-input-group .form-input:first-child,
+.form-input-group .form-select:first-child {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.form-input-group .form-input:last-child,
+.form-input-group .form-select:last-child {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.form-input-group .form-input:only-child,
+.form-input-group .form-select:only-child {
+  border-radius: var(--radius-sm);
+}
+
+.form-input-group__addon {
+  display: flex;
+  align-items: center;
+  padding: 0 1em;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  font-size: 0.85rem;
+  color: var(--gray-smoke);
+  white-space: nowrap;
+  font-family: var(--font-heading);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.form-input-group__addon:first-child {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  border-right: none;
+}
+
+.form-input-group__addon:last-child {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border-left: none;
+}
+
+.form-input-group__addon--gold {
+  background: rgba(212,168,67,0.12);
+  color: var(--gold-primary);
+  border-color: rgba(212,168,67,0.25);
+}
+
+/* ---- Fieldset & Legend ---- */
+.form-fieldset {
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius-md);
+  padding: 1.4rem 1.6rem;
+  margin-bottom: 1.2rem;
+}
+
+.form-legend {
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold-primary);
+  padding: 0 0.6em;
+}
+
+/* ---- Checkbox Group ---- */
+.form-check-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.form-check-group--inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* ---- Compact Group ---- */
+.form-group--compact .form-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+}
+
+.form-group--compact .form-input,
+.form-group--compact .form-select,
+.form-group--compact .form-textarea {
+  padding: 0.5em 0.7em;
+  font-size: 0.82rem;
+}
+
 /* ============================================================
    TABLES
    ============================================================ */
@@ -1111,6 +1323,193 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
 .badge--gold    { background: rgba(212,168,67,0.15);  color: var(--gold-primary); }
 .badge--neutral { background: rgba(255,255,255,0.06); color: var(--gray-smoke); }
 
+/* ---- Table Striped ---- */
+.table--striped tbody tr:nth-child(even) {
+  background: rgba(255,255,255,0.015);
+}
+
+.table--striped tbody tr:nth-child(even):hover {
+  background: rgba(255,255,255,0.04);
+}
+
+/* ---- Table Row Selected ---- */
+.table__row--selected {
+  background: rgba(212,168,67,0.08) !important;
+  outline: 1px solid rgba(212,168,67,0.2);
+  outline-offset: -1px;
+}
+
+.table__row--highlighted {
+  background: rgba(33,150,243,0.06) !important;
+  animation: fadeIn 0.4s var(--ease-smooth);
+}
+
+/* ---- Table Row Danger / Warning ---- */
+.table__row--danger {
+  background: rgba(198,40,40,0.06) !important;
+}
+
+.table__row--warning {
+  background: rgba(255,152,0,0.05) !important;
+}
+
+/* ---- Table Cell Truncate ---- */
+.table__cell--truncate {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table__cell--nowrap {
+  white-space: nowrap;
+}
+
+.table__cell--actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* ---- Table Checkbox Column ---- */
+.table__checkbox {
+  width: 20px;
+  height: 20px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid rgba(255,255,255,0.18);
+  border-radius: 4px;
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  position: relative;
+  transition: all var(--dur-fast);
+  flex-shrink: 0;
+}
+
+.table__checkbox:checked {
+  background: var(--gold-primary);
+  border-color: var(--gold-primary);
+}
+
+.table__checkbox:checked::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 5px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--black-deep);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.table__checkbox:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 1px;
+}
+
+.table__checkbox--all {
+  width: 22px;
+  height: 22px;
+  border-color: rgba(212,168,67,0.35);
+}
+
+/* ---- Fixed Header Table ---- */
+.table-wrap--fixed-header {
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.table--fixed-header th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--black-card);
+}
+
+/* ---- Sort Icon Standalone ---- */
+.table__sort-icon {
+  display: inline-block;
+  font-size: 0.7em;
+  margin-left: 0.3em;
+  opacity: 0.35;
+  transition: opacity var(--dur-fast);
+}
+
+.table th[aria-sort="ascending"] .table__sort-icon,
+.table th[aria-sort="descending"] .table__sort-icon {
+  opacity: 1;
+  color: var(--gold-primary);
+}
+
+/* ---- Table Compact Extra ---- */
+.table--compact th,
+.table--compact td {
+  padding: 0.4em 0.7em;
+}
+
+.table--compact {
+  font-size: 0.76rem;
+}
+
+/* ---- Table Responsive Card View (Mobile Fallback) ---- */
+@media (max-width: 600px) {
+  .table--responsive-card,
+  .table--responsive-card thead,
+  .table--responsive-card tbody,
+  .table--responsive-card th,
+  .table--responsive-card td,
+  .table--responsive-card tr {
+    display: block;
+  }
+
+  .table--responsive-card thead {
+    display: none;
+  }
+
+  .table--responsive-card tr {
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.8rem;
+    padding: 0.6rem;
+  }
+
+  .table--responsive-card td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5em 0.6em;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    text-align: right;
+  }
+
+  .table--responsive-card td:last-child {
+    border-bottom: none;
+  }
+
+  .table--responsive-card td::before {
+    content: attr(data-label);
+    font-family: var(--font-heading);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gold-primary);
+    text-align: left;
+    flex-shrink: 0;
+    margin-right: 1rem;
+  }
+
+  .table--responsive-card .table__cell--actions {
+    justify-content: flex-end;
+    text-align: right;
+  }
+
+  .table--responsive-card .table__cell--truncate {
+    max-width: none;
+    white-space: normal;
+  }
+}
+
 /* ============================================================
    MODAL / DIALOG
    ============================================================ */
@@ -1211,6 +1610,130 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
   font-size: 0.95rem;
   color: var(--gray-smoke);
   margin-bottom: 0.5rem;
+}
+
+.confirm-modal__actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.8rem;
+  margin-top: 1.2rem;
+}
+
+/* ---- Modal Icon (generic) ---- */
+.modal__icon {
+  display: block;
+  font-size: 2.8rem;
+  text-align: center;
+  margin-bottom: 1rem;
+  line-height: 1;
+}
+
+.modal__icon--gold   { color: var(--gold-primary); }
+.modal__icon--red    { color: var(--red-vivid); }
+.modal__icon--green  { color: var(--green-bright); }
+.modal__icon--blue   { color: var(--blue-info); }
+.modal__icon--orange { color: var(--orange-warning); }
+
+/* ---- Modal Alert Variant (compact) ---- */
+.modal--alert {
+  max-width: 420px;
+  text-align: center;
+}
+
+.modal--alert .modal__body {
+  padding: 2rem 1.6rem 1rem;
+}
+
+.modal--alert .modal__footer {
+  justify-content: center;
+  border-top: none;
+  padding-top: 0.5rem;
+}
+
+/* ---- Modal Drawer (slide from right) ---- */
+.modal--drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  max-height: 100vh;
+  max-width: 480px;
+  width: 90vw;
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+  margin: 0;
+  transform: translateX(40px) scale(1);
+}
+
+.modal-overlay--visible .modal--drawer {
+  transform: translateX(0) scale(1);
+}
+
+/* ---- Modal Fullscreen ---- */
+.modal--fullscreen {
+  max-width: 96vw;
+  max-height: 94vh;
+  width: 96vw;
+  height: 94vh;
+  border-radius: var(--radius-lg);
+}
+
+/* ---- Modal Centered Content ---- */
+.modal--centered .modal__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* ---- Modal Exit Animation ---- */
+.modal-overlay--hiding {
+  opacity: 0;
+  visibility: visible;
+}
+
+.modal-overlay--hiding .modal {
+  transform: translateY(16px) scale(0.97);
+}
+
+/* ---- Modal Backdrop Blur ---- */
+.modal-overlay--blur {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ---- Modal Focus Management ---- */
+.modal__close:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.modal:focus-visible {
+  outline: none;
+}
+
+/* ---- Modal Divider ---- */
+.modal__divider {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  margin: 0.8rem 0;
+}
+
+/* ---- Modal Scroll Shadow (bottom fade) ---- */
+.modal--scroll-shadow {
+  position: relative;
+}
+
+.modal--scroll-shadow::after {
+  content: '';
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(to top, var(--black-card), transparent);
+  pointer-events: none;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
 }
 
 /* ============================================================
@@ -1691,10 +2214,51 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
     border-radius: var(--radius-lg);
   }
 
+  .modal--drawer {
+    max-width: 90vw;
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  }
+
+  .modal--fullscreen {
+    max-width: 100vw;
+    max-height: 100vh;
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+  }
+
   .modal__header,
   .modal__body,
   .modal__footer {
     padding: 1rem 1.2rem;
+  }
+
+  .form-fieldset {
+    padding: 1rem 1.1rem;
+  }
+
+  .form-input-group {
+    flex-direction: column;
+  }
+
+  .form-input-group .form-input:first-child,
+  .form-input-group .form-select:first-child,
+  .form-input-group__addon:first-child {
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  }
+
+  .form-input-group .form-input:last-child,
+  .form-input-group .form-select:last-child,
+  .form-input-group__addon:last-child {
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  }
+
+  .form-input-group__addon:first-child {
+    border-right: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .form-input-group__addon:last-child {
+    border-left: 1px solid rgba(255,255,255,0.1);
   }
 
   .toast-container {
@@ -1753,6 +2317,14 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
     width: 100%;
   }
 
+  .confirm-modal__actions {
+    flex-direction: column;
+  }
+
+  .confirm-modal__actions .btn {
+    width: 100%;
+  }
+
   .form-row {
     flex-direction: column;
   }
@@ -1760,6 +2332,20 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
   .form-row .form-group {
     flex: none;
     width: 100%;
+  }
+
+  .form-group--inline {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .form-group--inline .form-label {
+    min-width: 0;
+  }
+
+  .form-input-group__addon {
+    font-size: 0.75rem;
+    padding: 0.45em 0.7em;
   }
 
   .tabs {
@@ -1858,12 +2444,40 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
     outline: 3px solid Highlight;
   }
 
+  .form-input-group__addon {
+    border: 1px solid ButtonText;
+  }
+
+  .form-fieldset {
+    border: 1px solid ButtonText;
+  }
+
   .btn:focus-visible {
     outline: 3px solid Highlight;
   }
 
   .table th {
     border-bottom: 2px solid ButtonText;
+  }
+
+  .table__checkbox {
+    border: 2px solid ButtonText;
+  }
+
+  .table__checkbox:focus-visible {
+    outline: 3px solid Highlight;
+  }
+
+  .modal {
+    border: 2px solid ButtonText;
+  }
+
+  .modal__close:focus-visible {
+    outline: 3px solid Highlight;
+  }
+
+  .badge {
+    border: 1px solid ButtonText;
   }
 }
 
@@ -1877,7 +2491,10 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
   .modal-overlay,
   .toast-container,
   .btn--ghost,
-  .table__actions .btn {
+  .table__actions .btn,
+  .table__checkbox,
+  .form-input-group__addon,
+  .form-upload {
     display: none !important;
   }
 
@@ -1903,5 +2520,32 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
   .table td {
     color: #000;
     border-color: #ddd;
+  }
+
+  .form-input,
+  .form-select,
+  .form-textarea {
+    background: #fff;
+    border: 1px solid #ccc;
+    color: #000;
+  }
+
+  .form-input::placeholder,
+  .form-textarea::placeholder {
+    color: #999;
+  }
+
+  .badge {
+    border: 1px solid #ccc;
+    color: #000 !important;
+    background: none !important;
+  }
+
+  .modal {
+    position: static;
+    transform: none;
+    max-width: 100%;
+    border: 1px solid #ccc;
+    box-shadow: none;
   }
 }
