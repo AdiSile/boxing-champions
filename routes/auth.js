@@ -6,6 +6,7 @@
 // POST /api/auth/login   – bcrypt password verification, JWT in
 //                           HttpOnly / Secure / SameSite=Strict cookie
 // GET  /api/auth/check   – verify JWT from cookie, return admin payload
+//                           (always 200; success: false when unauthenticated)
 // POST /api/auth/logout  – clear auth cookie
 //
 // Security: input validation, constant-time bcrypt comparison, short-lived
@@ -25,7 +26,7 @@ const router = express.Router();
 // ---------------------------------------------------------------------------
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_dev_secret_change_me';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
-const COOKIE_NAME = 'auth_token';
+const COOKIE_NAME = 'token';
 const SALT_ROUNDS = 12;
 
 // ---------------------------------------------------------------------------
@@ -99,19 +100,30 @@ function ms(duration) {
   return value * (multipliers[unit] || 0);
 }
 
+/**
+ * Extract the JWT from the cookie or Authorization header.
+ * Returns the token string or null.
+ */
+function extractToken(req) {
+  const cookieToken = req.cookies && req.cookies[COOKIE_NAME];
+  if (cookieToken) return cookieToken;
+
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // JWT verification middleware (exported for reuse by other route modules)
 // ---------------------------------------------------------------------------
 function verifyToken(req, res, next) {
-  // Read token from cookie first, then fall back to Authorization header
-  const token =
-    (req.cookies && req.cookies[COOKIE_NAME]) ||
-    (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')
-      ? req.headers.authorization.slice(7)
-      : null);
+  const token = extractToken(req);
 
   if (!token) {
-    return res.status(401).json({ authenticated: false, error: 'Token lipsă. Autentifică-te din nou.' });
+    return res.status(401).json({ success: false, redirect: '/login', message: 'Token lipsă. Autentifică-te din nou.' });
   }
 
   try {
@@ -120,12 +132,12 @@ function verifyToken(req, res, next) {
     return next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ authenticated: false, error: 'Sesiunea a expirat. Autentifică-te din nou.' });
+      return res.status(401).json({ success: false, redirect: '/login', message: 'Sesiunea a expirat. Autentifică-te din nou.' });
     }
     if (err.name === 'JsonWebTokenError') {
-      return res.status(401).json({ authenticated: false, error: 'Token invalid.' });
+      return res.status(401).json({ success: false, redirect: '/login', message: 'Token invalid.' });
     }
-    return res.status(500).json({ authenticated: false, error: 'Eroare la verificarea token-ului.' });
+    return res.status(500).json({ success: false, redirect: null, message: 'Eroare la verificarea token-ului.' });
   }
 }
 
@@ -139,24 +151,24 @@ function verifyToken(req, res, next) {
  * Body (JSON):
  *   { "email": "...", "password": "..." }
  *
- * On success returns: { authenticated: true, success: true, admin: { id, email } }
- * Also sets the auth_token cookie.
+ * On success returns: { success: true, redirect: "/admin", message: "Autentificare reușită.", admin: { id, email } }
+ * Also sets the token cookie.
  */
 router.post('/login', (req, res) => {
   // --- 1. Input presence ---
   const { email, password } = req.body || {};
 
   if (!email || !password) {
-    return res.status(400).json({ authenticated: false, error: 'Email și parolă obligatorii.' });
+    return res.status(400).json({ success: false, redirect: null, message: 'Email și parolă obligatorii.' });
   }
 
   // --- 2. Input validation ---
   if (!isValidEmail(email)) {
-    return res.status(400).json({ authenticated: false, error: 'Format email invalid.' });
+    return res.status(400).json({ success: false, redirect: null, message: 'Format email invalid.' });
   }
 
   if (!isValidPassword(password)) {
-    return res.status(400).json({ authenticated: false, error: 'Parola trebuie să aibă între 8 și 128 de caractere.' });
+    return res.status(400).json({ success: false, redirect: null, message: 'Parola trebuie să aibă între 8 și 128 de caractere.' });
   }
 
   // --- 3. Look up admin ---
@@ -165,7 +177,7 @@ router.post('/login', (req, res) => {
 
   if (!admin) {
     // Use a generic message to avoid user enumeration
-    return res.status(401).json({ authenticated: false, error: 'Email sau parolă incorecte.' });
+    return res.status(401).json({ success: false, redirect: null, message: 'Email sau parolă incorecte.' });
   }
 
   // --- 4. Verify password (constant-time via bcrypt) ---
@@ -173,11 +185,11 @@ router.post('/login', (req, res) => {
   try {
     passwordOk = bcrypt.compareSync(password, admin.password);
   } catch {
-    return res.status(500).json({ authenticated: false, error: 'Eroare internă la verificarea parolei.' });
+    return res.status(500).json({ success: false, redirect: null, message: 'Eroare internă la verificarea parolei.' });
   }
 
   if (!passwordOk) {
-    return res.status(401).json({ authenticated: false, error: 'Email sau parolă incorecte.' });
+    return res.status(401).json({ success: false, redirect: null, message: 'Email sau parolă incorecte.' });
   }
 
   // --- 5. Issue JWT ---
@@ -186,7 +198,7 @@ router.post('/login', (req, res) => {
   try {
     token = signToken(payload);
   } catch {
-    return res.status(500).json({ authenticated: false, error: 'Nu s-a putut genera token-ul.' });
+    return res.status(500).json({ success: false, redirect: null, message: 'Nu s-a putut genera token-ul.' });
   }
 
   // --- 6. Set cookie ---
@@ -194,8 +206,9 @@ router.post('/login', (req, res) => {
 
   // --- 7. Respond ---
   return res.json({
-    authenticated: true,
     success: true,
+    redirect: '/admin',
+    message: 'Autentificare reușită.',
     admin: {
       id: admin.id,
       email: admin.email,
@@ -209,20 +222,36 @@ router.post('/login', (req, res) => {
  * Reads the JWT from cookie / Authorization header and returns the current
  * admin payload if the token is valid.
  *
- * Protected: uses verifyToken middleware.
- *
- * Returns:
- *   200 { authenticated: true, admin: { id, email } }
- *   401 { authenticated: false, error: "..." }
+ * Always returns HTTP 200.
+ *   - Authenticated:   { success: true,  authenticated: true,  admin: { id, email } }
+ *   - Unauthenticated: { success: false, authenticated: false, redirect: null, message: "..." }
  */
-router.get('/check', verifyToken, (req, res) => {
-  return res.json({
-    authenticated: true,
-    admin: {
-      id: req.admin.id,
-      email: req.admin.email,
-    },
-  });
+router.get('/check', (req, res) => {
+  const token = extractToken(req);
+
+  if (!token) {
+    return res.status(200).json({ success: false, authenticated: false, redirect: null, message: 'Token lipsă. Autentifică-te din nou.' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return res.status(200).json({
+      success: true,
+      authenticated: true,
+      admin: {
+        id: decoded.id,
+        email: decoded.email,
+      },
+    });
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(200).json({ success: false, authenticated: false, redirect: null, message: 'Sesiunea a expirat. Autentifică-te din nou.' });
+    }
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(200).json({ success: false, authenticated: false, redirect: null, message: 'Token invalid.' });
+    }
+    return res.status(200).json({ success: false, authenticated: false, redirect: null, message: 'Eroare la verificarea token-ului.' });
+  }
 });
 
 /**
@@ -233,7 +262,7 @@ router.get('/check', verifyToken, (req, res) => {
  */
 router.post('/logout', (_req, res) => {
   clearAuthCookie(res);
-  return res.json({ message: 'Deconectare reușită.' });
+  return res.json({ success: true, redirect: '/login', message: 'Deconectare reușită.' });
 });
 
 // ---------------------------------------------------------------------------

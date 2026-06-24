@@ -163,7 +163,7 @@
         </div>
     </div>
     <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
-    <script>
+    <script nonce="%NONCE%">
         (function() {
             'use strict';
             const SECTIONS = {
@@ -320,7 +320,7 @@
                 opts.credentials = 'include';
                 try {
                     const resp = await fetch(url, opts);
-                    if (resp.status === 401) { window.location.href = '/admin/login.html'; throw new Error('Neautentificat'); }
+                    if (resp.status === 401) { window.location.href = '/admin'; throw new Error('Neautentificat'); }
                     if (!resp.ok) { const ed = await resp.json().catch(function() { return {}; }); throw new Error(ed.message || ed.error || 'Eroare server (' + resp.status + ')'); }
                     return await resp.json();
                 } catch (err) {
@@ -369,10 +369,11 @@
             async function checkAuth() {
                 try {
                     const r = await fetch('/api/auth/check', { method: 'GET', credentials: 'include', headers: { 'Accept': 'application/json' } });
-                    if (!r.ok) { window.location.href = '/admin/login.html'; return false; }
                     const d = await r.json();
-                    return d.authenticated === true || d.user !== undefined;
-                } catch (e) { window.location.href = '/admin/login.html'; return false; }
+                    // Tratează corect răspunsul { authenticated: false } (status 200)
+                    if (!d.authenticated) { window.location.href = '/admin'; return false; }
+                    return true;
+                } catch (e) { window.location.href = '/admin'; return false; }
             }
 
             async function loadSection(sk) {
@@ -458,7 +459,7 @@
             btnLogout.addEventListener('click', async function() {
                 if (!confirm('Ești sigur că vrei să te deconectezi?')) return;
                 try { await apiRequest('/api/auth/logout', { method: 'POST' }); } catch (err) {}
-                window.location.href = '/admin/login.html';
+                window.location.href = '/admin';
             });
 
             mobileMenuToggle.addEventListener('click', function() { sidebar.classList.toggle('open'); });
