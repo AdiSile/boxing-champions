@@ -1,15 +1,3 @@
-// Schimbare credențiale în seedDefaultAdmin():
-//  admin@boxing-champions.com → admin@boxingchampions.ro
-//  admin_champion_2026       → admin2026
-### config/db.js
-
-// Adăugat 'seo' în REQUIRED_TABLES
-// Adăugat CREATE TABLE seo în ensureTables()
-// Re-exporturi pentru getAllSeo, getSeoByPage, upsertSeo, updateSeoBatch
----
-
-### db.js
-
 'use strict';
 
 // ---------------------------------------------------------------------------
