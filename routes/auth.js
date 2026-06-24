@@ -111,7 +111,7 @@ function verifyToken(req, res, next) {
       : null);
 
   if (!token) {
-    return res.status(401).json({ error: 'Token lipsă. Autentifică-te din nou.' });
+    return res.status(401).json({ authenticated: false, error: 'Token lipsă. Autentifică-te din nou.' });
   }
 
   try {
@@ -120,12 +120,12 @@ function verifyToken(req, res, next) {
     return next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Sesiunea a expirat. Autentifică-te din nou.' });
+      return res.status(401).json({ authenticated: false, error: 'Sesiunea a expirat. Autentifică-te din nou.' });
     }
     if (err.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'Token invalid.' });
+      return res.status(401).json({ authenticated: false, error: 'Token invalid.' });
     }
-    return res.status(500).json({ error: 'Eroare la verificarea token-ului.' });
+    return res.status(500).json({ authenticated: false, error: 'Eroare la verificarea token-ului.' });
   }
 }
 
@@ -139,7 +139,7 @@ function verifyToken(req, res, next) {
  * Body (JSON):
  *   { "email": "...", "password": "..." }
  *
- * On success returns: { success: true, admin: { id, email } }
+ * On success returns: { authenticated: true, success: true, admin: { id, email } }
  * Also sets the auth_token cookie.
  */
 router.post('/login', (req, res) => {
@@ -147,16 +147,16 @@ router.post('/login', (req, res) => {
   const { email, password } = req.body || {};
 
   if (!email || !password) {
-    return res.status(400).json({ error: 'Email și parolă obligatorii.' });
+    return res.status(400).json({ authenticated: false, error: 'Email și parolă obligatorii.' });
   }
 
   // --- 2. Input validation ---
   if (!isValidEmail(email)) {
-    return res.status(400).json({ error: 'Format email invalid.' });
+    return res.status(400).json({ authenticated: false, error: 'Format email invalid.' });
   }
 
   if (!isValidPassword(password)) {
-    return res.status(400).json({ error: 'Parola trebuie să aibă între 8 și 128 de caractere.' });
+    return res.status(400).json({ authenticated: false, error: 'Parola trebuie să aibă între 8 și 128 de caractere.' });
   }
 
   // --- 3. Look up admin ---
@@ -165,7 +165,7 @@ router.post('/login', (req, res) => {
 
   if (!admin) {
     // Use a generic message to avoid user enumeration
-    return res.status(401).json({ error: 'Email sau parolă incorecte.' });
+    return res.status(401).json({ authenticated: false, error: 'Email sau parolă incorecte.' });
   }
 
   // --- 4. Verify password (constant-time via bcrypt) ---
@@ -173,11 +173,11 @@ router.post('/login', (req, res) => {
   try {
     passwordOk = bcrypt.compareSync(password, admin.password);
   } catch {
-    return res.status(500).json({ error: 'Eroare internă la verificarea parolei.' });
+    return res.status(500).json({ authenticated: false, error: 'Eroare internă la verificarea parolei.' });
   }
 
   if (!passwordOk) {
-    return res.status(401).json({ error: 'Email sau parolă incorecte.' });
+    return res.status(401).json({ authenticated: false, error: 'Email sau parolă incorecte.' });
   }
 
   // --- 5. Issue JWT ---
@@ -186,7 +186,7 @@ router.post('/login', (req, res) => {
   try {
     token = signToken(payload);
   } catch {
-    return res.status(500).json({ error: 'Nu s-a putut genera token-ul.' });
+    return res.status(500).json({ authenticated: false, error: 'Nu s-a putut genera token-ul.' });
   }
 
   // --- 6. Set cookie ---
@@ -194,6 +194,7 @@ router.post('/login', (req, res) => {
 
   // --- 7. Respond ---
   return res.json({
+    authenticated: true,
     success: true,
     admin: {
       id: admin.id,
@@ -209,9 +210,14 @@ router.post('/login', (req, res) => {
  * admin payload if the token is valid.
  *
  * Protected: uses verifyToken middleware.
+ *
+ * Returns:
+ *   200 { authenticated: true, admin: { id, email } }
+ *   401 { authenticated: false, error: "..." }
  */
 router.get('/check', verifyToken, (req, res) => {
   return res.json({
+    authenticated: true,
     admin: {
       id: req.admin.id,
       email: req.admin.email,
