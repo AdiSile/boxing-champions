@@ -27,7 +27,7 @@ const router = express.Router();
 // ---------------------------------------------------------------------------
 
 /** Numele cookie-ului de autentificare (sincronizat cu routes/auth.js) */
-const TOKEN_COOKIE = 'token';
+const TOKEN_COOKIE = 'access_token';
 
 /** Algoritmul JWT */
 const JWT_ALGORITHM = 'HS256';

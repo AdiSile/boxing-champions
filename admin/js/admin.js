@@ -210,28 +210,99 @@
 
   /**
    * Extrage cel mai bun mesaj de eroare dintr-un răspuns API.
+   * Încearcă: data.error, data.message (string sau array de validare),
+   *            apoi statusText, apoi fallback generic.
    */
-  function extractErrorMessage(data, status) {
-    if (!data) return 'Eroare server (HTTP ' + status + ')';
+  function extractErrorMessage(data, status, statusText) {
+    statusText = statusText || '';
+    if (!data) {
+      return 'Eroare server (HTTP ' + status + (statusText ? ' ' + statusText : '') + ')';
+    }
+    // Dacă răspunsul e HTML (eroare de server / proxy), extragem un fragment
+    if (typeof data._raw === 'string' && data._raw.length) {
+      var raw = data._raw;
+      if (/<html|<body|<head/i.test(raw)) {
+        // E o pagină HTML — extragem titlul dacă există
+        var titleMatch = raw.match(/<title[^>]*>([^<]*)<\/title>/i);
+        if (titleMatch && titleMatch[1]) {
+          return 'Serverul a returnat o pagină de eroare: „' + titleMatch[1].trim() + '” (HTTP ' + status + ')';
+        }
+        return 'Serverul a returnat o pagină HTML în loc de JSON (HTTP ' + status + (statusText ? ' ' + statusText : '') + ').';
+      }
+      // Text brut scurt – îl afișăm ca atare
+      if (raw.length < 200) return raw;
+      return 'Răspuns neașteptat de la server (HTTP ' + status + (statusText ? ' ' + statusText : '') + ')';
+    }
     if (typeof data.error === 'string' && data.error) return data.error;
     if (typeof data.message === 'string' && data.message) return data.message;
     if (Array.isArray(data.message) && data.message.length) {
       // erori de validare (NestJS class-validator)
       return data.message.map(function (m) {
-        return typeof m === 'string' ? m : (m.constraints ? Object.values(m.constraints).join('; ') : JSON.stringify(m));
-      }).join('; ');
+        if (typeof m === 'string') return m;
+        if (m.constraints) {
+          var constraintMsgs = [];
+          var keys = Object.keys(m.constraints);
+          for (var ci = 0; ci < keys.length; ci++) {
+            constraintMsgs.push(m.constraints[keys[ci]]);
+          }
+          return (m.property || 'câmp') + ': ' + constraintMsgs.join('; ');
+        }
+        return JSON.stringify(m);
+      }).join(' | ');
     }
     if (typeof data.statusCode === 'number') {
-      return 'Eroare server (HTTP ' + data.statusCode + ')';
+      return 'Eroare server (HTTP ' + data.statusCode + (statusText ? ' ' + statusText : '') + ')';
     }
-    return 'Eroare server (HTTP ' + status + ')';
+    return 'Eroare server (HTTP ' + status + (statusText ? ' ' + statusText : '') + ')';
+  }
+
+  /**
+   * Formatează o eroare pentru afișare: include status HTTP, statusText și
+   * eventualele detalii de validare din err.data.
+   */
+  function formatDetailedError(err) {
+    var parts = [];
+    // Mesajul principal
+    if (err.message) {
+      parts.push(err.message);
+    } else {
+      parts.push('Eroare necunoscută');
+    }
+    // Status HTTP
+    if (err.status && err.status > 0) {
+      parts.push('(HTTP ' + err.status + ')');
+    } else if (err.isNetworkError) {
+      parts.push('(Eroare de rețea)');
+    }
+    // Detalii suplimentare din data (ex: validation errors)
+    if (err.data) {
+      if (typeof err.data.error === 'string' && err.data.error !== err.message) {
+        parts.push('— ' + err.data.error);
+      }
+      if (Array.isArray(err.data.message) && err.data.message.length) {
+        var details = err.data.message.map(function (m) {
+          if (typeof m === 'string') return m;
+          if (m.constraints) {
+            var cMsgs = [];
+            var cKeys = Object.keys(m.constraints);
+            for (var ci = 0; ci < cKeys.length; ci++) {
+              cMsgs.push(m.constraints[cKeys[ci]]);
+            }
+            return (m.property || 'câmp') + ': ' + cMsgs.join('; ');
+          }
+          return JSON.stringify(m);
+        }).join(' | ');
+        if (details) parts.push('— ' + details);
+      }
+    }
+    return parts.join(' ');
   }
 
   async function apiFetch(url, options) {
     options = options || {};
     var isFormData = options.body instanceof FormData;
     var headers = {
-      'Accept': 'application/json',
+      'Accept': 'application/json, text/plain, */*',
       'X-Requested-With': 'XMLHttpRequest',
     };
     if (options.body && typeof options.body === 'object' && !isFormData) {
@@ -241,6 +312,7 @@
       method: options.method || 'GET',
       headers: headers,
       credentials: 'same-origin',
+      mode: 'same-origin',
     };
     if (options.body) {
       fetchOpts.body = isFormData ? options.body : JSON.stringify(options.body);
@@ -256,19 +328,40 @@
     }
     var data;
     var contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
+    var isJson = contentType.indexOf('application/json') !== -1;
+    var isHtml = contentType.indexOf('text/html') !== -1;
+    var isText = contentType.indexOf('text/') !== -1;
+
+    if (isJson) {
+      // Răspuns JSON așteptat
       try {
         data = await res.json();
-      } catch (_) {
-        data = null;
+      } catch (parseErr) {
+        // JSON invalid — citim ca text pentru diagnostic
+        var rawText = await res.text().catch(function () { return ''; });
+        data = { _raw: rawText || '[JSON parse error]' };
       }
+    } else if (isHtml || (!isJson && !isText)) {
+      // HTML sau binary — probabil o pagină de eroare de la server/proxy
+      var rawText = await res.text().catch(function () { return ''; });
+      // Limităm textul captat la 2000 caractere pentru a nu umple memoria
+      data = { _raw: rawText.substring(0, 2000) };
     } else {
-      var text = await res.text();
-      try { data = JSON.parse(text); } catch (_) { data = { _raw: text }; }
+      // Text simplu (text/plain, text/csv etc.)
+      var text = await res.text().catch(function () { return ''; });
+      // Încercăm să parsezi JSON din text
+      try {
+        data = JSON.parse(text);
+      } catch (_) {
+        data = { _raw: text.substring(0, 2000) };
+      }
     }
+
     if (!res.ok) {
-      var err = new Error(extractErrorMessage(data, res.status));
+      var errMsg = extractErrorMessage(data, res.status, res.statusText);
+      var err = new Error(errMsg);
       err.status = res.status;
+      err.statusText = res.statusText || '';
       err.data = data;
       throw err;
     }
@@ -469,7 +562,7 @@
       setStatValue('stat-revenue', formatPrice(revenue) + ' RON');
     } catch (e) {
       console.error('[admin] Dashboard load error:', e.message);
-      showToast('Eroare la încărcarea dashboard-ului.', 'error');
+      showToast('Eroare la încărcarea dashboard-ului: ' + formatDetailedError(e), 'error');
     }
   }
 
@@ -583,7 +676,7 @@
       renderPagination('coaches', state.coaches.pagination, loadCoaches);
     } catch (e) {
       tbody.innerHTML = '<tr><td colspan="8" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
-      showToast('Eroare la încărcarea antrenorilor.', 'error');
+      showToast('Eroare la încărcarea antrenorilor: ' + formatDetailedError(e), 'error');
     }
   }
 
@@ -706,7 +799,7 @@
       closeModal('modal-coach');
       loadCoaches();
     } catch (err) {
-      showToast('Eroare: ' + (err.message || 'Necunoscută'), 'error');
+      showToast(formatDetailedError(err), 'error');
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -739,7 +832,7 @@
       renderPagination('events', state.events.pagination, loadEvents);
     } catch (e) {
       tbody.innerHTML = '<tr><td colspan="9" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
-      showToast('Eroare la încărcarea evenimentelor.', 'error');
+      showToast('Eroare la încărcarea evenimentelor: ' + formatDetailedError(e), 'error');
     }
   }
 
@@ -863,7 +956,7 @@
       closeModal('modal-event');
       loadEvents();
     } catch (err) {
-      showToast('Eroare: ' + (err.message || 'Necunoscută'), 'error');
+      showToast(formatDetailedError(err), 'error');
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -896,7 +989,7 @@
       renderPagination('products', state.products.pagination, loadProducts);
     } catch (e) {
       tbody.innerHTML = '<tr><td colspan="9" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
-      showToast('Eroare la încărcarea produselor.', 'error');
+      showToast('Eroare la încărcarea produselor: ' + formatDetailedError(e), 'error');
     }
   }
 
@@ -1020,7 +1113,7 @@
       closeModal('modal-product');
       loadProducts();
     } catch (err) {
-      showToast('Eroare: ' + (err.message || 'Necunoscută'), 'error');
+      showToast(formatDetailedError(err), 'error');
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -1053,7 +1146,7 @@
       renderPagination('plans', state.plans.pagination, loadPlans);
     } catch (e) {
       tbody.innerHTML = '<tr><td colspan="8" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
-      showToast('Eroare la încărcarea abonamentelor.', 'error');
+      showToast('Eroare la încărcarea abonamentelor: ' + formatDetailedError(e), 'error');
     }
   }
 
@@ -1173,7 +1266,7 @@
       closeModal('modal-plan');
       loadPlans();
     } catch (err) {
-      showToast('Eroare: ' + (err.message || 'Necunoscută'), 'error');
+      showToast(formatDetailedError(err), 'error');
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -1194,7 +1287,7 @@
       renderScheduleView();
     } catch (e) {
       container.innerHTML = '<div class="empty-state"><div class="empty-state__icon"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="empty-state__title">Eroare la încărcare</div></div>';
-      showToast('Eroare la încărcarea programului.', 'error');
+      showToast('Eroare la încărcarea programului: ' + formatDetailedError(e), 'error');
     }
   }
 
@@ -1318,7 +1411,7 @@
       closeModal('modal-schedule');
       loadSchedule();
     } catch (err) {
-      showToast('Eroare: ' + (err.message || 'Necunoscută'), 'error');
+      showToast(formatDetailedError(err), 'error');
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -1338,7 +1431,7 @@
       showToast('Sesiune ștearsă!', 'success');
       loadSchedule();
     } catch (err) {
-      showToast('Eroare: ' + (err.message || 'Necunoscută'), 'error');
+      showToast(formatDetailedError(err), 'error');
     } finally {
       state.saving = false;
     }
@@ -1362,7 +1455,7 @@
       renderPagination('orders', state.orders.pagination, loadOrders);
     } catch (e) {
       tbody.innerHTML = '<tr><td colspan="8" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
-      showToast('Eroare la încărcarea comenzilor.', 'error');
+      showToast('Eroare la încărcarea comenzilor: ' + formatDetailedError(e), 'error');
     }
   }
 
@@ -1470,7 +1563,7 @@
       closeModal('modal-order');
       loadOrders();
     } catch (err) {
-      showToast('Eroare: ' + (err.message || 'Necunoscută'), 'error');
+      showToast(formatDetailedError(err), 'error');
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -1495,7 +1588,7 @@
       renderPagination('contact', state.contact.pagination, loadContact);
     } catch (e) {
       tbody.innerHTML = '<tr><td colspan="7" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
-      showToast('Eroare la încărcarea mesajelor.', 'error');
+      showToast('Eroare la încărcarea mesajelor: ' + formatDetailedError(e), 'error');
     }
   }
 
@@ -1589,7 +1682,7 @@
       if (!silent) { showToast('Mesaj marcat ca citit.', 'success'); }
       loadContact();
     } catch (err) {
-      if (!silent) showToast('Eroare: ' + (err.message || 'Necunoscută'), 'error');
+      if (!silent) showToast(formatDetailedError(err), 'error');
     }
   }
 
@@ -1611,7 +1704,7 @@
       renderPagination('promotions', state.promotions.pagination, loadPromotions);
     } catch (e) {
       tbody.innerHTML = '<tr><td colspan="10" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
-      showToast('Eroare la încărcarea promoțiilor.', 'error');
+      showToast('Eroare la încărcarea promoțiilor: ' + formatDetailedError(e), 'error');
     }
   }
 
@@ -1732,7 +1825,7 @@
       closeModal('modal-promotion');
       loadPromotions();
     } catch (err) {
-      showToast('Eroare: ' + (err.message || 'Necunoscută'), 'error');
+      showToast(formatDetailedError(err), 'error');
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -1752,7 +1845,7 @@
       renderSettingsForm();
     } catch (e) {
       container.innerHTML = '<div class="empty-state"><div class="empty-state__icon"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="empty-state__title">Eroare la încărcare</div></div>';
-      showToast('Eroare la încărcarea setărilor.', 'error');
+      showToast('Eroare la încărcarea setărilor: ' + formatDetailedError(e), 'error');
     }
   }
 
@@ -1804,7 +1897,7 @@
       await apiFetch(API.SETTINGS, { method: 'PUT', body: body });
       showToast('Setări salvate cu succes!', 'success');
     } catch (err) {
-      showToast('Eroare: ' + (err.message || 'Necunoscută'), 'error');
+      showToast(formatDetailedError(err), 'error');
     } finally {
       state.saving = false;
       if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origText; }
@@ -1856,7 +1949,7 @@
       showToast(label + ' cu succes!', 'success');
       if (reloadFn) reloadFn();
     } catch (err) {
-      showToast('Eroare: ' + (err.message || 'Necunoscută'), 'error');
+      showToast(formatDetailedError(err), 'error');
       if (btn) { btn.disabled = false; btn.textContent = 'Șterge'; }
     }
   }

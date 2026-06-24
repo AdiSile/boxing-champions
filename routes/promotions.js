@@ -17,7 +17,7 @@ const router = express.Router();
 // ---------------------------------------------------------------------------
 // Constante
 // ---------------------------------------------------------------------------
-const TOKEN_COOKIE = 'token';
+const TOKEN_COOKIE = 'access_token';
 const JWT_ALGORITHM = 'HS256';
 const ALLOWED_SORT_COLUMNS = ['id', 'code', 'discount_type', 'discount_value', 'applies_to', 'start_date', 'end_date', 'usage_limit', 'is_active', 'created_at'];
 

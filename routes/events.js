@@ -28,7 +28,7 @@ const router = express.Router();
 // ---------------------------------------------------------------------------
 
 /** Numele cookie-ului de autentificare (sincronizat cu routes/auth.js) */
-const TOKEN_COOKIE = 'token';
+const TOKEN_COOKIE = 'access_token';
 
 /** Algoritmul JWT */
 const JWT_ALGORITHM = 'HS256';
@@ -370,6 +370,7 @@ router.post(
         time,
         price,
         capacity,
+        image,
         is_published,
       } = req.body;
 
@@ -391,8 +392,8 @@ router.post(
       const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
       const result = db.prepare(`
-        INSERT INTO events (title, slug, description, type, location, start_date, end_date, time, price, capacity, is_published, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO events (title, slug, description, type, location, start_date, end_date, time, price, capacity, image, is_published, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         title,
         slug,
@@ -404,6 +405,7 @@ router.post(
         time || null,
         price !== undefined ? price : 0,
         capacity !== undefined ? capacity : null,
+        image || null,
         is_published !== undefined ? (is_published ? 1 : 0) : 1,
         now,
         now,
@@ -495,7 +497,7 @@ router.put(
       // Câmpuri text
       const textFields = [
         'title', 'slug', 'description', 'type', 'location',
-        'start_date', 'end_date', 'time',
+        'start_date', 'end_date', 'time', 'image',
       ];
 
       for (const field of textFields) {

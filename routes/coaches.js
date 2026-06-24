@@ -28,7 +28,7 @@ const router = express.Router();
 // ---------------------------------------------------------------------------
 
 /** Numele cookie-ului de autentificare (sincronizat cu routes/auth.js) */
-const TOKEN_COOKIE = 'token';
+const TOKEN_COOKIE = 'access_token';
 
 /** Algoritmul JWT */
 const JWT_ALGORITHM = 'HS256';
@@ -369,6 +369,7 @@ router.post(
         slug,
         title,
         bio,
+        photo,
         specialties,
         certifications,
         email,
@@ -396,13 +397,14 @@ router.post(
       const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
       const result = db.prepare(`
-        INSERT INTO coaches (name, slug, title, bio, specialties, certifications, email, phone, social_links, is_active, sort_order, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO coaches (name, slug, title, bio, photo, specialties, certifications, email, phone, social_links, is_active, sort_order, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         name,
         slug,
         title || null,
         bio || null,
+        photo || null,
         safeJsonStringify(specialties) || '[]',
         safeJsonStringify(certifications) || '[]',
         email || null,
@@ -499,7 +501,7 @@ router.put(
 
       // Câmpuri directe
       const directFields = [
-        'name', 'slug', 'title', 'bio', 'email', 'phone',
+        'name', 'slug', 'title', 'bio', 'photo', 'email', 'phone',
       ];
 
       for (const field of directFields) {
