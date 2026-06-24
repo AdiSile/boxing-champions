@@ -154,7 +154,8 @@ function verifyToken(req, res, next) {
  * On success returns: { success: true, redirect: "/admin/dashboard", message: "Autentificare reușită.", admin: { id, email } }
  * Also sets the token cookie.
  *
- * Dacă nu există niciun admin în baza de date, creează automat un admin default:
+ * Dacă nu există niciun admin în baza de date, creează automat un admin default
+ * (independent de email-ul introdus):
  *   email: admin@boxingchampions.ro
  *   parola: boxing2026
  */
@@ -175,35 +176,28 @@ router.post('/login', (req, res) => {
     return res.status(400).json({ success: false, redirect: null, message: 'Parola trebuie să aibă între 8 și 128 de caractere.' });
   }
 
-  // --- 3. Look up admin ---
-  const normalizedEmail = email.trim().toLowerCase();
-  let admin = db.getAdminByEmail(normalizedEmail);
+  // --- 3. Asigură existența unui admin în sistem (independent de cerere) ---
+  const database = db.getDb();
+  const adminCount = database.prepare('SELECT COUNT(*) AS cnt FROM admins').get();
 
-  // --- 3a. Dacă nu există niciun admin în sistem, creează automat admin-ul default ---
-  if (!admin) {
-    const database = db.getDb();
-    const adminCount = database.prepare('SELECT COUNT(*) AS cnt FROM admins').get();
-
-    if (adminCount.cnt === 0) {
-      const defaultEmail = process.env.ADMIN_EMAIL || 'admin@boxingchampions.ro';
-      const defaultPassword = process.env.ADMIN_PASSWORD || 'boxing2026';
-      const hash = bcrypt.hashSync(defaultPassword, SALT_ROUNDS);
-      database.prepare('INSERT INTO admins (email, password) VALUES (?, ?)').run(defaultEmail, hash);
-      console.log('[AUTH] Admin default creat:', defaultEmail);
-
-      // Dacă email-ul din cerere se potrivește cu cel default, folosește noul admin
-      if (normalizedEmail === defaultEmail.toLowerCase()) {
-        admin = { id: 1, email: defaultEmail, password: hash };
-      }
-    }
+  if (adminCount.cnt === 0) {
+    const defaultEmail = process.env.ADMIN_EMAIL || 'admin@boxingchampions.ro';
+    const defaultPassword = process.env.ADMIN_PASSWORD || 'boxing2026';
+    const hash = bcrypt.hashSync(defaultPassword, SALT_ROUNDS);
+    database.prepare('INSERT INTO admins (email, password) VALUES (?, ?)').run(defaultEmail, hash);
+    console.log('[AUTH] Admin default creat:', defaultEmail);
   }
+
+  // --- 4. Look up admin ---
+  const normalizedEmail = email.trim().toLowerCase();
+  const admin = db.getAdminByEmail(normalizedEmail);
 
   if (!admin) {
     // Use a generic message to avoid user enumeration
-    return res.status(401).json({ success: false, redirect: null, message: 'Email sau parolă incorecte.' });
+    return res.status(401).json({ success: false, redirect: null, message: 'Credențiale incorecte' });
   }
 
-  // --- 4. Verify password (constant-time via bcrypt) ---
+  // --- 5. Verify password (constant-time via bcrypt) ---
   let passwordOk = false;
   try {
     passwordOk = bcrypt.compareSync(password, admin.password);
@@ -212,10 +206,10 @@ router.post('/login', (req, res) => {
   }
 
   if (!passwordOk) {
-    return res.status(401).json({ success: false, redirect: null, message: 'Email sau parolă incorecte.' });
+    return res.status(401).json({ success: false, redirect: null, message: 'Credențiale incorecte' });
   }
 
-  // --- 5. Issue JWT ---
+  // --- 6. Issue JWT ---
   const payload = { id: admin.id, email: admin.email };
   let token;
   try {
@@ -224,10 +218,10 @@ router.post('/login', (req, res) => {
     return res.status(500).json({ success: false, redirect: null, message: 'Nu s-a putut genera token-ul.' });
   }
 
-  // --- 6. Set cookie ---
+  // --- 7. Set cookie ---
   setAuthCookie(res, token);
 
-  // --- 7. Respond ---
+  // --- 8. Respond ---
   return res.json({
     success: true,
     redirect: '/admin/dashboard',

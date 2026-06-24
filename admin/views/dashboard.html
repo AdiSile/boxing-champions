@@ -350,7 +350,7 @@
                 opts.credentials = 'include';
                 try {
                     const resp = await fetch(url, opts);
-                    if (resp.status === 401) { window.location.replace('/admin'); throw new Error('Neautentificat'); }
+                    if (resp.status === 401 || resp.status === 403) { window.location.replace('/admin'); throw new Error('Neautentificat'); }
                     if (!resp.ok) { const ed = await resp.json().catch(function() { return {}; }); throw new Error(ed.message || ed.error || 'Eroare server (' + resp.status + ')'); }
                     return await resp.json();
                 } catch (err) {
@@ -397,34 +397,76 @@
             }
 
             /**
+             * Afișează starea de eroare pe overlay-ul de loading și redirecționează
+             * după o scurtă pauză pentru a da feedback vizual utilizatorului.
+             * @param {string} [msg] Mesaj opțional de eroare.
+             * @returns {boolean} întotdeauna false (pentru a putea fi folosit ca return).
+             */
+            function failAuthAndRedirect(msg) {
+                if (authLoadingOverlay) {
+                    // Înlocuim spinner-ul și textul cu mesaj de eroare
+                    var spinner = authLoadingOverlay.querySelector('.auth-spinner');
+                    var textEl = authLoadingOverlay.querySelector('.auth-text');
+                    var iconEl = authLoadingOverlay.querySelector('.auth-icon i');
+                    if (spinner) spinner.style.display = 'none';
+                    if (iconEl) { iconEl.className = 'fa-solid fa-lock'; iconEl.style.color = 'var(--red-light)'; }
+                    if (textEl) {
+                        textEl.textContent = msg || 'Autentificare eșuată. Redirecționare…';
+                        textEl.style.color = 'var(--red-light)';
+                    }
+                }
+                // Pauză scurtă pentru ca utilizatorul să vadă feedback-ul, apoi redirect
+                setTimeout(function() {
+                    window.location.replace('/admin');
+                }, 800);
+                return false;
+            }
+
+            /**
              * Verificare autentificare la încărcare prin GET /api/auth/check.
+             * Folosește AbortController cu timeout de 8 secunde pentru a evita blocarea.
              * Dacă utilizatorul nu este autentificat, se face redirecționare către /admin.
              * Se folosește window.location.replace pentru a preveni întoarcerea cu back.
              * @returns {Promise<boolean>} true dacă autentificat, altfel redirect și false.
              */
             async function checkAuth() {
+                var controller;
+                var timeoutId;
                 try {
-                    const r = await fetch('/api/auth/check', {
+                    controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                    if (controller) {
+                        timeoutId = setTimeout(function() { controller.abort(); }, 8000);
+                    }
+                    var fetchOpts = {
                         method: 'GET',
                         credentials: 'include',
                         headers: { 'Accept': 'application/json' }
-                    });
-                    // Dacă serverul răspunde cu 401, redirecționăm imediat
-                    if (r.status === 401) {
-                        window.location.replace('/admin');
-                        return false;
+                    };
+                    if (controller) { fetchOpts.signal = controller.signal; }
+                    var r = await fetch('/api/auth/check', fetchOpts);
+                    if (timeoutId) clearTimeout(timeoutId);
+                    // Tratează 401 (Unauthorized) și 403 (Forbidden) – redirecționare imediată
+                    if (r.status === 401 || r.status === 403) {
+                        return failAuthAndRedirect();
                     }
-                    const d = await r.json();
+                    // Încearcă parsarea JSON; dacă răspunsul nu e JSON valid, redirecționează
+                    var d;
+                    try {
+                        d = await r.json();
+                    } catch (parseErr) {
+                        // Răspunsul nu este JSON valid – sesiune invalidă
+                        return failAuthAndRedirect();
+                    }
                     // Tratează corect răspunsul { authenticated: false } (status 200)
-                    if (!d.authenticated) {
-                        window.location.replace('/admin');
-                        return false;
+                    // Verifică și cazul în care d este null/undefined sau authenticated nu e explicit true
+                    if (!d || d.authenticated === false || d.authenticated !== true) {
+                        return failAuthAndRedirect();
                     }
                     return true;
                 } catch (e) {
-                    // Orice eroare de rețea sau parsing duce la redirecționare
-                    window.location.replace('/admin');
-                    return false;
+                    if (timeoutId) clearTimeout(timeoutId);
+                    // Orice eroare de rețea, timeout sau AbortError duce la redirecționare
+                    return failAuthAndRedirect(e.name === 'AbortError' ? 'Timpul de verificare a expirat. Redirecționare…' : null);
                 }
             }
 

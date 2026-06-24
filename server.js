@@ -180,26 +180,30 @@ app.use('/api', apiLimiter, settingsRoutes);
 
 /**
  * GET /admin — pagina de login
+ * Înlocuiește %NONCE% cu nonce-ul generat per request.
  */
 app.get('/admin', (_req, res) => {
   const filePath = path.join(__dirname, 'admin', 'views', 'login.html');
   if (!fs.existsSync(filePath)) {
     return res.status(404).send('Pagina de autentificare nu a fost găsită.');
   }
-  const html = fs.readFileSync(filePath, 'utf-8');
+  let html = fs.readFileSync(filePath, 'utf-8');
+  html = html.replace(/%NONCE%/g, res.locals.nonce);
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(html);
 });
 
 /**
  * GET /admin/login.html — aceeași pagină de login
+ * Înlocuiește %NONCE% cu nonce-ul generat per request.
  */
 app.get('/admin/login.html', (_req, res) => {
   const filePath = path.join(__dirname, 'admin', 'views', 'login.html');
   if (!fs.existsSync(filePath)) {
     return res.status(404).send('Pagina de autentificare nu a fost găsită.');
   }
-  const html = fs.readFileSync(filePath, 'utf-8');
+  let html = fs.readFileSync(filePath, 'utf-8');
+  html = html.replace(/%NONCE%/g, res.locals.nonce);
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(html);
 });

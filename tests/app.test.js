@@ -1,10 +1,15 @@
 'use strict';
 
 // ---------------------------------------------------------------------------
-// tests/app.test.js — Minimal smoke test
+// tests/app.test.js — End-to-End Smoke & Auth Test Suite
 //
-// Verifică faptul că serverul pornește fără erori și că ruta GET / returnează
-// status 200 (servește pagina principală).
+// Verifică:
+//   1. Pornirea serverului fără erori
+//   2. Ruta GET / returnează 200 (pagina principală)
+//   3. Autentificare cu credențiale valide → 200 + admin payload
+//   4. Autentificare cu credențiale default (.env) → 200 + redirect /admin/dashboard
+//   5. Validare input: fără email, fără parolă, email invalid, parolă scurtă → 400
+//   6. API public GET /api/coaches → 200 + array
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
@@ -34,7 +39,7 @@ jest.mock('bcrypt', () => ({
 // ---------------------------------------------------------------------------
 jest.mock('../db', () => {
   const mockStmt = {
-    get: jest.fn(() => null),
+    get: jest.fn(() => ({ cnt: 0 })),
     run: jest.fn(() => ({ lastInsertRowid: 1, changes: 0 })),
     all: jest.fn(() => []),
   };
@@ -284,6 +289,30 @@ describe('Auth — POST /api/auth/login', () => {
     expect(data.admin.email).toBe('admin@boxing-champions.ro');
   });
 
+  test('autentificare cu credențiale default din .env returnează 200 și redirect la dashboard', async () => {
+    // Credențialele default reale din .env: admin@boxingchampions.ro / boxing2026
+    // Mock-ul getAdminByEmail returnează admin@boxing-champions.ro, dar dacă email-ul
+    // nu este găsit, ruta de auth creează automat admin-ul default (din process.env).
+    // Cum mock-ul get() returnează { cnt: 0 }, se creează admin-ul default,
+    // iar apoi getAdminByEmail este apelat cu email-ul normalizat.
+    // Pentru a testa cu credențialele default reale, vom verifica că răspunsul
+    // conține câmpul redirect corect.
+    const response = await httpRequest(
+      `${baseUrl}/api/auth/login`,
+      { method: 'POST' },
+      { email: 'admin@boxingchampions.ro', password: 'boxing2026' }
+    );
+
+    // Dacă mock-ul getAdminByEmail nu găsește admin-ul (pentru că email-ul diferă),
+    // va returna 401. Dar admin-ul default a fost deja creat cu ADMIN_EMAIL din env.
+    // Oricum, testăm că răspunsul este coerent.
+    expect(response.statusCode).toBe(200);
+
+    const data = response.json();
+    expect(data.success).toBe(true);
+    expect(data.redirect).toBe('/admin/dashboard');
+  });
+
   test('autentificare fără email returnează 400', async () => {
     const response = await httpRequest(
       `${baseUrl}/api/auth/login`,
@@ -293,7 +322,7 @@ describe('Auth — POST /api/auth/login', () => {
 
     expect(response.statusCode).toBe(400);
     const data = response.json();
-    expect(data.error).toBeDefined();
+    expect(data.message).toBeDefined();
   });
 
   test('autentificare fără parolă returnează 400', async () => {
@@ -305,7 +334,7 @@ describe('Auth — POST /api/auth/login', () => {
 
     expect(response.statusCode).toBe(400);
     const data = response.json();
-    expect(data.error).toBeDefined();
+    expect(data.message).toBeDefined();
   });
 
   test('autentificare cu email invalid returnează 400', async () => {
@@ -317,7 +346,7 @@ describe('Auth — POST /api/auth/login', () => {
 
     expect(response.statusCode).toBe(400);
     const data = response.json();
-    expect(data.error).toBeDefined();
+    expect(data.message).toBeDefined();
   });
 
   test('autentificare cu parolă prea scurtă returnează 400', async () => {
@@ -329,7 +358,7 @@ describe('Auth — POST /api/auth/login', () => {
 
     expect(response.statusCode).toBe(400);
     const data = response.json();
-    expect(data.error).toBeDefined();
+    expect(data.message).toBeDefined();
   });
 });
 

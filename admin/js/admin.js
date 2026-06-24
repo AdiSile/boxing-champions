@@ -12,8 +12,69 @@
 //   - Validare formulare admin (client-side)
 //   - Notificări toast & stări de încărcare
 // =============================================================================
+//
+// COMPATIBILITATE: Acest modul este proiectat să funcționeze ca script EXTERN
+// independent. NU este compatibil cu script-ul inline din dashboard.html,
+// deoarece folosesc API-uri, selectori DOM și sisteme de navigare diferite.
+//
+// Dacă pagina conține deja script-ul inline dashboard (detectat prin prezența
+// elementelor #mainPanel sau .nav-item), acest modul se va dezactiva automat
+// pentru a preveni conflictele de dublă inițializare.
+// =============================================================================
 
 (function () {
+  // ---------------------------------------------------------------------------
+  // GUARD: Detectare script inline dashboard — previne dubla inițializare
+  // ---------------------------------------------------------------------------
+  var _inlineDashboardDetected = (function () {
+    // Verifică dacă structura DOM specifică script-ului inline din dashboard.html
+    // este prezentă: #mainPanel (container principal inline) sau .nav-item
+    // (elemente de navigare inline, spre deosebire de .sidebar-nav-item).
+    var hasMainPanel = !!document.getElementById('mainPanel');
+    var hasNavItems = document.querySelectorAll('.nav-item[data-section]').length > 0;
+    // De asemenea, verificăm dacă #modalOverlay există (modal inline static)
+    var hasModalOverlay = !!document.getElementById('modalOverlay');
+
+    if (hasMainPanel || (hasNavItems && hasModalOverlay)) {
+      console.warn(
+        '[admin.js] Script-ul inline dashboard a fost detectat pe această pagină ' +
+        '(elemente: #mainPanel, .nav-item[data-section], #modalOverlay). ' +
+        'admin.js se dezactivează automat pentru a preveni conflictele de dublă ' +
+        'inițializare, API-uri diferite și selectori DOM incompatibili. ' +
+        'Pentru a folosi admin.js, elimină script-ul inline din dashboard.html ' +
+        'și asigură-te că markup-ul HTML folosește clasele .sidebar-nav-item, ' +
+        '.sidebar, .main-content.'
+      );
+      return true;
+    }
+    return false;
+  })();
+
+  // Dacă dashboard-ul inline este activ, ieșim imediat — fără a înregistra
+  // event listeneri, fără a expune AdminDashboard, fără a polua DOM-ul.
+  if (_inlineDashboardDetected) {
+    // Expunem un obiect gol pentru a preveni erori de tip
+    // "AdminDashboard is undefined" în eventuale apeluri externe.
+    window.AdminDashboard = {
+      _disabled: true,
+      _reason: 'Inline dashboard script detected — admin.js disabled to prevent conflicts.',
+      switchSection: function () {},
+      loadCoaches: function () {},
+      loadEvents: function () {},
+      loadSchedule: function () {},
+      loadSubscriptions: function () {},
+      loadProducts: function () {},
+      loadOrders: function () {},
+      loadMessages: function () {},
+      loadAchievements: function () {},
+      loadSEO: function () {},
+      loadBadges: function () {},
+      logout: function () { window.location.href = '/admin'; },
+      showToast: function () {},
+    };
+    return; // Oprire completă — restul modulului nu se execută
+  }
+
   // ---------------------------------------------------------------------------
   // CONSTANTE
   // ---------------------------------------------------------------------------
