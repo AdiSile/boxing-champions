@@ -1177,6 +1177,361 @@ img {
 }
 
 /* ============================================================
+   SEO SECTION — Form Grid, Meta Textarea, Preview, Scores
+   ============================================================ */
+
+/* ---- SEO Form Grid ---- */
+.seo-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.seo-form-grid .seo-full-width {
+  grid-column: 1 / -1;
+}
+
+/* ---- SEO Meta Textarea ---- */
+.seo-meta-textarea {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  resize: vertical;
+  min-height: 80px;
+  max-height: 200px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  color: var(--white);
+  transition: all var(--dur-fast) var(--ease-out);
+  width: 100%;
+  line-height: 1.5;
+}
+
+.seo-meta-textarea::placeholder {
+  color: var(--dark-400);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+}
+
+.seo-meta-textarea:focus {
+  outline: none;
+  border-color: var(--gold-500);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 3px rgba(228, 176, 64, 0.1);
+}
+
+.seo-meta-textarea.error {
+  border-color: var(--red-500);
+}
+
+.seo-meta-textarea.error:focus {
+  box-shadow: 0 0 0 3px rgba(224, 64, 64, 0.1);
+}
+
+.seo-meta-textarea.success {
+  border-color: #34d399;
+}
+
+/* ---- SEO Character Counter ---- */
+.seo-char-counter {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  color: var(--dark-300);
+  margin-top: 4px;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.seo-char-counter .counter-current {
+  font-weight: 600;
+}
+
+.seo-char-counter.warn {
+  color: var(--gold-400);
+}
+
+.seo-char-counter.danger {
+  color: var(--red-400);
+}
+
+.seo-char-counter.good {
+  color: #34d399;
+}
+
+/* ---- SEO Progress Bar for character limits ---- */
+.seo-char-bar {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-full);
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.seo-char-bar .bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width var(--dur-normal) var(--ease-out),
+              background var(--dur-normal) var(--ease-out);
+}
+
+.seo-char-bar .bar-fill.good {
+  background: #34d399;
+}
+
+.seo-char-bar .bar-fill.warn {
+  background: var(--gold-400);
+}
+
+.seo-char-bar .bar-fill.danger {
+  background: var(--red-400);
+}
+
+/* ---- SEO Preview Card (Google-style SERP snippet) ---- */
+.seo-preview-card {
+  background: var(--dark-900);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  margin-top: 16px;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.seo-preview-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.seo-preview-card .preview-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--dark-300);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.seo-preview-url {
+  font-size: 0.78rem;
+  color: #34a853;
+  margin-bottom: 4px;
+  font-family: var(--font-sans);
+  word-break: break-all;
+}
+
+.seo-preview-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #8ab4f8;
+  margin-bottom: 4px;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.seo-preview-title.is-long {
+  color: var(--gold-400);
+}
+
+.seo-preview-desc {
+  font-size: 0.85rem;
+  color: var(--gray-200);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.seo-preview-desc.is-long {
+  color: var(--gold-400);
+}
+
+/* ---- SEO Score Indicators ---- */
+.seo-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.seo-score::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.seo-score.good {
+  background: rgba(52, 211, 153, 0.12);
+  color: #34d399;
+}
+.seo-score.good::before { background: #34d399; }
+
+.seo-score.ok {
+  background: rgba(240, 192, 96, 0.12);
+  color: var(--gold-400);
+}
+.seo-score.ok::before { background: var(--gold-400); }
+
+.seo-score.bad {
+  background: rgba(224, 64, 64, 0.12);
+  color: var(--red-400);
+}
+.seo-score.bad::before { background: var(--red-400); }
+
+.seo-score.pending {
+  background: rgba(107, 114, 128, 0.12);
+  color: var(--dark-300);
+}
+.seo-score.pending::before { background: var(--dark-300); }
+
+/* ---- SEO Score Breakdown Row ---- */
+.seo-score-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+/* ---- SEO Keyword Tags ---- */
+.seo-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 36px;
+  align-items: flex-start;
+}
+
+.seo-keyword-tag {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  padding: 5px 14px;
+  font-size: 0.78rem;
+  color: var(--gray-200);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--dur-fast) var(--ease-out);
+  cursor: default;
+}
+
+.seo-keyword-tag:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.seo-keyword-tag .remove-tag {
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+  font-size: 0.9rem;
+  line-height: 1;
+  margin-left: 2px;
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 0;
+}
+
+.seo-keyword-tag .remove-tag:hover {
+  opacity: 1;
+  color: var(--red-400);
+}
+
+.seo-keyword-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.seo-keyword-input-wrapper .form-input {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  flex: 1;
+}
+
+.seo-keyword-input-wrapper .btn {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* ---- SEO Checklist ---- */
+.seo-checklist {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.seo-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--gray-200);
+}
+
+.seo-checklist li .check-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+
+.seo-checklist li.pass .check-icon {
+  color: #34d399;
+}
+
+.seo-checklist li.fail .check-icon {
+  color: var(--red-400);
+}
+
+.seo-checklist li.warn .check-icon {
+  color: var(--gold-400);
+}
+
+/* ---- SEO Tab Variant (inside card for SEO sub-navigation) ---- */
+.seo-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 16px;
+}
+
+.seo-tabs .seo-tab {
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--dark-300);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out);
+  white-space: nowrap;
+  font-family: var(--font-sans);
+}
+
+.seo-tabs .seo-tab:hover {
+  color: var(--gray-200);
+}
+
+.seo-tabs .seo-tab.active {
+  color: var(--gold-400);
+  border-bottom-color: var(--gold-500);
+}
+
+/* ============================================================
    PAGINARE
    ============================================================ */
 .pagination {
@@ -1598,6 +1953,11 @@ img {
   .stat-grid {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
+
+  .seo-form-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
 }
 
 /* Telefon (≤768px) */
@@ -1701,6 +2061,20 @@ img {
     min-width: 100%;
   }
 
+  .seo-form-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .seo-score-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .seo-preview-card {
+    padding: 14px 16px;
+  }
+
   .modal-dialog {
     max-width: 100%;
     margin: 0;
@@ -1777,6 +2151,27 @@ img {
   .btn-group .btn + .btn {
     margin-left: 0;
     margin-top: -1px;
+  }
+
+  .seo-preview-title {
+    font-size: 1rem;
+  }
+
+  .seo-keyword-input-wrapper {
+    flex-direction: column;
+  }
+
+  .seo-keyword-input-wrapper .form-input {
+    border-radius: var(--radius-md);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .seo-keyword-input-wrapper .btn {
+    border-radius: var(--radius-md);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    width: 100%;
   }
 }
 

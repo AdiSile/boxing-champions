@@ -595,6 +595,9 @@
       case 'achievements':
         loadAchievements();
         break;
+      case 'seo':
+        loadSEO();
+        break;
       default:
         mainContent.innerHTML = renderEmptyState('Secțiunea nu există.', 'fa-circle-exclamation');
     }
@@ -2325,6 +2328,253 @@
   }
 
   // ---------------------------------------------------------------------------
+  // === SECȚIUNEA: SEO (META TAGS, TITLE, DESCRIPTION) ===
+  // ---------------------------------------------------------------------------
+
+  async function loadSEO() {
+    try {
+      var seo = await apiGet(API_BASE + '/seo');
+      renderSEO(seo);
+    } catch (err) {
+      mainContent.innerHTML = renderErrorState(err.message || 'Nu s-au putut încărca setările SEO.', loadSEO);
+    }
+  }
+
+  function renderSEO(seo) {
+    var data = seo || {};
+    var html = renderSectionHeader('SEO Global', 'Meta-taguri, titlu și descriere pentru toate paginile');
+
+    html += '<form class="admin-form" id="seoForm" novalidate>';
+    html += '<div class="seo-tabs">';
+    html += '<div class="seo-tabs-nav">';
+    html += '<button class="seo-tab-btn active" data-seo-tab="general" type="button">General</button>';
+    html += '<button class="seo-tab-btn" data-seo-tab="social" type="button">Social / Open Graph</button>';
+    html += '<button class="seo-tab-btn" data-seo-tab="advanced" type="button">Avansat</button>';
+    html += '</div>';
+
+    // TAB: GENERAL
+    html += '<div class="seo-tab-panel active" data-seo-panel="general">';
+    html += '<div class="form-group">';
+    html += '<label for="seo_title">Title Tag (Titlu pagină)</label>';
+    html += '<div class="input-wrapper">';
+    html += '<input type="text" id="seo_title" name="title" value="' + escapeHtml(data.title || '') + '" maxlength="70" placeholder="Maxim 60-70 caractere recomandat">';
+    html += '</div>';
+    html += '<small class="field-hint" id="seo_title_hint">' + (data.title ? data.title.length : 0) + '/70 caractere</small>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label for="seo_description">Meta Description</label>';
+    html += '<div class="input-wrapper">';
+    html += '<textarea id="seo_description" name="description" rows="3" maxlength="160" placeholder="Maxim 150-160 caractere recomandat">' + escapeHtml(data.description || '') + '</textarea>';
+    html += '</div>';
+    html += '<small class="field-hint" id="seo_description_hint">' + (data.description ? data.description.length : 0) + '/160 caractere</small>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label for="seo_keywords">Meta Keywords</label>';
+    html += '<div class="input-wrapper">';
+    html += '<input type="text" id="seo_keywords" name="keywords" value="' + escapeHtml(data.keywords || '') + '" maxlength="500" placeholder="cuvânt1, cuvânt2, cuvânt3">';
+    html += '</div>';
+    html += '<small class="field-hint">Separați cuvintele cheie prin virgulă.</small>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label for="seo_author">Autor</label>';
+    html += '<div class="input-wrapper">';
+    html += '<input type="text" id="seo_author" name="author" value="' + escapeHtml(data.author || '') + '" maxlength="200" placeholder="Numele autorului / companiei">';
+    html += '</div>';
+    html += '</div>';
+
+    html += '</div>'; // .seo-tab-panel general
+
+    // TAB: SOCIAL / OPEN GRAPH
+    html += '<div class="seo-tab-panel" data-seo-panel="social">';
+    html += '<div class="form-group">';
+    html += '<label for="seo_og_title">OG Title</label>';
+    html += '<div class="input-wrapper">';
+    html += '<input type="text" id="seo_og_title" name="og_title" value="' + escapeHtml(data.og_title || '') + '" maxlength="95" placeholder="Titlu pentru share social">';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label for="seo_og_description">OG Description</label>';
+    html += '<div class="input-wrapper">';
+    html += '<textarea id="seo_og_description" name="og_description" rows="3" maxlength="300" placeholder="Descriere pentru share social">' + escapeHtml(data.og_description || '') + '</textarea>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label for="seo_og_image">OG Image URL</label>';
+    html += '<div class="input-wrapper">';
+    html += '<input type="url" id="seo_og_image" name="og_image" value="' + escapeHtml(data.og_image || '') + '" maxlength="2000" placeholder="https://...">';
+    html += '</div>';
+    html += '<small class="field-hint">Imaginea afișată la share pe Facebook, LinkedIn etc. (1200×630 px recomandat).</small>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label for="seo_og_type">OG Type</label>';
+    html += '<div class="input-wrapper">';
+    html += '<select id="seo_og_type" name="og_type">';
+    html += '<option value="website"' + (data.og_type === 'website' || !data.og_type ? ' selected' : '') + '>website</option>';
+    html += '<option value="article"' + (data.og_type === 'article' ? ' selected' : '') + '>article</option>';
+    html += '<option value="business.business"' + (data.og_type === 'business.business' ? ' selected' : '') + '>business.business</option>';
+    html += '<option value="place"' + (data.og_type === 'place' ? ' selected' : '') + '>place</option>';
+    html += '</select>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label for="seo_og_site_name">OG Site Name</label>';
+    html += '<div class="input-wrapper">';
+    html += '<input type="text" id="seo_og_site_name" name="og_site_name" value="' + escapeHtml(data.og_site_name || '') + '" maxlength="200" placeholder="Numele site-ului">';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label for="seo_twitter_card">Twitter Card</label>';
+    html += '<div class="input-wrapper">';
+    html += '<select id="seo_twitter_card" name="twitter_card">';
+    html += '<option value="summary"' + (data.twitter_card === 'summary' || !data.twitter_card ? ' selected' : '') + '>summary</option>';
+    html += '<option value="summary_large_image"' + (data.twitter_card === 'summary_large_image' ? ' selected' : '') + '>summary_large_image</option>';
+    html += '<option value="app"' + (data.twitter_card === 'app' ? ' selected' : '') + '>app</option>';
+    html += '<option value="player"' + (data.twitter_card === 'player' ? ' selected' : '') + '>player</option>';
+    html += '</select>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '</div>'; // .seo-tab-panel social
+
+    // TAB: AVANSAT
+    html += '<div class="seo-tab-panel" data-seo-panel="advanced">';
+    html += '<div class="form-group">';
+    html += '<label for="seo_robots">Meta Robots</label>';
+    html += '<div class="input-wrapper">';
+    html += '<select id="seo_robots" name="robots">';
+    html += '<option value="index, follow"' + (data.robots === 'index, follow' || !data.robots ? ' selected' : '') + '>index, follow</option>';
+    html += '<option value="noindex, follow"' + (data.robots === 'noindex, follow' ? ' selected' : '') + '>noindex, follow</option>';
+    html += '<option value="index, nofollow"' + (data.robots === 'index, nofollow' ? ' selected' : '') + '>index, nofollow</option>';
+    html += '<option value="noindex, nofollow"' + (data.robots === 'noindex, nofollow' ? ' selected' : '') + '>noindex, nofollow</option>';
+    html += '</select>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label for="seo_canonical_url">Canonical URL</label>';
+    html += '<div class="input-wrapper">';
+    html += '<input type="url" id="seo_canonical_url" name="canonical_url" value="' + escapeHtml(data.canonical_url || '') + '" maxlength="2000" placeholder="https://exemplu.ro/">';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label for="seo_google_site_verification">Google Site Verification</label>';
+    html += '<div class="input-wrapper">';
+    html += '<input type="text" id="seo_google_site_verification" name="google_site_verification" value="' + escapeHtml(data.google_site_verification || '') + '" maxlength="200" placeholder="Cod verificare Google Search Console">';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label for="seo_google_analytics">Google Analytics ID</label>';
+    html += '<div class="input-wrapper">';
+    html += '<input type="text" id="seo_google_analytics" name="google_analytics" value="' + escapeHtml(data.google_analytics || '') + '" maxlength="50" placeholder="G-XXXXXXXXXX sau UA-XXXXXXXXX-X">';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label for="seo_favicon">Favicon URL</label>';
+    html += '<div class="input-wrapper">';
+    html += '<input type="url" id="seo_favicon" name="favicon" value="' + escapeHtml(data.favicon || '') + '" maxlength="2000" placeholder="https://...">';
+    html += '</div>';
+    html += '</div>';
+
+    html += '</div>'; // .seo-tab-panel advanced
+
+    html += '</div>'; // .seo-tabs
+
+    html += '' +
+      '<div class="form-actions">' +
+      '<button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvează SEO</button>' +
+      '</div>';
+
+    html += '</form>';
+
+    mainContent.innerHTML = html;
+
+    // Character counters
+    var titleInput = document.getElementById('seo_title');
+    var titleHint = document.getElementById('seo_title_hint');
+    if (titleInput && titleHint) {
+      titleInput.addEventListener('input', function () {
+        titleHint.textContent = this.value.length + '/70 caractere';
+      });
+    }
+
+    var descInput = document.getElementById('seo_description');
+    var descHint = document.getElementById('seo_description_hint');
+    if (descInput && descHint) {
+      descInput.addEventListener('input', function () {
+        descHint.textContent = this.value.length + '/160 caractere';
+      });
+    }
+
+    // Tab switching
+    var tabBtns = document.querySelectorAll('.seo-tab-btn');
+    tabBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var tabName = this.getAttribute('data-seo-tab');
+
+        // Active class on buttons
+        tabBtns.forEach(function (b) { b.classList.remove('active'); });
+        this.classList.add('active');
+
+        // Show/hide panels
+        var panels = document.querySelectorAll('.seo-tab-panel');
+        panels.forEach(function (p) {
+          if (p.getAttribute('data-seo-panel') === tabName) {
+            p.classList.add('active');
+          } else {
+            p.classList.remove('active');
+          }
+        });
+      });
+    });
+
+    // Bind form submit
+    var form = document.getElementById('seoForm');
+    if (form) {
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        var formData = new FormData(form);
+        var seoObj = {};
+        formData.forEach(function (value, key) {
+          seoObj[key] = value;
+        });
+
+        var rules = {
+          title: [{ validator: 'maxLength', label: 'Title tag', param: 70 }],
+          description: [{ validator: 'maxLength', label: 'Meta description', param: 160 }],
+          og_title: [{ validator: 'maxLength', label: 'OG Title', param: 95 }],
+          og_description: [{ validator: 'maxLength', label: 'OG Description', param: 300 }],
+          keywords: [{ validator: 'maxLength', label: 'Keywords', param: 500 }],
+        };
+
+        var validation = validateForm(form, rules);
+        if (!validation.valid) {
+          displayFormErrors(form, validation.errors);
+          return;
+        }
+
+        try {
+          await apiPut(API_BASE + '/seo', seoObj);
+          showToast('success', 'Setările SEO au fost salvate cu succes.');
+        } catch (err) {
+          showToast('error', err.message || 'Eroare la salvarea setărilor SEO.');
+        }
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // BINDING-URI GENERICE PENTRU TABELE
   // ---------------------------------------------------------------------------
 
@@ -2484,6 +2734,7 @@
     loadOrders: loadOrders,
     loadMessages: loadMessages,
     loadAchievements: loadAchievements,
+    loadSEO: loadSEO,
     loadBadges: loadBadges,
     logout: logout,
     showToast: showToast,

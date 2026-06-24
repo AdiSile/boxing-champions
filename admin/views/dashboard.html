@@ -814,11 +814,6 @@
           <span class="link-icon"><i class="fa-solid fa-gear"></i></span>
           <span>Setări Generale</span>
         </button>
-
-        <button class="sidebar-link sidebar-nav-item" data-section="achievements">
-          <span class="link-icon"><i class="fa-solid fa-trophy"></i></span>
-          <span>Realizări</span>
-        </button>
       </div>
 
       <!-- Secțiunea: Conținut -->
@@ -870,6 +865,16 @@
           <span class="link-icon"><i class="fa-solid fa-envelope"></i></span>
           <span>Mesaje</span>
           <span class="link-badge" id="badge-messages" style="display:none;">0</span>
+        </button>
+      </div>
+
+      <!-- Secțiunea: SEO -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Marketing</div>
+
+        <button class="sidebar-link sidebar-nav-item" data-section="seo">
+          <span class="link-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></span>
+          <span>SEO</span>
         </button>
       </div>
 
@@ -936,13 +941,18 @@
 <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
 
 <!-- ==========================================================
+     TOAST CONTAINER
+     ========================================================== -->
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+<!-- ==========================================================
      SCRIPTS
      ========================================================== -->
 <script nonce="%NONCE%" src="/admin/js/admin.js"></script>
 
 <script nonce="%NONCE%">
   /**
-   * Dashboard — Logică suplimentară de UI (sidebar toggle, search, refresh)
+   * Dashboard — Logică suplimentară de UI (sidebar toggle, search, refresh, toasts)
    * Se execută DUPĂ admin.js pentru a extinde comportamentul.
    */
   (function () {
@@ -957,8 +967,9 @@
     var pageTitle    = document.getElementById('pageTitle');
     var globalSearch = document.getElementById('globalSearch');
     var mainContent  = document.getElementById('mainContent');
+    var toastContainer = document.getElementById('toastContainer');
 
-    // ---- Titluri secțiuni ----
+    // ---- Titluri secțiuni (9 secțiuni) ----
     var sectionTitles = {
       settings:      'Setări Generale',
       coaches:       'Antrenori',
@@ -968,7 +979,7 @@
       products:      'Produse',
       orders:        'Comenzi',
       messages:      'Mesaje',
-      achievements:  'Realizări',
+      seo:           'SEO',
     };
 
     // ---- Sidebar toggle (mobile) ----
@@ -1050,6 +1061,68 @@
         document.body.style.overflow = '';
       }
     });
+
+    // ---- Toast global API (expus pe window pentru admin.js) ----
+    window.showToast = function (message, type) {
+      type = type || 'info'; // success | error | info | warning
+      if (!toastContainer) return;
+
+      var toast = document.createElement('div');
+      toast.className = 'toast toast--' + type + ' toast--visible';
+      toast.setAttribute('role', 'alert');
+      toast.setAttribute('aria-live', 'assertive');
+
+      var iconMap = {
+        success: 'fa-circle-check',
+        error: 'fa-circle-xmark',
+        info: 'fa-circle-info',
+        warning: 'fa-triangle-exclamation',
+      };
+      var icon = iconMap[type] || 'fa-circle-info';
+
+      toast.innerHTML =
+        '<span class="toast-icon"><i class="fa-solid ' + icon + '"></i></span>' +
+        '<span class="toast-message">' + escapeHtml(message) + '</span>' +
+        '<button class="toast-close" aria-label="Închide">&times;</button>';
+
+      toastContainer.appendChild(toast);
+
+      // Auto-dismiss după 4 secunde
+      var timer = setTimeout(function () {
+        dismissToast(toast);
+      }, 4000);
+
+      // Buton close manual
+      var closeBtn = toast.querySelector('.toast-close');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function () {
+          clearTimeout(timer);
+          dismissToast(toast);
+        });
+      }
+    };
+
+    function dismissToast(toast) {
+      if (!toast || !toast.parentNode) return;
+      toast.classList.remove('toast--visible');
+      toast.addEventListener('transitionend', function () {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, { once: true });
+      // Fallback: remove after 400ms if transitionend doesn't fire
+      setTimeout(function () {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 450);
+    }
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
 
   })();
 </script>
