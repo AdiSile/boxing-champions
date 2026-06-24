@@ -32,6 +32,7 @@ const REQUIRED_TABLES = [
   'messages',
   'achievements',
   'admins',
+  'seo',
 ];
 
 // ---------------------------------------------------------------------------
@@ -171,6 +172,16 @@ function ensureTables() {
         password    TEXT    NOT NULL,
         created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
       );
+
+      CREATE TABLE IF NOT EXISTS seo (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        page        TEXT    NOT NULL UNIQUE,
+        title       TEXT    NOT NULL DEFAULT '',
+        description TEXT    NOT NULL DEFAULT '',
+        keywords    TEXT    NOT NULL DEFAULT '',
+        og_image    TEXT    NOT NULL DEFAULT '',
+        updated_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+      );
     `);
   }
 
@@ -289,6 +300,12 @@ module.exports = {
   getAllAchievements: db.getAllAchievements,
   getAchievement: db.getAchievement,
   upsertAchievement: db.upsertAchievement,
+
+  // SEO
+  getAllSeo: db.getAllSeo,
+  getSeoByPage: db.getSeoByPage,
+  upsertSeo: db.upsertSeo,
+  updateSeoBatch: db.updateSeoBatch,
 
   // Admin
   getAdminByEmail: db.getAdminByEmail,

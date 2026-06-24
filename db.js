@@ -1,3 +1,15 @@
+// Schimbare credențiale în seedDefaultAdmin():
+//  admin@boxing-champions.com → admin@boxingchampions.ro
+//  admin_champion_2026       → admin2026
+### config/db.js
+
+// Adăugat 'seo' în REQUIRED_TABLES
+// Adăugat CREATE TABLE seo în ensureTables()
+// Re-exporturi pentru getAllSeo, getSeoByPage, upsertSeo, updateSeoBatch
+---
+
+### db.js
+
 'use strict';
 
 // ---------------------------------------------------------------------------
@@ -142,6 +154,16 @@ function createSchema(database) {
       key         TEXT    NOT NULL UNIQUE,
       value       INTEGER NOT NULL DEFAULT 0,
       label       TEXT    NOT NULL DEFAULT '',
+      updated_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS seo (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      page        TEXT    NOT NULL UNIQUE,
+      title       TEXT    NOT NULL DEFAULT '',
+      description TEXT    NOT NULL DEFAULT '',
+      keywords    TEXT    NOT NULL DEFAULT '',
+      og_image    TEXT    NOT NULL DEFAULT '',
       updated_at  TEXT    NOT NULL DEFAULT (datetime('now'))
     );
   `);
@@ -395,6 +417,78 @@ function seedData(database) {
     const insertMany = database.transaction(() => {
       for (const a of achievements) {
         insertAch.run(a.key, a.value, a.label);
+      }
+    });
+    insertMany();
+  }
+
+  // --- SEO ---
+  const seoCount = database.prepare('SELECT COUNT(*) AS cnt FROM seo').get();
+  if (seoCount.cnt === 0) {
+    const insertSeo = database.prepare(
+      `INSERT INTO seo (page, title, description, keywords, og_image) VALUES (?, ?, ?, ?, ?)`
+    );
+    const seoDefaults = [
+      {
+        page: 'home',
+        title: 'Boxing Champions — Cel mai bun club de box din România',
+        description: 'Boxing Champions: tradiție, disciplină și excelență din 1998. Antrenamente de box profesionist pentru toate vârstele.',
+        keywords: 'box, club box, antrenamente box, București, box profesionist, sală box',
+        og_image: 'images/og-home.jpg',
+      },
+      {
+        page: 'about',
+        title: 'Despre noi — Boxing Champions',
+        description: 'Află povestea Boxing Champions, un club de box fondat în 1998, dedicat excelenței și disciplinei.',
+        keywords: 'despre club box, istorie box, tradiție box, București',
+        og_image: 'images/og-about.jpg',
+      },
+      {
+        page: 'coaches',
+        title: 'Antrenori — Boxing Champions',
+        description: 'Cei mai buni antrenori de box din România. Experți în box profesionist, feminin și pentru copii.',
+        keywords: 'antrenori box, coach box, instructor box, București',
+        og_image: 'images/og-coaches.jpg',
+      },
+      {
+        page: 'schedule',
+        title: 'Orar — Boxing Champions',
+        description: 'Vezi orarul complet al antrenamentelor de box. Program flexibil Luni-Vineri pentru toate categoriile.',
+        keywords: 'orar box, program antrenamente, clase box, București',
+        og_image: 'images/og-schedule.jpg',
+      },
+      {
+        page: 'subscriptions',
+        title: 'Abonamente — Boxing Champions',
+        description: 'Alege abonamentul potrivit pentru tine. Prețuri accesibile pentru începători, avansați și campioni.',
+        keywords: 'abonamente box, prețuri box, membership box, București',
+        og_image: 'images/og-subscriptions.jpg',
+      },
+      {
+        page: 'events',
+        title: 'Evenimente — Boxing Champions',
+        description: 'Participă la cele mai tari evenimente de box: gale, sparring night și competiții pentru tineri.',
+        keywords: 'evenimente box, gale box, competiții box, sparring, București',
+        og_image: 'images/og-events.jpg',
+      },
+      {
+        page: 'shop',
+        title: 'Magazin — Boxing Champions',
+        description: 'Descoperă echipamentul oficial Boxing Champions. Produse premium pentru performanță maximă.',
+        keywords: 'magazin box, echipament box, mănuși box, haine box',
+        og_image: 'images/og-shop.jpg',
+      },
+      {
+        page: 'contact',
+        title: 'Contact — Boxing Champions',
+        description: 'Contactează-ne pentru orice întrebare. Suntem aici să te ajutăm să devii campion.',
+        keywords: 'contact box, adresă sală box, telefon box, București',
+        og_image: 'images/og-contact.jpg',
+      },
+    ];
+    const insertMany = database.transaction(() => {
+      for (const s of seoDefaults) {
+        insertSeo.run(s.page, s.title, s.description, s.keywords, s.og_image);
       }
     });
     insertMany();
@@ -981,6 +1075,52 @@ function upsertAchievement(key, value, label) {
 }
 
 // ---------------------------------------------------------------------------
+// === SEO QUERIES ===
+// ---------------------------------------------------------------------------
+
+function getAllSeo() {
+  return getDb().prepare('SELECT * FROM seo ORDER BY page ASC').all();
+}
+
+function getSeoByPage(page) {
+  return getDb().prepare('SELECT * FROM seo WHERE page = ?').get(page) || null;
+}
+
+function upsertSeo(page, { title, description, keywords, og_image }) {
+  const stmt = getDb().prepare(
+    `INSERT INTO seo (page, title, description, keywords, og_image, updated_at)
+     VALUES (?, ?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(page) DO UPDATE SET
+       title = excluded.title,
+       description = excluded.description,
+       keywords = excluded.keywords,
+       og_image = excluded.og_image,
+       updated_at = excluded.updated_at`
+  );
+  return stmt.run(page, title || '', description || '', keywords || '', og_image || '');
+}
+
+function updateSeoBatch(seoArray) {
+  const stmt = getDb().prepare(
+    `INSERT INTO seo (page, title, description, keywords, og_image, updated_at)
+     VALUES (?, ?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(page) DO UPDATE SET
+       title = excluded.title,
+       description = excluded.description,
+       keywords = excluded.keywords,
+       og_image = excluded.og_image,
+       updated_at = excluded.updated_at`
+  );
+  const tx = getDb().transaction(() => {
+    for (const s of seoArray) {
+      stmt.run(s.page, s.title || '', s.description || '', s.keywords || '', s.og_image || '');
+    }
+  });
+  tx();
+  return getAllSeo();
+}
+
+// ---------------------------------------------------------------------------
 // === ADMIN AUTH QUERIES ===
 // ---------------------------------------------------------------------------
 
@@ -1009,8 +1149,8 @@ function seedDefaultAdmin(database) {
   const bcrypt = require('bcrypt');
   const count = database.prepare('SELECT COUNT(*) AS cnt FROM admins').get();
   if (count.cnt === 0) {
-    const email = process.env.ADMIN_EMAIL || 'admin@boxing-champions.com';
-    const password = process.env.ADMIN_PASSWORD || 'admin_champion_2026';
+    const email = process.env.ADMIN_EMAIL || 'admin@boxingchampions.ro';
+    const password = process.env.ADMIN_PASSWORD || 'admin2026';
     const hash = bcrypt.hashSync(password, 12);
     database.prepare('INSERT INTO admins (email, password) VALUES (?, ?)').run(email, hash);
   }
@@ -1110,6 +1250,12 @@ module.exports = {
   getAllAchievements,
   getAchievement,
   upsertAchievement,
+
+  // SEO
+  getAllSeo,
+  getSeoByPage,
+  upsertSeo,
+  updateSeoBatch,
 
   // Admin
   getAdminByEmail,

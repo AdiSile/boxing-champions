@@ -202,6 +202,10 @@ safeMount('/api', './routes/api');
 
 // ---------------------------------------------------------------------------
 // HTML page serving
+//
+// Reads HTML files from disk and replaces %NONCE% placeholders with the
+// dynamically generated CSP nonce so that inline <script> and <style> blocks
+// pass the Content Security Policy.
 // ---------------------------------------------------------------------------
 const PAGE_MAP = {
   '/': 'public/index.html',
@@ -217,11 +221,17 @@ const PAGE_MAP = {
 Object.entries(PAGE_MAP).forEach(([route, filePath]) => {
   app.get(route, (_req, res) => {
     const fullPath = path.join(__dirname, filePath);
-    if (fs.existsSync(fullPath)) {
-      res.sendFile(fullPath);
-    } else {
+    if (!fs.existsSync(fullPath)) {
       res.status(404).send('Page not found');
+      return;
     }
+
+    // Serve with nonce replacement so inline scripts/styles pass CSP
+    const nonce = res.locals.nonce || '';
+    let html = fs.readFileSync(fullPath, 'utf-8');
+    html = html.replace(/%NONCE%/g, nonce);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
   });
 });
 

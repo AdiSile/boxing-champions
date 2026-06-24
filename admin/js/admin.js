@@ -48,6 +48,19 @@
   // Chei realizări
   const ACHIEVEMENT_KEYS = ['championships', 'matches_won', 'active_members', 'years_experience'];
 
+  // Pagini SEO suportate de backend
+  const SEO_PAGES = ['home', 'about', 'coaches', 'schedule', 'subscriptions', 'events', 'shop', 'contact'];
+  const SEO_PAGE_LABELS = {
+    home: 'Acasă',
+    about: 'Despre Noi',
+    coaches: 'Antrenori',
+    schedule: 'Program',
+    subscriptions: 'Abonamente',
+    events: 'Evenimente',
+    shop: 'Magazin',
+    contact: 'Contact',
+  };
+
   // ---------------------------------------------------------------------------
   // REFERINȚE DOM GLOBALE
   // ---------------------------------------------------------------------------
@@ -59,6 +72,9 @@
   // Badge-uri sidebar
   let badgeMessages = null;
   let badgeOrders = null;
+
+  // Cache date SEO
+  let seoDataCache = [];
 
   // ---------------------------------------------------------------------------
   // UTILITARE
@@ -122,6 +138,21 @@
     return (prefix || 'el') + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
   }
 
+  /** Iconiță pentru pagină SEO */
+  function getPageIcon(page) {
+    var icons = {
+      home: 'fa-house',
+      about: 'fa-circle-info',
+      coaches: 'fa-user-graduate',
+      schedule: 'fa-clock',
+      subscriptions: 'fa-ticket',
+      events: 'fa-calendar-star',
+      shop: 'fa-store',
+      contact: 'fa-envelope',
+    };
+    return icons[page] || 'fa-file';
+  }
+
   // ---------------------------------------------------------------------------
   // TOAST SYSTEM
   // ---------------------------------------------------------------------------
@@ -135,11 +166,6 @@
     document.body.appendChild(toastContainer);
   }
 
-  /**
-   * @param {'success'|'error'|'info'|'warning'} type
-   * @param {string} message
-   * @param {number} [duration]
-   */
   function showToast(type, message, duration) {
     ensureToastContainer();
     const dur = duration || TOAST_DURATION;
@@ -194,7 +220,6 @@
     }
     html += '</div></div>';
 
-    // Injectează
     var wrapper = document.createElement('div');
     wrapper.innerHTML = html;
     var overlay = wrapper.querySelector('.modal-overlay');
@@ -203,15 +228,12 @@
     document.body.appendChild(overlay);
     document.body.appendChild(modal);
 
-    // Funcții
     function open() {
       overlay.setAttribute('aria-hidden', 'false');
       modal.setAttribute('aria-hidden', 'false');
       overlay.classList.add('modal-overlay--visible');
       modal.classList.add('modal--open');
       document.body.style.overflow = 'hidden';
-
-      // Focus trap
       setTimeout(function () {
         var firstFocus = modal.querySelector('input, select, textarea, button:not(.modal-close)');
         if (firstFocus) firstFocus.focus();
@@ -224,15 +246,12 @@
       overlay.classList.remove('modal-overlay--visible');
       modal.classList.remove('modal--open');
       document.body.style.overflow = '';
-
-      // Cleanup după animație
       setTimeout(function () {
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (modal.parentNode) modal.parentNode.removeChild(modal);
       }, 350);
     }
 
-    // Bind close buttons
     modal.querySelectorAll('[data-modal-close]').forEach(function (btn) {
       btn.addEventListener('click', close);
     });
@@ -240,7 +259,6 @@
       if (e.target === overlay) close();
     });
 
-    // Escape key
     function onKeyDown(e) {
       if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') {
         close();
@@ -248,7 +266,6 @@
     }
     document.addEventListener('keydown', onKeyDown);
 
-    // Return API
     return {
       open: open,
       close: close,
@@ -266,16 +283,11 @@
   // FETCH API CU GESTIONARE SESIUNE
   // ---------------------------------------------------------------------------
 
-  /**
-   * Fetch către API cu credentials: 'same-origin' (cookie JWT).
-   * Dacă răspunsul e 401, redirecționează la login.
-   */
   async function apiRequest(url, options) {
     var opts = options || {};
     opts.credentials = 'same-origin';
     if (!opts.headers) opts.headers = {};
 
-    // Pentru corp JSON, setează Content-Type
     if (opts.body && typeof opts.body === 'string' && !opts.headers['Content-Type']) {
       try {
         JSON.parse(opts.body);
@@ -317,35 +329,24 @@
       if (err.message === 'Sesiune expirată' || err.message === 'Acces interzis') {
         throw err;
       }
-      // Eroare de rețea sau alta
       throw err;
     }
   }
 
-  // Wrapper-uri specifice
   function apiGet(url) {
     return apiRequest(url, { method: 'GET' });
   }
 
   function apiPost(url, body) {
-    return apiRequest(url, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
+    return apiRequest(url, { method: 'POST', body: JSON.stringify(body) });
   }
 
   function apiPut(url, body) {
-    return apiRequest(url, {
-      method: 'PUT',
-      body: JSON.stringify(body),
-    });
+    return apiRequest(url, { method: 'PUT', body: JSON.stringify(body) });
   }
 
   function apiPatch(url, body) {
-    return apiRequest(url, {
-      method: 'PATCH',
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    return apiRequest(url, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined });
   }
 
   function apiDelete(url) {
@@ -358,49 +359,28 @@
 
   async function checkSession() {
     try {
-      var response = await fetch(AUTH_CHECK_URL, {
-        method: 'GET',
-        credentials: 'same-origin',
-      });
-      if (!response.ok) {
-        window.location.href = LOGIN_URL;
-        return false;
-      }
+      var response = await fetch(AUTH_CHECK_URL, { method: 'GET', credentials: 'same-origin' });
+      if (!response.ok) { window.location.href = LOGIN_URL; return false; }
       return true;
-    } catch (_) {
-      window.location.href = LOGIN_URL;
-      return false;
-    }
+    } catch (_) { window.location.href = LOGIN_URL; return false; }
   }
 
   function startSessionCheck() {
     if (sessionCheckInterval) clearInterval(sessionCheckInterval);
     sessionCheckInterval = setInterval(async function () {
       try {
-        var response = await fetch(AUTH_CHECK_URL, {
-          method: 'GET',
-          credentials: 'same-origin',
-        });
+        var response = await fetch(AUTH_CHECK_URL, { method: 'GET', credentials: 'same-origin' });
         if (!response.ok) {
           clearInterval(sessionCheckInterval);
           showToast('error', 'Sesiunea a expirat. Redirecționare...');
-          setTimeout(function () {
-            window.location.href = LOGIN_URL;
-          }, 1500);
+          setTimeout(function () { window.location.href = LOGIN_URL; }, 1500);
         }
-      } catch (_) {
-        // Ignorăm erorile de rețea la verificarea periodică
-      }
+      } catch (_) { /* ignore */ }
     }, SESSION_CHECK_INTERVAL);
   }
 
   async function logout() {
-    try {
-      await fetch(AUTH_LOGOUT_URL, {
-        method: 'POST',
-        credentials: 'same-origin',
-      });
-    } catch (_) { /* ignore */ }
+    try { await fetch(AUTH_LOGOUT_URL, { method: 'POST', credentials: 'same-origin' }); } catch (_) { }
     if (sessionCheckInterval) clearInterval(sessionCheckInterval);
     window.location.href = LOGIN_URL;
   }
@@ -409,18 +389,10 @@
   // UPLOAD FIȘIERE + PREVIEW IMAGINI
   // ---------------------------------------------------------------------------
 
-  /**
-   * Creează un input de tip file cu preview live.
-   * @param {string} containerSelector - selector pentru containerul unde se injectează
-   * @param {string} currentImageUrl - URL-ul imaginii existente (pentru preview inițial)
-   * @param {Function} onFileSelected - callback cu { file, dataUrl } când se alege un fișier
-   * @returns {object} API pentru uploader
-   */
   function createImageUploader(containerSelector, currentImageUrl, onFileSelected) {
     var container = typeof containerSelector === 'string'
       ? document.querySelector(containerSelector)
       : containerSelector;
-
     if (!container) return null;
 
     var uploadId = uid('upload');
@@ -437,8 +409,7 @@
     html += '</div>';
     html += '<div class="img-upload-actions">';
     html += '<label class="btn btn-outline btn-sm" for="' + uploadId + '_input">';
-    html += '<i class="fa-solid fa-upload"></i> Alege Imaginea';
-    html += '</label>';
+    html += '<i class="fa-solid fa-upload"></i> Alege Imaginea</label>';
     html += '<input type="file" id="' + uploadId + '_input" accept="image/*" style="display:none;">';
     html += '<button class="btn btn-ghost btn-sm img-upload-remove" type="button" id="' + uploadId + '_remove" ';
     html += currentImageUrl ? '' : 'style="display:none;"';
@@ -480,7 +451,6 @@
       var file = fileInput.files && fileInput.files[0];
       if (!file) return;
 
-      // Validare tip
       if (ALLOWED_IMAGE_TYPES.indexOf(file.type) === -1) {
         errorEl.textContent = 'Format invalid. Acceptate: JPEG, PNG, WebP, GIF, SVG.';
         errorEl.style.display = 'block';
@@ -488,7 +458,6 @@
         return;
       }
 
-      // Validare dimensiune
       if (file.size > MAX_IMAGE_SIZE) {
         errorEl.textContent = 'Fișierul depășește 5 MB. Alege o imagine mai mică.';
         errorEl.style.display = 'block';
@@ -503,9 +472,7 @@
         currentDataUrl = e.target.result;
         currentFile = file;
         updatePreview(currentDataUrl);
-        if (onFileSelected) {
-          onFileSelected({ file: file, dataUrl: currentDataUrl });
-        }
+        if (onFileSelected) onFileSelected({ file: file, dataUrl: currentDataUrl });
       };
       reader.readAsDataURL(file);
     });
@@ -516,19 +483,10 @@
       getDataUrl: function () { return currentDataUrl; },
       getFile: function () { return currentFile; },
       clear: clearImage,
-      setPreview: function (url) {
-        if (url) {
-          updatePreview(url);
-        }
-      },
+      setPreview: function (url) { if (url) updatePreview(url); },
     };
   }
 
-  /**
-   * Procesează o imagine (fișier sau data URL) și returnează un string
-   * pentru a fi salvat. În mediu real, ai trimite fișierul la un endpoint
-   * de upload. Aici salvăm ca data URL pentru simplitate.
-   */
   function processImageForSave(uploader) {
     if (!uploader) return '';
     var dataUrl = uploader.getDataUrl();
@@ -543,8 +501,6 @@
 
   function switchSection(sectionName) {
     currentSection = sectionName;
-
-    // Actualizează sidebar active
     var allNavItems = document.querySelectorAll('.sidebar-nav-item');
     allNavItems.forEach(function (item) {
       var section = item.getAttribute('data-section');
@@ -556,50 +512,25 @@
         item.removeAttribute('aria-current');
       }
     });
-
-    // Încarcă conținutul secțiunii
     loadSectionContent(sectionName);
   }
 
   function loadSectionContent(sectionName) {
     if (!mainContent) return;
-
-    // Golește conținutul anterior
     mainContent.innerHTML = renderLoadingSkeleton();
 
     switch (sectionName) {
-      case 'settings':
-        loadSettings();
-        break;
-      case 'coaches':
-        loadCoaches();
-        break;
-      case 'events':
-        loadEvents();
-        break;
-      case 'schedule':
-        loadSchedule();
-        break;
-      case 'subscriptions':
-        loadSubscriptions();
-        break;
-      case 'products':
-        loadProducts();
-        break;
-      case 'orders':
-        loadOrders();
-        break;
-      case 'messages':
-        loadMessages();
-        break;
-      case 'achievements':
-        loadAchievements();
-        break;
-      case 'seo':
-        loadSEO();
-        break;
-      default:
-        mainContent.innerHTML = renderEmptyState('Secțiunea nu există.', 'fa-circle-exclamation');
+      case 'settings': loadSettings(); break;
+      case 'coaches': loadCoaches(); break;
+      case 'events': loadEvents(); break;
+      case 'schedule': loadSchedule(); break;
+      case 'subscriptions': loadSubscriptions(); break;
+      case 'products': loadProducts(); break;
+      case 'orders': loadOrders(); break;
+      case 'messages': loadMessages(); break;
+      case 'achievements': loadAchievements(); break;
+      case 'seo': loadSEO(); break;
+      default: mainContent.innerHTML = renderEmptyState('Secțiunea nu există.', 'fa-circle-exclamation');
     }
   }
 
@@ -628,7 +559,6 @@
 
   function renderErrorState(message, retryFn) {
     var retryId = uid('retry');
-    // Delegare eveniment după injectare
     setTimeout(function () {
       var btn = document.getElementById(retryId);
       if (btn && retryFn) btn.addEventListener('click', retryFn);
@@ -665,10 +595,6 @@
       '<span class="toggle-slider"></span>' +
       '</label>';
   }
-
-  // ---------------------------------------------------------------------------
-  // HEADER SECȚIUNE
-  // ---------------------------------------------------------------------------
 
   function renderSectionHeader(title, subtitle, actionLabel, actionIcon, actionFn, actionId) {
     var btnId = actionId || uid('action');
@@ -721,9 +647,7 @@
     },
     positiveNum: function (val, label) {
       var n = parseFloat(val);
-      if (Number.isNaN(n) || n < 0) {
-        return (label || 'Valoarea') + ' trebuie să fie un număr pozitiv.';
-      }
+      if (Number.isNaN(n) || n < 0) return (label || 'Valoarea') + ' trebuie să fie un număr pozitiv.';
       return null;
     },
     integer: function (val, label) {
@@ -747,50 +671,28 @@
     },
   };
 
-  /**
-   * Validează un formular pe baza unui set de reguli.
-   * @param {HTMLFormElement} form
-   * @param {object} rules — { fieldName: [{ validator: 'required', label: 'Nume' }, ...] }
-   * @returns {{ valid: boolean, errors: object }}
-   */
   function validateForm(form, rules) {
     var errors = {};
     var valid = true;
-
     for (var fieldName in rules) {
       if (!rules.hasOwnProperty(fieldName)) continue;
       var fieldRules = rules[fieldName];
       var input = form.querySelector('[name="' + fieldName + '"]');
       var val = input ? input.value : '';
-
       for (var i = 0; i < fieldRules.length; i++) {
         var rule = fieldRules[i];
         var validatorFn = validators[rule.validator];
         if (!validatorFn) continue;
         var error = validatorFn(val, rule.label, rule.param);
-        if (error) {
-          errors[fieldName] = error;
-          valid = false;
-          break;
-        }
+        if (error) { errors[fieldName] = error; valid = false; break; }
       }
     }
-
     return { valid: valid, errors: errors };
   }
 
-  /**
-   * Afișează erorile de validare pe formular.
-   */
   function displayFormErrors(form, errors) {
-    // Curăță erorile anterioare
-    form.querySelectorAll('.field-error').forEach(function (el) {
-      el.textContent = '';
-      el.classList.remove('visible');
-    });
-    form.querySelectorAll('.input-wrapper').forEach(function (el) {
-      el.classList.remove('error');
-    });
+    form.querySelectorAll('.field-error').forEach(function (el) { el.textContent = ''; el.classList.remove('visible'); });
+    form.querySelectorAll('.input-wrapper').forEach(function (el) { el.classList.remove('error'); });
 
     for (var fieldName in errors) {
       if (!errors.hasOwnProperty(fieldName)) continue;
@@ -800,12 +702,8 @@
       var errorEl = wrapper
         ? wrapper.parentElement.querySelector('.field-error')
         : form.querySelector('[data-error-for="' + fieldName + '"]');
-
       if (wrapper) wrapper.classList.add('error');
-      if (errorEl) {
-        errorEl.textContent = errors[fieldName];
-        errorEl.classList.add('visible');
-      }
+      if (errorEl) { errorEl.textContent = errors[fieldName]; errorEl.classList.add('visible'); }
     }
   }
 
@@ -824,135 +722,32 @@
 
   function renderSettings(settings) {
     var html = renderSectionHeader('Setări Generale', 'Configurează datele clubului');
-
     html += '<form class="admin-form" id="settingsForm" novalidate>';
     html += '<div class="form-grid">';
 
-    // Club name
-    html += '' +
-      '<div class="form-group">' +
-      '<label for="set_club_name">Nume Club</label>' +
-      '<div class="input-wrapper">' +
-      '<i class="fa-solid fa-building"></i>' +
-      '<input type="text" id="set_club_name" name="club_name" value="' + escapeHtml(settings.club_name || '') + '" maxlength="200" required>' +
-      '</div>' +
-      '<div class="field-error" data-error-for="club_name"></div>' +
-      '</div>';
+    html += '<div class="form-group"><label for="set_club_name">Nume Club</label><div class="input-wrapper"><i class="fa-solid fa-building"></i><input type="text" id="set_club_name" name="club_name" value="' + escapeHtml(settings.club_name || '') + '" maxlength="200" required></div><div class="field-error" data-error-for="club_name"></div></div>';
+    html += '<div class="form-group"><label for="set_slogan">Slogan</label><div class="input-wrapper"><i class="fa-solid fa-quote-right"></i><input type="text" id="set_slogan" name="slogan" value="' + escapeHtml(settings.slogan || '') + '" maxlength="300"></div><div class="field-error" data-error-for="slogan"></div></div>';
+    html += '<div class="form-group"><label for="set_email">Email Contact</label><div class="input-wrapper"><i class="fa-solid fa-envelope"></i><input type="email" id="set_email" name="email" value="' + escapeHtml(settings.email || '') + '" maxlength="320"></div><div class="field-error" data-error-for="email"></div></div>';
+    html += '<div class="form-group"><label for="set_phone">Telefon</label><div class="input-wrapper"><i class="fa-solid fa-phone"></i><input type="text" id="set_phone" name="phone" value="' + escapeHtml(settings.phone || '') + '" maxlength="30"></div><div class="field-error" data-error-for="phone"></div></div>';
+    html += '<div class="form-group form-group--full"><label for="set_address">Adresă</label><div class="input-wrapper"><i class="fa-solid fa-location-dot"></i><input type="text" id="set_address" name="address" value="' + escapeHtml(settings.address || '') + '" maxlength="500"></div><div class="field-error" data-error-for="address"></div></div>';
+    html += '<div class="form-group"><label for="set_facebook">Facebook URL</label><div class="input-wrapper"><i class="fa-brands fa-facebook"></i><input type="url" id="set_facebook" name="facebook" value="' + escapeHtml(settings.facebook || '') + '" maxlength="2000"></div></div>';
+    html += '<div class="form-group"><label for="set_instagram">Instagram URL</label><div class="input-wrapper"><i class="fa-brands fa-instagram"></i><input type="url" id="set_instagram" name="instagram" value="' + escapeHtml(settings.instagram || '') + '" maxlength="2000"></div></div>';
+    html += '<div class="form-group"><label for="set_tiktok">TikTok URL</label><div class="input-wrapper"><i class="fa-brands fa-tiktok"></i><input type="url" id="set_tiktok" name="tiktok" value="' + escapeHtml(settings.tiktok || '') + '" maxlength="2000"></div></div>';
+    html += '<div class="form-group form-group--full"><label for="set_hero_badge">Text Badge Hero</label><div class="input-wrapper"><i class="fa-solid fa-tag"></i><input type="text" id="set_hero_badge" name="hero_badge" value="' + escapeHtml(settings.hero_badge || '') + '" maxlength="300"></div></div>';
+    html += '<div class="form-group form-group--full"><label for="set_about_text">Text Despre Noi</label><div class="input-wrapper"><i class="fa-solid fa-circle-info"></i><textarea id="set_about_text" name="about_text" rows="4" maxlength="2000">' + escapeHtml(settings.about_text || '') + '</textarea></div></div>';
 
-    // Slogan
-    html += '' +
-      '<div class="form-group">' +
-      '<label for="set_slogan">Slogan</label>' +
-      '<div class="input-wrapper">' +
-      '<i class="fa-solid fa-quote-right"></i>' +
-      '<input type="text" id="set_slogan" name="slogan" value="' + escapeHtml(settings.slogan || '') + '" maxlength="300">' +
-      '</div>' +
-      '<div class="field-error" data-error-for="slogan"></div>' +
-      '</div>';
-
-    // Email
-    html += '' +
-      '<div class="form-group">' +
-      '<label for="set_email">Email Contact</label>' +
-      '<div class="input-wrapper">' +
-      '<i class="fa-solid fa-envelope"></i>' +
-      '<input type="email" id="set_email" name="email" value="' + escapeHtml(settings.email || '') + '" maxlength="320">' +
-      '</div>' +
-      '<div class="field-error" data-error-for="email"></div>' +
-      '</div>';
-
-    // Phone
-    html += '' +
-      '<div class="form-group">' +
-      '<label for="set_phone">Telefon</label>' +
-      '<div class="input-wrapper">' +
-      '<i class="fa-solid fa-phone"></i>' +
-      '<input type="text" id="set_phone" name="phone" value="' + escapeHtml(settings.phone || '') + '" maxlength="30">' +
-      '</div>' +
-      '<div class="field-error" data-error-for="phone"></div>' +
-      '</div>';
-
-    // Address
-    html += '' +
-      '<div class="form-group form-group--full">' +
-      '<label for="set_address">Adresă</label>' +
-      '<div class="input-wrapper">' +
-      '<i class="fa-solid fa-location-dot"></i>' +
-      '<input type="text" id="set_address" name="address" value="' + escapeHtml(settings.address || '') + '" maxlength="500">' +
-      '</div>' +
-      '<div class="field-error" data-error-for="address"></div>' +
-      '</div>';
-
-    // Social links
-    html += '' +
-      '<div class="form-group">' +
-      '<label for="set_facebook">Facebook URL</label>' +
-      '<div class="input-wrapper">' +
-      '<i class="fa-brands fa-facebook"></i>' +
-      '<input type="url" id="set_facebook" name="facebook" value="' + escapeHtml(settings.facebook || '') + '" maxlength="2000">' +
-      '</div>' +
-      '</div>';
-
-    html += '' +
-      '<div class="form-group">' +
-      '<label for="set_instagram">Instagram URL</label>' +
-      '<div class="input-wrapper">' +
-      '<i class="fa-brands fa-instagram"></i>' +
-      '<input type="url" id="set_instagram" name="instagram" value="' + escapeHtml(settings.instagram || '') + '" maxlength="2000">' +
-      '</div>' +
-      '</div>';
-
-    html += '' +
-      '<div class="form-group">' +
-      '<label for="set_tiktok">TikTok URL</label>' +
-      '<div class="input-wrapper">' +
-      '<i class="fa-brands fa-tiktok"></i>' +
-      '<input type="url" id="set_tiktok" name="tiktok" value="' + escapeHtml(settings.tiktok || '') + '" maxlength="2000">' +
-      '</div>' +
-      '</div>';
-
-    // Hero badge
-    html += '' +
-      '<div class="form-group form-group--full">' +
-      '<label for="set_hero_badge">Text Badge Hero</label>' +
-      '<div class="input-wrapper">' +
-      '<i class="fa-solid fa-tag"></i>' +
-      '<input type="text" id="set_hero_badge" name="hero_badge" value="' + escapeHtml(settings.hero_badge || '') + '" maxlength="300">' +
-      '</div>' +
-      '</div>';
-
-    // About text
-    html += '' +
-      '<div class="form-group form-group--full">' +
-      '<label for="set_about_text">Text Despre Noi</label>' +
-      '<div class="input-wrapper">' +
-      '<i class="fa-solid fa-circle-info"></i>' +
-      '<textarea id="set_about_text" name="about_text" rows="4" maxlength="2000">' + escapeHtml(settings.about_text || '') + '</textarea>' +
-      '</div>' +
-      '</div>';
-
-    html += '</div>'; // .form-grid
-
-    html += '' +
-      '<div class="form-actions">' +
-      '<button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvează Setările</button>' +
-      '</div>';
-
+    html += '</div><div class="form-actions"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvează Setările</button></div>';
     html += '</form>';
 
     mainContent.innerHTML = html;
 
-    // Bind form submit
     var form = document.getElementById('settingsForm');
     if (form) {
       form.addEventListener('submit', async function (e) {
         e.preventDefault();
-
         var formData = new FormData(form);
         var settingsObj = {};
-        formData.forEach(function (value, key) {
-          settingsObj[key] = value;
-        });
+        formData.forEach(function (value, key) { settingsObj[key] = value; });
 
         var rules = {
           club_name: [{ validator: 'required', label: 'Numele clubului' }, { validator: 'minLength', label: 'Numele clubului', param: 2 }],
@@ -963,10 +758,7 @@
         };
 
         var validation = validateForm(form, rules);
-        if (!validation.valid) {
-          displayFormErrors(form, validation.errors);
-          return;
-        }
+        if (!validation.valid) { displayFormErrors(form, validation.errors); return; }
 
         try {
           await apiPut(API_BASE + '/settings', settingsObj);
@@ -995,42 +787,22 @@
     var activeCount = coaches.filter(function (c) { return c.active === 1; }).length;
     var inactiveCount = coaches.length - activeCount;
 
-    var html = renderSectionHeader(
-      'Antrenori',
-      activeCount + ' activi, ' + inactiveCount + ' inactivi — Total: ' + coaches.length,
-      'Adaugă Antrenor',
-      'fa-plus',
-      openCoachModal
-    );
+    var html = renderSectionHeader('Antrenori', activeCount + ' activi, ' + inactiveCount + ' inactivi — Total: ' + coaches.length, 'Adaugă Antrenor', 'fa-plus', openCoachModal);
 
     if (coaches.length === 0) {
       html += renderEmptyState('Nu există antrenori. Adaugă primul antrenor.', 'fa-user-slash');
     } else {
       html += '<div class="data-table-wrap"><table class="data-table">';
-      html += '<thead><tr>';
-      html += '<th>Imagine</th><th>Nume</th><th>Specializare</th><th>Certificări</th><th>Status</th><th>Acțiuni</th>';
-      html += '</tr></thead><tbody>';
+      html += '<thead><tr><th>Imagine</th><th>Nume</th><th>Specializare</th><th>Certificări</th><th>Status</th><th>Acțiuni</th></tr></thead><tbody>';
 
       coaches.forEach(function (coach) {
-        html += '' +
-          '<tr data-entity="coach" data-id="' + coach.id + '">' +
-          '<td>' +
-          '<div class="table-img">' +
-          (coach.photo
-            ? '<img src="' + escapeHtml(coach.photo) + '" alt="' + escapeHtml(coach.name) + '" loading="lazy">'
-            : '<div class="table-img-placeholder"><i class="fa-solid fa-user"></i></div>') +
-          '</div>' +
-          '</td>' +
+        html += '<tr data-entity="coach" data-id="' + coach.id + '">' +
+          '<td><div class="table-img">' + (coach.photo ? '<img src="' + escapeHtml(coach.photo) + '" alt="' + escapeHtml(coach.name) + '" loading="lazy">' : '<div class="table-img-placeholder"><i class="fa-solid fa-user"></i></div>') + '</div></td>' +
           '<td><strong>' + escapeHtml(coach.name) + '</strong></td>' +
           '<td>' + escapeHtml(coach.specialization) + '</td>' +
           '<td><small>' + escapeHtml(coach.certifications) + '</small></td>' +
           '<td>' + renderToggleSwitch('coach', coach.id, coach.active) + ' ' + renderBadge(coach.active) + '</td>' +
-          '<td>' +
-          '<div class="table-actions">' +
-          '<button class="btn btn-ghost btn-sm btn-edit" data-edit="coach" data-id="' + coach.id + '" title="Editează" type="button"><i class="fa-solid fa-pen-to-square"></i></button>' +
-          '<button class="btn btn-ghost btn-sm btn-delete" data-delete="coach" data-id="' + coach.id + '" title="Șterge" type="button"><i class="fa-solid fa-trash-can"></i></button>' +
-          '</div>' +
-          '</td>' +
+          '<td><div class="table-actions"><button class="btn btn-ghost btn-sm btn-edit" data-edit="coach" data-id="' + coach.id + '" title="Editează" type="button"><i class="fa-solid fa-pen-to-square"></i></button><button class="btn btn-ghost btn-sm btn-delete" data-delete="coach" data-id="' + coach.id + '" title="Șterge" type="button"><i class="fa-solid fa-trash-can"></i></button></div></td>' +
           '</tr>';
       });
 
@@ -1038,12 +810,8 @@
     }
 
     mainContent.innerHTML = html;
-
-    // Bind toggle-uri
     bindToggles('coach');
-    // Bind edit
     bindEdits('coach', openCoachModal);
-    // Bind delete
     bindDeletes('coach', loadCoaches);
   }
 
@@ -1052,77 +820,35 @@
     var title = isEdit ? 'Editează Antrenor' : 'Adaugă Antrenor';
     var coach = coachData || {};
 
-    var bodyHtml = '' +
-      '<form class="admin-form" id="coachForm" novalidate>' +
+    var bodyHtml = '<form class="admin-form" id="coachForm" novalidate>' +
       '<input type="hidden" name="id" value="' + (coach.id || '') + '">' +
-      '<div class="form-group">' +
-      '<label for="coach_name">Nume <span class="required">*</span></label>' +
-      '<div class="input-wrapper">' +
-      '<input type="text" id="coach_name" name="name" value="' + escapeHtml(coach.name || '') + '" maxlength="200" required>' +
-      '</div>' +
-      '<div class="field-error" data-error-for="name"></div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="coach_specialization">Specializare</label>' +
-      '<div class="input-wrapper">' +
-      '<input type="text" id="coach_specialization" name="specialization" value="' + escapeHtml(coach.specialization || '') + '" maxlength="500">' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="coach_certifications">Certificări</label>' +
-      '<div class="input-wrapper">' +
-      '<textarea id="coach_certifications" name="certifications" rows="2" maxlength="1000">' + escapeHtml(coach.certifications || '') + '</textarea>' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="coach_quote">Citat</label>' +
-      '<div class="input-wrapper">' +
-      '<textarea id="coach_quote" name="quote" rows="2" maxlength="1000">' + escapeHtml(coach.quote || '') + '</textarea>' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label>Imagine</label>' +
-      '<div id="coachImageUploader"></div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label class="checkbox-label">' +
-      '<input type="checkbox" name="active" value="1"' + (coach.active !== 0 ? ' checked' : '') + '> Activ' +
-      '</label>' +
-      '</div>' +
+      '<div class="form-group"><label for="coach_name">Nume <span class="required">*</span></label><div class="input-wrapper"><input type="text" id="coach_name" name="name" value="' + escapeHtml(coach.name || '') + '" maxlength="200" required></div><div class="field-error" data-error-for="name"></div></div>' +
+      '<div class="form-group"><label for="coach_specialization">Specializare</label><div class="input-wrapper"><input type="text" id="coach_specialization" name="specialization" value="' + escapeHtml(coach.specialization || '') + '" maxlength="500"></div></div>' +
+      '<div class="form-group"><label for="coach_certifications">Certificări</label><div class="input-wrapper"><textarea id="coach_certifications" name="certifications" rows="2" maxlength="1000">' + escapeHtml(coach.certifications || '') + '</textarea></div></div>' +
+      '<div class="form-group"><label for="coach_quote">Citat</label><div class="input-wrapper"><textarea id="coach_quote" name="quote" rows="2" maxlength="1000">' + escapeHtml(coach.quote || '') + '</textarea></div></div>' +
+      '<div class="form-group"><label>Imagine</label><div id="coachImageUploader"></div></div>' +
+      '<div class="form-group"><label class="checkbox-label"><input type="checkbox" name="active" value="1"' + (coach.active !== 0 ? ' checked' : '') + '> Activ</label></div>' +
       '</form>';
 
-    var footerHtml = '' +
-      '<button class="btn btn-ghost" data-modal-close type="button">Anulează</button>' +
-      '<button class="btn btn-primary" id="coachSaveBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> ' + (isEdit ? 'Actualizează' : 'Adaugă') + '</button>';
+    var footerHtml = '<button class="btn btn-ghost" data-modal-close type="button">Anulează</button><button class="btn btn-primary" id="coachSaveBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> ' + (isEdit ? 'Actualizează' : 'Adaugă') + '</button>';
 
     var modal = createModal(title, bodyHtml, footerHtml, { size: 'medium' });
     modal.open();
 
-    // Uploader imagine
     var uploader = createImageUploader('#coachImageUploader', coach.photo || '', null);
 
-    // Bind save
     var saveBtn = modal.getElement('#coachSaveBtn');
     if (saveBtn) {
       saveBtn.addEventListener('click', async function () {
         var form = modal.getElement('#coachForm');
         var formData = new FormData(form);
         var data = {};
-        formData.forEach(function (value, key) {
-          data[key] = value;
-        });
+        formData.forEach(function (value, key) { data[key] = value; });
 
-        var rules = {
-          name: [{ validator: 'required', label: 'Numele' }, { validator: 'minLength', label: 'Numele', param: 2 }],
-        };
-
+        var rules = { name: [{ validator: 'required', label: 'Numele' }, { validator: 'minLength', label: 'Numele', param: 2 }] };
         var validation = validateForm(form, rules);
-        if (!validation.valid) {
-          displayFormErrors(form, validation.errors);
-          return;
-        }
+        if (!validation.valid) { displayFormErrors(form, validation.errors); return; }
 
-        // Procesează imaginea
         var imageUrl = processImageForSave(uploader);
         data.photo = imageUrl || coach.photo || '';
         data.active = data.active === '1';
@@ -1137,9 +863,7 @@
           }
           modal.destroy();
           loadCoaches();
-        } catch (err) {
-          showToast('error', err.message || 'Eroare la salvarea antrenorului.');
-        }
+        } catch (err) { showToast('error', err.message || 'Eroare la salvarea antrenorului.'); }
       });
     }
   }
@@ -1159,44 +883,23 @@
 
   function renderEvents(events) {
     var activeCount = events.filter(function (e) { return e.active === 1; }).length;
-    var html = renderSectionHeader(
-      'Evenimente',
-      activeCount + ' active — Total: ' + events.length,
-      'Adaugă Eveniment',
-      'fa-plus',
-      openEventModal
-    );
+    var html = renderSectionHeader('Evenimente', activeCount + ' active — Total: ' + events.length, 'Adaugă Eveniment', 'fa-plus', openEventModal);
 
     if (events.length === 0) {
       html += renderEmptyState('Nu există evenimente. Adaugă primul eveniment.', 'fa-calendar-xmark');
     } else {
       html += '<div class="data-table-wrap"><table class="data-table">';
-      html += '<thead><tr>';
-      html += '<th>Titlu</th><th>Data</th><th>Locație</th><th>Foto</th><th>Status</th><th>Acțiuni</th>';
-      html += '</tr></thead><tbody>';
+      html += '<thead><tr><th>Titlu</th><th>Data</th><th>Locație</th><th>Foto</th><th>Status</th><th>Acțiuni</th></tr></thead><tbody>';
 
       events.forEach(function (event) {
         var firstPhoto = event.photos && event.photos.length > 0 ? event.photos[0].url : '';
-        html += '' +
-          '<tr data-entity="event" data-id="' + event.id + '">' +
+        html += '<tr data-entity="event" data-id="' + event.id + '">' +
           '<td><strong>' + escapeHtml(event.title) + '</strong></td>' +
           '<td>' + formatDate(event.event_date) + '</td>' +
           '<td>' + escapeHtml(event.location) + '</td>' +
-          '<td>' +
-          '<div class="table-img">' +
-          (firstPhoto
-            ? '<img src="' + escapeHtml(firstPhoto) + '" alt="' + escapeHtml(event.title) + '" loading="lazy">'
-            : '<div class="table-img-placeholder"><i class="fa-solid fa-calendar-days"></i></div>') +
-          '</div>' +
-          '</td>' +
+          '<td><div class="table-img">' + (firstPhoto ? '<img src="' + escapeHtml(firstPhoto) + '" alt="' + escapeHtml(event.title) + '" loading="lazy">' : '<div class="table-img-placeholder"><i class="fa-solid fa-calendar-days"></i></div>') + '</div></td>' +
           '<td>' + renderToggleSwitch('event', event.id, event.active) + ' ' + renderBadge(event.active) + '</td>' +
-          '<td>' +
-          '<div class="table-actions">' +
-          '<button class="btn btn-ghost btn-sm btn-photos" data-photos="event" data-id="' + event.id + '" title="Galerie Foto" type="button"><i class="fa-solid fa-images"></i></button>' +
-          '<button class="btn btn-ghost btn-sm btn-edit" data-edit="event" data-id="' + event.id + '" title="Editează" type="button"><i class="fa-solid fa-pen-to-square"></i></button>' +
-          '<button class="btn btn-ghost btn-sm btn-delete" data-delete="event" data-id="' + event.id + '" title="Șterge" type="button"><i class="fa-solid fa-trash-can"></i></button>' +
-          '</div>' +
-          '</td>' +
+          '<td><div class="table-actions"><button class="btn btn-ghost btn-sm btn-photos" data-photos="event" data-id="' + event.id + '" title="Galerie Foto" type="button"><i class="fa-solid fa-images"></i></button><button class="btn btn-ghost btn-sm btn-edit" data-edit="event" data-id="' + event.id + '" title="Editează" type="button"><i class="fa-solid fa-pen-to-square"></i></button><button class="btn btn-ghost btn-sm btn-delete" data-delete="event" data-id="' + event.id + '" title="Șterge" type="button"><i class="fa-solid fa-trash-can"></i></button></div></td>' +
           '</tr>';
       });
 
@@ -1204,7 +907,6 @@
     }
 
     mainContent.innerHTML = html;
-
     bindToggles('event');
     bindEdits('event', openEventModal);
     bindDeletes('event', loadEvents);
@@ -1216,45 +918,16 @@
     var title = isEdit ? 'Editează Eveniment' : 'Adaugă Eveniment';
     var event = eventData || {};
 
-    var bodyHtml = '' +
-      '<form class="admin-form" id="eventForm" novalidate>' +
+    var bodyHtml = '<form class="admin-form" id="eventForm" novalidate>' +
       '<input type="hidden" name="id" value="' + (event.id || '') + '">' +
-      '<div class="form-group">' +
-      '<label for="event_title">Titlu <span class="required">*</span></label>' +
-      '<div class="input-wrapper">' +
-      '<input type="text" id="event_title" name="title" value="' + escapeHtml(event.title || '') + '" maxlength="300" required>' +
-      '</div>' +
-      '<div class="field-error" data-error-for="title"></div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="event_date">Data <span class="required">*</span> (YYYY-MM-DD)</label>' +
-      '<div class="input-wrapper">' +
-      '<input type="date" id="event_date" name="event_date" value="' + escapeHtml(event.event_date || '') + '" required>' +
-      '</div>' +
-      '<div class="field-error" data-error-for="event_date"></div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="event_location">Locație</label>' +
-      '<div class="input-wrapper">' +
-      '<input type="text" id="event_location" name="location" value="' + escapeHtml(event.location || '') + '" maxlength="500">' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="event_description">Descriere</label>' +
-      '<div class="input-wrapper">' +
-      '<textarea id="event_description" name="description" rows="4" maxlength="5000">' + escapeHtml(event.description || '') + '</textarea>' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label class="checkbox-label">' +
-      '<input type="checkbox" name="active" value="1"' + (event.active !== 0 ? ' checked' : '') + '> Activ' +
-      '</label>' +
-      '</div>' +
+      '<div class="form-group"><label for="event_title">Titlu <span class="required">*</span></label><div class="input-wrapper"><input type="text" id="event_title" name="title" value="' + escapeHtml(event.title || '') + '" maxlength="300" required></div><div class="field-error" data-error-for="title"></div></div>' +
+      '<div class="form-group"><label for="event_date">Data <span class="required">*</span> (YYYY-MM-DD)</label><div class="input-wrapper"><input type="date" id="event_date" name="event_date" value="' + escapeHtml(event.event_date || '') + '" required></div><div class="field-error" data-error-for="event_date"></div></div>' +
+      '<div class="form-group"><label for="event_location">Locație</label><div class="input-wrapper"><input type="text" id="event_location" name="location" value="' + escapeHtml(event.location || '') + '" maxlength="500"></div></div>' +
+      '<div class="form-group"><label for="event_description">Descriere</label><div class="input-wrapper"><textarea id="event_description" name="description" rows="4" maxlength="5000">' + escapeHtml(event.description || '') + '</textarea></div></div>' +
+      '<div class="form-group"><label class="checkbox-label"><input type="checkbox" name="active" value="1"' + (event.active !== 0 ? ' checked' : '') + '> Activ</label></div>' +
       '</form>';
 
-    var footerHtml = '' +
-      '<button class="btn btn-ghost" data-modal-close type="button">Anulează</button>' +
-      '<button class="btn btn-primary" id="eventSaveBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> ' + (isEdit ? 'Actualizează' : 'Adaugă') + '</button>';
+    var footerHtml = '<button class="btn btn-ghost" data-modal-close type="button">Anulează</button><button class="btn btn-primary" id="eventSaveBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> ' + (isEdit ? 'Actualizează' : 'Adaugă') + '</button>';
 
     var modal = createModal(title, bodyHtml, footerHtml, { size: 'medium' });
     modal.open();
@@ -1265,41 +938,27 @@
         var form = modal.getElement('#eventForm');
         var formData = new FormData(form);
         var data = {};
-        formData.forEach(function (value, key) {
-          data[key] = value;
-        });
+        formData.forEach(function (value, key) { data[key] = value; });
 
         var rules = {
           title: [{ validator: 'required', label: 'Titlul' }, { validator: 'minLength', label: 'Titlul', param: 2 }],
           event_date: [{ validator: 'required', label: 'Data' }, { validator: 'dateFormat', label: 'Data' }],
         };
-
         var validation = validateForm(form, rules);
-        if (!validation.valid) {
-          displayFormErrors(form, validation.errors);
-          return;
-        }
+        if (!validation.valid) { displayFormErrors(form, validation.errors); return; }
 
         data.active = data.active === '1';
 
         try {
-          if (isEdit) {
-            await apiPut(API_BASE + '/events/' + event.id, data);
-            showToast('success', 'Evenimentul a fost actualizat.');
-          } else {
-            await apiPost(API_BASE + '/events', data);
-            showToast('success', 'Evenimentul a fost adăugat.');
-          }
+          if (isEdit) { await apiPut(API_BASE + '/events/' + event.id, data); showToast('success', 'Evenimentul a fost actualizat.'); }
+          else { await apiPost(API_BASE + '/events', data); showToast('success', 'Evenimentul a fost adăugat.'); }
           modal.destroy();
           loadEvents();
-        } catch (err) {
-          showToast('error', err.message || 'Eroare la salvarea evenimentului.');
-        }
+        } catch (err) { showToast('error', err.message || 'Eroare la salvarea evenimentului.'); }
       });
     }
   }
 
-  // Gallery Photos
   function bindPhotos() {
     var photoBtns = document.querySelectorAll('[data-photos="event"]');
     photoBtns.forEach(function (btn) {
@@ -1315,9 +974,7 @@
       var photos = await apiGet(API_BASE + '/events/' + eventId + '/photos');
       var event = await apiGet(API_BASE + '/events/' + eventId);
       renderPhotosModal(event, photos);
-    } catch (err) {
-      showToast('error', err.message || 'Eroare la încărcarea fotografiilor.');
-    }
+    } catch (err) { showToast('error', err.message || 'Eroare la încărcarea fotografiilor.'); }
   }
 
   function renderPhotosModal(event, photos) {
@@ -1328,78 +985,41 @@
       bodyHtml += '<p style="color:var(--text-secondary);text-align:center;padding:24px;">Nicio fotografie în galerie.</p>';
     } else {
       photos.forEach(function (photo) {
-        bodyHtml += '' +
-          '<div class="photo-card" data-photo-id="' + photo.id + '">' +
+        bodyHtml += '<div class="photo-card" data-photo-id="' + photo.id + '">' +
           '<img src="' + escapeHtml(photo.url) + '" alt="' + escapeHtml(photo.caption || 'Foto') + '" loading="lazy">' +
-          '<div class="photo-card-info">' +
-          '<p>' + escapeHtml(photo.caption || 'Fără descriere') + '</p>' +
-          '<button class="btn btn-ghost btn-sm btn-delete-photo" data-photo-id="' + photo.id + '" type="button"><i class="fa-solid fa-trash-can"></i></button>' +
-          '</div>' +
+          '<div class="photo-card-info"><p>' + escapeHtml(photo.caption || 'Fără descriere') + '</p><button class="btn btn-ghost btn-sm btn-delete-photo" data-photo-id="' + photo.id + '" type="button"><i class="fa-solid fa-trash-can"></i></button></div>' +
           '</div>';
       });
     }
-
     bodyHtml += '</div>';
 
-    // Form adăugare fotografie nouă
-    bodyHtml += '' +
-      '<div class="photo-add" style="margin-top:20px;padding-top:20px;border-top:1px solid var(--glass-border);">' +
+    bodyHtml += '<div class="photo-add" style="margin-top:20px;padding-top:20px;border-top:1px solid var(--glass-border);">' +
       '<h4 style="margin-bottom:12px;">Adaugă Fotografie</h4>' +
       '<form id="photoAddForm">' +
-      '<div class="form-group">' +
-      '<label for="photo_url">URL Imagine <span class="required">*</span></label>' +
-      '<div class="input-wrapper">' +
-      '<input type="url" id="photo_url" name="url" placeholder="https://..." required maxlength="2000">' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="photo_caption">Descriere</label>' +
-      '<div class="input-wrapper">' +
-      '<input type="text" id="photo_caption" name="caption" maxlength="500">' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="photo_sort">Ordine</label>' +
-      '<div class="input-wrapper">' +
-      '<input type="number" id="photo_sort" name="sort_order" value="0" min="0">' +
-      '</div>' +
-      '</div>' +
-      '<button class="btn btn-primary btn-sm" type="submit"><i class="fa-solid fa-plus"></i> Adaugă Fotografia</button>' +
-      '</form>' +
-      '</div>';
+      '<div class="form-group"><label for="photo_url">URL Imagine <span class="required">*</span></label><div class="input-wrapper"><input type="url" id="photo_url" name="url" placeholder="https://..." required maxlength="2000"></div></div>' +
+      '<div class="form-group"><label for="photo_caption">Descriere</label><div class="input-wrapper"><input type="text" id="photo_caption" name="caption" maxlength="500"></div></div>' +
+      '<div class="form-group"><label for="photo_sort">Ordine</label><div class="input-wrapper"><input type="number" id="photo_sort" name="sort_order" value="0" min="0"></div></div>' +
+      '<button class="btn btn-primary btn-sm" type="submit"><i class="fa-solid fa-plus"></i> Adaugă Fotografia</button></form></div>';
 
     var modal = createModal('Galerie Foto — ' + escapeHtml(event.title), bodyHtml, null, { size: 'large' });
     modal.open();
 
-    // Bind add photo form
     var photoForm = modal.getElement('#photoAddForm');
     if (photoForm) {
       photoForm.addEventListener('submit', async function (e) {
         e.preventDefault();
         var fd = new FormData(photoForm);
-        var data = {
-          url: fd.get('url') || '',
-          caption: fd.get('caption') || '',
-          sort_order: parseInt(fd.get('sort_order'), 10) || 0,
-        };
-
-        if (!data.url.trim()) {
-          showToast('error', 'URL-ul imaginii este obligatoriu.');
-          return;
-        }
-
+        var data = { url: fd.get('url') || '', caption: fd.get('caption') || '', sort_order: parseInt(fd.get('sort_order'), 10) || 0 };
+        if (!data.url.trim()) { showToast('error', 'URL-ul imaginii este obligatoriu.'); return; }
         try {
           await apiPost(API_BASE + '/events/' + eventId + '/photos', data);
           showToast('success', 'Fotografia a fost adăugată.');
           modal.destroy();
-          openPhotosModal(eventId); // Reîncarcă
-        } catch (err) {
-          showToast('error', err.message || 'Eroare la adăugarea fotografiei.');
-        }
+          openPhotosModal(eventId);
+        } catch (err) { showToast('error', err.message || 'Eroare la adăugarea fotografiei.'); }
       });
     }
 
-    // Bind delete photo buttons
     modal.modalEl.querySelectorAll('.btn-delete-photo').forEach(function (btn) {
       btn.addEventListener('click', async function () {
         var photoId = parseInt(this.getAttribute('data-photo-id'), 10);
@@ -1409,9 +1029,7 @@
           showToast('success', 'Fotografia a fost ștearsă.');
           modal.destroy();
           openPhotosModal(eventId);
-        } catch (err) {
-          showToast('error', err.message || 'Eroare la ștergerea fotografiei.');
-        }
+        } catch (err) { showToast('error', err.message || 'Eroare la ștergerea fotografiei.'); }
       });
     });
   }
@@ -1424,51 +1042,32 @@
     try {
       var schedule = await apiGet(API_BASE + '/schedule');
       renderSchedule(schedule);
-    } catch (err) {
-      mainContent.innerHTML = renderErrorState(err.message || 'Nu s-a putut încărca programul.', loadSchedule);
-    }
+    } catch (err) { mainContent.innerHTML = renderErrorState(err.message || 'Nu s-a putut încărca programul.', loadSchedule); }
   }
 
   function renderSchedule(schedule) {
     var activeCount = schedule.filter(function (s) { return s.active === 1; }).length;
-    var html = renderSectionHeader(
-      'Program Săptămânal',
-      activeCount + ' sloturi active — Total: ' + schedule.length,
-      'Adaugă Slot',
-      'fa-plus',
-      openScheduleModal
-    );
+    var html = renderSectionHeader('Program Săptămânal', activeCount + ' sloturi active — Total: ' + schedule.length, 'Adaugă Slot', 'fa-plus', openScheduleModal);
 
     if (schedule.length === 0) {
       html += renderEmptyState('Nu există sloturi în program.', 'fa-clock');
     } else {
       html += '<div class="data-table-wrap"><table class="data-table">';
-      html += '<thead><tr>';
-      html += '<th>Zi</th><th>Interval</th><th>Categorie</th><th>Gen</th><th>Status</th><th>Acțiuni</th>';
-      html += '</tr></thead><tbody>';
+      html += '<thead><tr><th>Zi</th><th>Interval</th><th>Categorie</th><th>Gen</th><th>Status</th><th>Acțiuni</th></tr></thead><tbody>';
 
       schedule.forEach(function (slot) {
-        html += '' +
-          '<tr data-entity="schedule" data-id="' + slot.id + '">' +
+        html += '<tr data-entity="schedule" data-id="' + slot.id + '">' +
           '<td><strong>' + escapeHtml(slot.day) + '</strong></td>' +
           '<td>' + escapeHtml(slot.start_time) + ' – ' + escapeHtml(slot.end_time) + '</td>' +
-          '<td>' + escapeHtml(slot.category) + '</td>' +
-          '<td>' + escapeHtml(slot.gender) + '</td>' +
+          '<td>' + escapeHtml(slot.category) + '</td><td>' + escapeHtml(slot.gender) + '</td>' +
           '<td>' + renderToggleSwitch('schedule', slot.id, slot.active) + ' ' + renderBadge(slot.active) + '</td>' +
-          '<td>' +
-          '<div class="table-actions">' +
-          '<button class="btn btn-ghost btn-sm btn-edit" data-edit="schedule" data-id="' + slot.id + '" title="Editează" type="button"><i class="fa-solid fa-pen-to-square"></i></button>' +
-          '<button class="btn btn-ghost btn-sm btn-delete" data-delete="schedule" data-id="' + slot.id + '" title="Șterge" type="button"><i class="fa-solid fa-trash-can"></i></button>' +
-          '</div>' +
-          '</td>' +
+          '<td><div class="table-actions"><button class="btn btn-ghost btn-sm btn-edit" data-edit="schedule" data-id="' + slot.id + '" title="Editează" type="button"><i class="fa-solid fa-pen-to-square"></i></button><button class="btn btn-ghost btn-sm btn-delete" data-delete="schedule" data-id="' + slot.id + '" title="Șterge" type="button"><i class="fa-solid fa-trash-can"></i></button></div></td>' +
           '</tr>';
       });
-
       html += '</tbody></table></div>';
     }
 
     mainContent.innerHTML = html;
-
     bindToggles('schedule');
     bindEdits('schedule', openScheduleModal);
     bindDeletes('schedule', loadSchedule);
@@ -1479,58 +1078,23 @@
     var title = isEdit ? 'Editează Slot Program' : 'Adaugă Slot Program';
     var slot = slotData || {};
 
-    var dayOptions = WEEK_DAYS.map(function (d) {
-      var sel = slot.day === d ? ' selected' : '';
-      return '<option value="' + d + '"' + sel + '>' + d + '</option>';
-    }).join('');
+    var dayOptions = WEEK_DAYS.map(function (d) { var sel = slot.day === d ? ' selected' : ''; return '<option value="' + d + '"' + sel + '>' + d + '</option>'; }).join('');
 
-    var bodyHtml = '' +
-      '<form class="admin-form" id="scheduleForm" novalidate>' +
+    var bodyHtml = '<form class="admin-form" id="scheduleForm" novalidate>' +
       '<input type="hidden" name="id" value="' + (slot.id || '') + '">' +
-      '<div class="form-group">' +
-      '<label for="sched_day">Zi <span class="required">*</span></label>' +
-      '<div class="input-wrapper">' +
-      '<select id="sched_day" name="day" required>' + dayOptions + '</select>' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="sched_start">Ora Început <span class="required">*</span></label>' +
-      '<div class="input-wrapper">' +
-      '<input type="time" id="sched_start" name="start_time" value="' + escapeHtml(slot.start_time || '') + '" required>' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="sched_end">Ora Sfârșit <span class="required">*</span></label>' +
-      '<div class="input-wrapper">' +
-      '<input type="time" id="sched_end" name="end_time" value="' + escapeHtml(slot.end_time || '') + '" required>' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="sched_category">Categorie <span class="required">*</span></label>' +
-      '<div class="input-wrapper">' +
-      '<input type="text" id="sched_category" name="category" value="' + escapeHtml(slot.category || '') + '" maxlength="200" required>' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="sched_gender">Gen</label>' +
-      '<div class="input-wrapper">' +
-      '<select id="sched_gender" name="gender">' +
+      '<div class="form-group"><label for="sched_day">Zi <span class="required">*</span></label><div class="input-wrapper"><select id="sched_day" name="day" required>' + dayOptions + '</select></div></div>' +
+      '<div class="form-group"><label for="sched_start">Ora Început <span class="required">*</span></label><div class="input-wrapper"><input type="time" id="sched_start" name="start_time" value="' + escapeHtml(slot.start_time || '') + '" required></div></div>' +
+      '<div class="form-group"><label for="sched_end">Ora Sfârșit <span class="required">*</span></label><div class="input-wrapper"><input type="time" id="sched_end" name="end_time" value="' + escapeHtml(slot.end_time || '') + '" required></div></div>' +
+      '<div class="form-group"><label for="sched_category">Categorie <span class="required">*</span></label><div class="input-wrapper"><input type="text" id="sched_category" name="category" value="' + escapeHtml(slot.category || '') + '" maxlength="200" required></div></div>' +
+      '<div class="form-group"><label for="sched_gender">Gen</label><div class="input-wrapper"><select id="sched_gender" name="gender">' +
       '<option value="Masculin"' + (slot.gender === 'Masculin' ? ' selected' : '') + '>Masculin</option>' +
       '<option value="Feminin"' + (slot.gender === 'Feminin' ? ' selected' : '') + '>Feminin</option>' +
       '<option value="Mixt"' + (slot.gender === 'Mixt' || !slot.gender ? ' selected' : '') + '>Mixt</option>' +
-      '</select>' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label class="checkbox-label">' +
-      '<input type="checkbox" name="active" value="1"' + (slot.active !== 0 ? ' checked' : '') + '> Activ' +
-      '</label>' +
-      '</div>' +
+      '</select></div></div>' +
+      '<div class="form-group"><label class="checkbox-label"><input type="checkbox" name="active" value="1"' + (slot.active !== 0 ? ' checked' : '') + '> Activ</label></div>' +
       '</form>';
 
-    var footerHtml = '' +
-      '<button class="btn btn-ghost" data-modal-close type="button">Anulează</button>' +
-      '<button class="btn btn-primary" id="scheduleSaveBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> ' + (isEdit ? 'Actualizează' : 'Adaugă') + '</button>';
+    var footerHtml = '<button class="btn btn-ghost" data-modal-close type="button">Anulează</button><button class="btn btn-primary" id="scheduleSaveBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> ' + (isEdit ? 'Actualizează' : 'Adaugă') + '</button>';
 
     var modal = createModal(title, bodyHtml, footerHtml, { size: 'small' });
     modal.open();
@@ -1541,9 +1105,7 @@
         var form = modal.getElement('#scheduleForm');
         var formData = new FormData(form);
         var data = {};
-        formData.forEach(function (value, key) {
-          data[key] = value;
-        });
+        formData.forEach(function (value, key) { data[key] = value; });
 
         var rules = {
           day: [{ validator: 'required', label: 'Ziua' }],
@@ -1551,28 +1113,17 @@
           end_time: [{ validator: 'required', label: 'Ora de sfârșit' }],
           category: [{ validator: 'required', label: 'Categoria' }, { validator: 'minLength', label: 'Categoria', param: 2 }],
         };
-
         var validation = validateForm(form, rules);
-        if (!validation.valid) {
-          displayFormErrors(form, validation.errors);
-          return;
-        }
+        if (!validation.valid) { displayFormErrors(form, validation.errors); return; }
 
         data.active = data.active === '1';
 
         try {
-          if (isEdit) {
-            await apiPut(API_BASE + '/schedule/' + slot.id, data);
-            showToast('success', 'Slotul a fost actualizat.');
-          } else {
-            await apiPost(API_BASE + '/schedule', data);
-            showToast('success', 'Slotul a fost adăugat.');
-          }
+          if (isEdit) { await apiPut(API_BASE + '/schedule/' + slot.id, data); showToast('success', 'Slotul a fost actualizat.'); }
+          else { await apiPost(API_BASE + '/schedule', data); showToast('success', 'Slotul a fost adăugat.'); }
           modal.destroy();
           loadSchedule();
-        } catch (err) {
-          showToast('error', err.message || 'Eroare la salvarea slotului.');
-        }
+        } catch (err) { showToast('error', err.message || 'Eroare la salvarea slotului.'); }
       });
     }
   }
@@ -1585,51 +1136,32 @@
     try {
       var subscriptions = await apiGet(API_BASE + '/subscriptions');
       renderSubscriptions(subscriptions);
-    } catch (err) {
-      mainContent.innerHTML = renderErrorState(err.message || 'Nu s-au putut încărca abonamentele.', loadSubscriptions);
-    }
+    } catch (err) { mainContent.innerHTML = renderErrorState(err.message || 'Nu s-au putut încărca abonamentele.', loadSubscriptions); }
   }
 
   function renderSubscriptions(subscriptions) {
     var activeCount = subscriptions.filter(function (s) { return s.active === 1; }).length;
-    var html = renderSectionHeader(
-      'Abonamente',
-      activeCount + ' active — Total: ' + subscriptions.length,
-      'Adaugă Abonament',
-      'fa-plus',
-      openSubscriptionModal
-    );
+    var html = renderSectionHeader('Abonamente', activeCount + ' active — Total: ' + subscriptions.length, 'Adaugă Abonament', 'fa-plus', openSubscriptionModal);
 
     if (subscriptions.length === 0) {
       html += renderEmptyState('Nu există abonamente.', 'fa-ticket');
     } else {
       html += '<div class="data-table-wrap"><table class="data-table">';
-      html += '<thead><tr>';
-      html += '<th>Nume</th><th>Preț Lunar</th><th>Preț Anual</th><th>Highlighted</th><th>Status</th><th>Acțiuni</th>';
-      html += '</tr></thead><tbody>';
+      html += '<thead><tr><th>Nume</th><th>Preț Lunar</th><th>Preț Anual</th><th>Highlighted</th><th>Status</th><th>Acțiuni</th></tr></thead><tbody>';
 
       subscriptions.forEach(function (sub) {
-        html += '' +
-          '<tr data-entity="subscription" data-id="' + sub.id + '">' +
+        html += '<tr data-entity="subscription" data-id="' + sub.id + '">' +
           '<td><strong>' + escapeHtml(sub.name) + '</strong></td>' +
-          '<td>' + formatPrice(sub.monthly_price) + '</td>' +
-          '<td>' + formatPrice(sub.yearly_price) + '</td>' +
+          '<td>' + formatPrice(sub.monthly_price) + '</td><td>' + formatPrice(sub.yearly_price) + '</td>' +
           '<td>' + (sub.highlighted ? '<span class="badge badge--gold">Recomandat</span>' : '—') + '</td>' +
           '<td>' + renderToggleSwitch('subscription', sub.id, sub.active) + ' ' + renderBadge(sub.active) + '</td>' +
-          '<td>' +
-          '<div class="table-actions">' +
-          '<button class="btn btn-ghost btn-sm btn-edit" data-edit="subscription" data-id="' + sub.id + '" title="Editează" type="button"><i class="fa-solid fa-pen-to-square"></i></button>' +
-          '<button class="btn btn-ghost btn-sm btn-delete" data-delete="subscription" data-id="' + sub.id + '" title="Șterge" type="button"><i class="fa-solid fa-trash-can"></i></button>' +
-          '</div>' +
-          '</td>' +
+          '<td><div class="table-actions"><button class="btn btn-ghost btn-sm btn-edit" data-edit="subscription" data-id="' + sub.id + '" title="Editează" type="button"><i class="fa-solid fa-pen-to-square"></i></button><button class="btn btn-ghost btn-sm btn-delete" data-delete="subscription" data-id="' + sub.id + '" title="Șterge" type="button"><i class="fa-solid fa-trash-can"></i></button></div></td>' +
           '</tr>';
       });
-
       html += '</tbody></table></div>';
     }
 
     mainContent.innerHTML = html;
-
     bindToggles('subscription');
     bindEdits('subscription', openSubscriptionModal);
     bindDeletes('subscription', loadSubscriptions);
@@ -1640,56 +1172,19 @@
     var title = isEdit ? 'Editează Abonament' : 'Adaugă Abonament';
     var sub = subData || {};
     var benefitsStr = '';
-    try {
-      benefitsStr = sub.benefits ? (typeof sub.benefits === 'string' ? sub.benefits : JSON.stringify(sub.benefits)) : '[]';
-    } catch (_) {
-      benefitsStr = '[]';
-    }
+    try { benefitsStr = sub.benefits ? (typeof sub.benefits === 'string' ? sub.benefits : JSON.stringify(sub.benefits)) : '[]'; } catch (_) { benefitsStr = '[]'; }
 
-    var bodyHtml = '' +
-      '<form class="admin-form" id="subscriptionForm" novalidate>' +
+    var bodyHtml = '<form class="admin-form" id="subscriptionForm" novalidate>' +
       '<input type="hidden" name="id" value="' + (sub.id || '') + '">' +
-      '<div class="form-group">' +
-      '<label for="sub_name">Nume <span class="required">*</span></label>' +
-      '<div class="input-wrapper">' +
-      '<input type="text" id="sub_name" name="name" value="' + escapeHtml(sub.name || '') + '" maxlength="200" required>' +
-      '</div>' +
-      '<div class="field-error" data-error-for="name"></div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="sub_monthly_price">Preț Lunar (RON) <span class="required">*</span></label>' +
-      '<div class="input-wrapper">' +
-      '<input type="number" id="sub_monthly_price" name="monthly_price" value="' + (sub.monthly_price || 0) + '" min="0" step="0.01" required>' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="sub_yearly_price">Preț Anual (RON) <span class="required">*</span></label>' +
-      '<div class="input-wrapper">' +
-      '<input type="number" id="sub_yearly_price" name="yearly_price" value="' + (sub.yearly_price || 0) + '" min="0" step="0.01" required>' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="sub_benefits">Beneficii (JSON array)</label>' +
-      '<div class="input-wrapper">' +
-      '<textarea id="sub_benefits" name="benefits" rows="4" maxlength="5000">' + escapeHtml(benefitsStr) + '</textarea>' +
-      '</div>' +
-      '<small style="color:var(--text-muted);">Ex: ["Acces nelimitat", "Echipament inclus", "..." ]</small>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label class="checkbox-label">' +
-      '<input type="checkbox" name="highlighted" value="1"' + (sub.highlighted ? ' checked' : '') + '> Recomandat (highlighted)' +
-      '</label>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label class="checkbox-label">' +
-      '<input type="checkbox" name="active" value="1"' + (sub.active !== 0 ? ' checked' : '') + '> Activ' +
-      '</label>' +
-      '</div>' +
+      '<div class="form-group"><label for="sub_name">Nume <span class="required">*</span></label><div class="input-wrapper"><input type="text" id="sub_name" name="name" value="' + escapeHtml(sub.name || '') + '" maxlength="200" required></div><div class="field-error" data-error-for="name"></div></div>' +
+      '<div class="form-group"><label for="sub_monthly_price">Preț Lunar (RON) <span class="required">*</span></label><div class="input-wrapper"><input type="number" id="sub_monthly_price" name="monthly_price" value="' + (sub.monthly_price || 0) + '" min="0" step="0.01" required></div></div>' +
+      '<div class="form-group"><label for="sub_yearly_price">Preț Anual (RON) <span class="required">*</span></label><div class="input-wrapper"><input type="number" id="sub_yearly_price" name="yearly_price" value="' + (sub.yearly_price || 0) + '" min="0" step="0.01" required></div></div>' +
+      '<div class="form-group"><label for="sub_benefits">Beneficii (JSON array)</label><div class="input-wrapper"><textarea id="sub_benefits" name="benefits" rows="4" maxlength="5000">' + escapeHtml(benefitsStr) + '</textarea></div><small style="color:var(--text-muted);">Ex: ["Acces nelimitat", "Echipament inclus", "..." ]</small></div>' +
+      '<div class="form-group"><label class="checkbox-label"><input type="checkbox" name="highlighted" value="1"' + (sub.highlighted ? ' checked' : '') + '> Recomandat (highlighted)</label></div>' +
+      '<div class="form-group"><label class="checkbox-label"><input type="checkbox" name="active" value="1"' + (sub.active !== 0 ? ' checked' : '') + '> Activ</label></div>' +
       '</form>';
 
-    var footerHtml = '' +
-      '<button class="btn btn-ghost" data-modal-close type="button">Anulează</button>' +
-      '<button class="btn btn-primary" id="subscriptionSaveBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> ' + (isEdit ? 'Actualizează' : 'Adaugă') + '</button>';
+    var footerHtml = '<button class="btn btn-ghost" data-modal-close type="button">Anulează</button><button class="btn btn-primary" id="subscriptionSaveBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> ' + (isEdit ? 'Actualizează' : 'Adaugă') + '</button>';
 
     var modal = createModal(title, bodyHtml, footerHtml, { size: 'medium' });
     modal.open();
@@ -1700,45 +1195,24 @@
         var form = modal.getElement('#subscriptionForm');
         var formData = new FormData(form);
         var data = {};
-        formData.forEach(function (value, key) {
-          data[key] = value;
-        });
+        formData.forEach(function (value, key) { data[key] = value; });
 
-        var rules = {
-          name: [{ validator: 'required', label: 'Numele' }, { validator: 'minLength', label: 'Numele', param: 2 }],
-        };
-
+        var rules = { name: [{ validator: 'required', label: 'Numele' }, { validator: 'minLength', label: 'Numele', param: 2 }] };
         var validation = validateForm(form, rules);
-        if (!validation.valid) {
-          displayFormErrors(form, validation.errors);
-          return;
-        }
+        if (!validation.valid) { displayFormErrors(form, validation.errors); return; }
 
         data.monthly_price = parseFloat(data.monthly_price) || 0;
         data.yearly_price = parseFloat(data.yearly_price) || 0;
         data.highlighted = data.highlighted === '1';
         data.active = data.active === '1';
-
-        // Parsează benefits JSON
-        try {
-          data.benefits = JSON.parse(data.benefits);
-        } catch (_) {
-          data.benefits = [];
-        }
+        try { data.benefits = JSON.parse(data.benefits); } catch (_) { data.benefits = []; }
 
         try {
-          if (isEdit) {
-            await apiPut(API_BASE + '/subscriptions/' + sub.id, data);
-            showToast('success', 'Abonamentul a fost actualizat.');
-          } else {
-            await apiPost(API_BASE + '/subscriptions', data);
-            showToast('success', 'Abonamentul a fost adăugat.');
-          }
+          if (isEdit) { await apiPut(API_BASE + '/subscriptions/' + sub.id, data); showToast('success', 'Abonamentul a fost actualizat.'); }
+          else { await apiPost(API_BASE + '/subscriptions', data); showToast('success', 'Abonamentul a fost adăugat.'); }
           modal.destroy();
           loadSubscriptions();
-        } catch (err) {
-          showToast('error', err.message || 'Eroare la salvarea abonamentului.');
-        }
+        } catch (err) { showToast('error', err.message || 'Eroare la salvarea abonamentului.'); }
       });
     }
   }
@@ -1751,58 +1225,32 @@
     try {
       var products = await apiGet(API_BASE + '/products');
       renderProducts(products);
-    } catch (err) {
-      mainContent.innerHTML = renderErrorState(err.message || 'Nu s-au putut încărca produsele.', loadProducts);
-    }
+    } catch (err) { mainContent.innerHTML = renderErrorState(err.message || 'Nu s-au putut încărca produsele.', loadProducts); }
   }
 
   function renderProducts(products) {
     var activeCount = products.filter(function (p) { return p.active === 1; }).length;
-    var html = renderSectionHeader(
-      'Produse',
-      activeCount + ' active — Total: ' + products.length,
-      'Adaugă Produs',
-      'fa-plus',
-      openProductModal
-    );
+    var html = renderSectionHeader('Produse', activeCount + ' active — Total: ' + products.length, 'Adaugă Produs', 'fa-plus', openProductModal);
 
     if (products.length === 0) {
       html += renderEmptyState('Nu există produse. Adaugă primul produs.', 'fa-box-open');
     } else {
       html += '<div class="data-table-wrap"><table class="data-table">';
-      html += '<thead><tr>';
-      html += '<th>Imagine</th><th>Nume</th><th>Preț</th><th>Stoc</th><th>Categorie</th><th>Status</th><th>Acțiuni</th>';
-      html += '</tr></thead><tbody>';
+      html += '<thead><tr><th>Imagine</th><th>Nume</th><th>Preț</th><th>Stoc</th><th>Categorie</th><th>Status</th><th>Acțiuni</th></tr></thead><tbody>';
 
       products.forEach(function (product) {
-        html += '' +
-          '<tr data-entity="product" data-id="' + product.id + '">' +
-          '<td>' +
-          '<div class="table-img">' +
-          (product.image
-            ? '<img src="' + escapeHtml(product.image) + '" alt="' + escapeHtml(product.name) + '" loading="lazy">'
-            : '<div class="table-img-placeholder"><i class="fa-solid fa-box"></i></div>') +
-          '</div>' +
-          '</td>' +
+        html += '<tr data-entity="product" data-id="' + product.id + '">' +
+          '<td><div class="table-img">' + (product.image ? '<img src="' + escapeHtml(product.image) + '" alt="' + escapeHtml(product.name) + '" loading="lazy">' : '<div class="table-img-placeholder"><i class="fa-solid fa-box"></i></div>') + '</div></td>' +
           '<td><strong>' + escapeHtml(product.name) + '</strong></td>' +
-          '<td>' + formatPrice(product.price) + '</td>' +
-          '<td>' + product.stock + '</td>' +
-          '<td>' + escapeHtml(product.category) + '</td>' +
+          '<td>' + formatPrice(product.price) + '</td><td>' + product.stock + '</td><td>' + escapeHtml(product.category) + '</td>' +
           '<td>' + renderToggleSwitch('product', product.id, product.active) + ' ' + renderBadge(product.active) + '</td>' +
-          '<td>' +
-          '<div class="table-actions">' +
-          '<button class="btn btn-ghost btn-sm btn-edit" data-edit="product" data-id="' + product.id + '" title="Editează" type="button"><i class="fa-solid fa-pen-to-square"></i></button>' +
-          '<button class="btn btn-ghost btn-sm btn-delete" data-delete="product" data-id="' + product.id + '" title="Șterge" type="button"><i class="fa-solid fa-trash-can"></i></button>' +
-          '</div>' +
-          '</td>' +
+          '<td><div class="table-actions"><button class="btn btn-ghost btn-sm btn-edit" data-edit="product" data-id="' + product.id + '" title="Editează" type="button"><i class="fa-solid fa-pen-to-square"></i></button><button class="btn btn-ghost btn-sm btn-delete" data-delete="product" data-id="' + product.id + '" title="Șterge" type="button"><i class="fa-solid fa-trash-can"></i></button></div></td>' +
           '</tr>';
       });
-
       html += '</tbody></table></div>';
     }
 
     mainContent.innerHTML = html;
-
     bindToggles('product');
     bindEdits('product', openProductModal);
     bindDeletes('product', loadProducts);
@@ -1813,77 +1261,23 @@
     var title = isEdit ? 'Editează Produs' : 'Adaugă Produs';
     var product = productData || {};
 
-    var categoryOptions = PRODUCT_CATEGORIES.map(function (cat) {
-      var sel = product.category === cat ? ' selected' : '';
-      return '<option value="' + cat + '"' + sel + '>' + cat + '</option>';
-    }).join('');
+    var categoryOptions = PRODUCT_CATEGORIES.map(function (cat) { var sel = product.category === cat ? ' selected' : ''; return '<option value="' + cat + '"' + sel + '>' + cat + '</option>'; }).join('');
 
-    var bodyHtml = '' +
-      '<form class="admin-form" id="productForm" novalidate>' +
+    var bodyHtml = '<form class="admin-form" id="productForm" novalidate>' +
       '<input type="hidden" name="id" value="' + (product.id || '') + '">' +
-      '<div class="form-group">' +
-      '<label for="prod_name">Nume <span class="required">*</span></label>' +
-      '<div class="input-wrapper">' +
-      '<input type="text" id="prod_name" name="name" value="' + escapeHtml(product.name || '') + '" maxlength="300" required>' +
-      '</div>' +
-      '<div class="field-error" data-error-for="name"></div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="prod_description">Descriere</label>' +
-      '<div class="input-wrapper">' +
-      '<textarea id="prod_description" name="description" rows="3" maxlength="5000">' + escapeHtml(product.description || '') + '</textarea>' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="prod_price">Preț (RON) <span class="required">*</span></label>' +
-      '<div class="input-wrapper">' +
-      '<input type="number" id="prod_price" name="price" value="' + (product.price || 0) + '" min="0" step="0.01" required>' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="prod_old_price">Preț Vechi (RON)</label>' +
-      '<div class="input-wrapper">' +
-      '<input type="number" id="prod_old_price" name="old_price" value="' + (product.old_price || '') + '" min="0" step="0.01">' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="prod_discount_label">Etichetă Reducere</label>' +
-      '<div class="input-wrapper">' +
-      '<input type="text" id="prod_discount_label" name="discount_label" value="' + escapeHtml(product.discount_label || '') + '" maxlength="100" placeholder="Ex: -20%">' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="prod_contextual_label">Etichetă Contextuală</label>' +
-      '<div class="input-wrapper">' +
-      '<input type="text" id="prod_contextual_label" name="contextual_label" value="' + escapeHtml(product.contextual_label || '') + '" maxlength="100" placeholder="Ex: Nou">' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="prod_category">Categorie <span class="required">*</span></label>' +
-      '<div class="input-wrapper">' +
-      '<select id="prod_category" name="category" required>' + categoryOptions + '</select>' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label for="prod_stock">Stoc <span class="required">*</span></label>' +
-      '<div class="input-wrapper">' +
-      '<input type="number" id="prod_stock" name="stock" value="' + (product.stock || 0) + '" min="0" required>' +
-      '</div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label>Imagine</label>' +
-      '<div id="productImageUploader"></div>' +
-      '</div>' +
-      '<div class="form-group">' +
-      '<label class="checkbox-label">' +
-      '<input type="checkbox" name="active" value="1"' + (product.active !== 0 ? ' checked' : '') + '> Activ' +
-      '</label>' +
-      '</div>' +
+      '<div class="form-group"><label for="prod_name">Nume <span class="required">*</span></label><div class="input-wrapper"><input type="text" id="prod_name" name="name" value="' + escapeHtml(product.name || '') + '" maxlength="300" required></div><div class="field-error" data-error-for="name"></div></div>' +
+      '<div class="form-group"><label for="prod_description">Descriere</label><div class="input-wrapper"><textarea id="prod_description" name="description" rows="3" maxlength="5000">' + escapeHtml(product.description || '') + '</textarea></div></div>' +
+      '<div class="form-group"><label for="prod_price">Preț (RON) <span class="required">*</span></label><div class="input-wrapper"><input type="number" id="prod_price" name="price" value="' + (product.price || 0) + '" min="0" step="0.01" required></div></div>' +
+      '<div class="form-group"><label for="prod_old_price">Preț Vechi (RON)</label><div class="input-wrapper"><input type="number" id="prod_old_price" name="old_price" value="' + (product.old_price || '') + '" min="0" step="0.01"></div></div>' +
+      '<div class="form-group"><label for="prod_discount_label">Etichetă Reducere</label><div class="input-wrapper"><input type="text" id="prod_discount_label" name="discount_label" value="' + escapeHtml(product.discount_label || '') + '" maxlength="100" placeholder="Ex: -20%"></div></div>' +
+      '<div class="form-group"><label for="prod_contextual_label">Etichetă Contextuală</label><div class="input-wrapper"><input type="text" id="prod_contextual_label" name="contextual_label" value="' + escapeHtml(product.contextual_label || '') + '" maxlength="100" placeholder="Ex: Nou"></div></div>' +
+      '<div class="form-group"><label for="prod_category">Categorie <span class="required">*</span></label><div class="input-wrapper"><select id="prod_category" name="category" required>' + categoryOptions + '</select></div></div>' +
+      '<div class="form-group"><label for="prod_stock">Stoc <span class="required">*</span></label><div class="input-wrapper"><input type="number" id="prod_stock" name="stock" value="' + (product.stock || 0) + '" min="0" required></div></div>' +
+      '<div class="form-group"><label>Imagine</label><div id="productImageUploader"></div></div>' +
+      '<div class="form-group"><label class="checkbox-label"><input type="checkbox" name="active" value="1"' + (product.active !== 0 ? ' checked' : '') + '> Activ</label></div>' +
       '</form>';
 
-    var footerHtml = '' +
-      '<button class="btn btn-ghost" data-modal-close type="button">Anulează</button>' +
-      '<button class="btn btn-primary" id="productSaveBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> ' + (isEdit ? 'Actualizează' : 'Adaugă') + '</button>';
+    var footerHtml = '<button class="btn btn-ghost" data-modal-close type="button">Anulează</button><button class="btn btn-primary" id="productSaveBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> ' + (isEdit ? 'Actualizează' : 'Adaugă') + '</button>';
 
     var modal = createModal(title, bodyHtml, footerHtml, { size: 'medium' });
     modal.open();
@@ -1896,9 +1290,7 @@
         var form = modal.getElement('#productForm');
         var formData = new FormData(form);
         var data = {};
-        formData.forEach(function (value, key) {
-          data[key] = value;
-        });
+        formData.forEach(function (value, key) { data[key] = value; });
 
         var rules = {
           name: [{ validator: 'required', label: 'Numele' }, { validator: 'minLength', label: 'Numele', param: 2 }],
@@ -1906,12 +1298,8 @@
           stock: [{ validator: 'integer', label: 'Stocul' }],
           category: [{ validator: 'required', label: 'Categoria' }],
         };
-
         var validation = validateForm(form, rules);
-        if (!validation.valid) {
-          displayFormErrors(form, validation.errors);
-          return;
-        }
+        if (!validation.valid) { displayFormErrors(form, validation.errors); return; }
 
         var imageUrl = processImageForSave(uploader);
         data.image = imageUrl || product.image || '';
@@ -1921,18 +1309,11 @@
         data.active = data.active === '1';
 
         try {
-          if (isEdit) {
-            await apiPut(API_BASE + '/products/' + product.id, data);
-            showToast('success', 'Produsul a fost actualizat.');
-          } else {
-            await apiPost(API_BASE + '/products', data);
-            showToast('success', 'Produsul a fost adăugat.');
-          }
+          if (isEdit) { await apiPut(API_BASE + '/products/' + product.id, data); showToast('success', 'Produsul a fost actualizat.'); }
+          else { await apiPost(API_BASE + '/products', data); showToast('success', 'Produsul a fost adăugat.'); }
           modal.destroy();
           loadProducts();
-        } catch (err) {
-          showToast('error', err.message || 'Eroare la salvarea produsului.');
-        }
+        } catch (err) { showToast('error', err.message || 'Eroare la salvarea produsului.'); }
       });
     }
   }
@@ -1945,52 +1326,35 @@
     try {
       var orders = await apiGet(API_BASE + '/orders');
       renderOrders(orders);
-    } catch (err) {
-      mainContent.innerHTML = renderErrorState(err.message || 'Nu s-au putut încărca comenzile.', loadOrders);
-    }
+    } catch (err) { mainContent.innerHTML = renderErrorState(err.message || 'Nu s-au putut încărca comenzile.', loadOrders); }
   }
 
   function renderOrders(orders) {
     var pendingCount = orders.filter(function (o) { return o.status === 'pending'; }).length;
     var totalRevenue = orders.reduce(function (sum, o) { return sum + (o.total || 0); }, 0);
-
-    var html = renderSectionHeader(
-      'Comenzi',
-      pendingCount + ' în așteptare — Venit total: ' + formatPrice(totalRevenue)
-    );
+    var html = renderSectionHeader('Comenzi', pendingCount + ' în așteptare — Venit total: ' + formatPrice(totalRevenue));
 
     if (orders.length === 0) {
       html += renderEmptyState('Nu există comenzi.', 'fa-receipt');
     } else {
       html += '<div class="data-table-wrap"><table class="data-table">';
-      html += '<thead><tr>';
-      html += '<th>ID</th><th>Client</th><th>Email</th><th>Total</th><th>Status</th><th>Data</th><th>Acțiuni</th>';
-      html += '</tr></thead><tbody>';
+      html += '<thead><tr><th>ID</th><th>Client</th><th>Email</th><th>Total</th><th>Status</th><th>Data</th><th>Acțiuni</th></tr></thead><tbody>';
 
       orders.forEach(function (order) {
-        html += '' +
-          '<tr data-entity="order" data-id="' + order.id + '">' +
+        html += '<tr data-entity="order" data-id="' + order.id + '">' +
           '<td>#' + order.id + '</td>' +
           '<td><strong>' + escapeHtml(order.customer_name) + '</strong></td>' +
           '<td>' + escapeHtml(order.customer_email) + '</td>' +
           '<td>' + formatPrice(order.total) + '</td>' +
           '<td>' + renderStatusBadge(order.status) + '</td>' +
           '<td>' + formatDateTime(order.created_at) + '</td>' +
-          '<td>' +
-          '<div class="table-actions">' +
-          '<button class="btn btn-ghost btn-sm btn-view-order" data-view-order="' + order.id + '" title="Detalii" type="button"><i class="fa-solid fa-eye"></i></button>' +
-          '<button class="btn btn-ghost btn-sm btn-status-order" data-status-order="' + order.id + '" title="Schimbă Status" type="button"><i class="fa-solid fa-arrow-progress"></i></button>' +
-          '<button class="btn btn-ghost btn-sm btn-delete" data-delete="order" data-id="' + order.id + '" title="Șterge" type="button"><i class="fa-solid fa-trash-can"></i></button>' +
-          '</div>' +
-          '</td>' +
+          '<td><div class="table-actions"><button class="btn btn-ghost btn-sm btn-view-order" data-view-order="' + order.id + '" title="Detalii" type="button"><i class="fa-solid fa-eye"></i></button><button class="btn btn-ghost btn-sm btn-status-order" data-status-order="' + order.id + '" title="Schimbă Status" type="button"><i class="fa-solid fa-arrow-progress"></i></button><button class="btn btn-ghost btn-sm btn-delete" data-delete="order" data-id="' + order.id + '" title="Șterge" type="button"><i class="fa-solid fa-trash-can"></i></button></div></td>' +
           '</tr>';
       });
-
       html += '</tbody></table></div>';
     }
 
     mainContent.innerHTML = html;
-
     bindDeletes('order', loadOrders);
     bindViewOrders();
     bindStatusOrders();
@@ -2004,39 +1368,27 @@
         try {
           var order = await apiGet(API_BASE + '/orders/' + orderId);
           showOrderDetails(order);
-        } catch (err) {
-          showToast('error', err.message || 'Eroare la încărcarea detaliilor.');
-        }
+        } catch (err) { showToast('error', err.message || 'Eroare la încărcarea detaliilor.'); }
       });
     });
   }
 
   function showOrderDetails(order) {
     var items = [];
-    try {
-      items = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []);
-    } catch (_) { items = []; }
+    try { items = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []); } catch (_) { items = []; }
 
     var itemsHtml = items.map(function (item) {
-      return '' +
-        '<div class="order-item-row">' +
-        '<span>' + escapeHtml(item.name) + ' x ' + item.quantity + '</span>' +
-        '<span>' + formatPrice((item.price || 0) * (item.quantity || 1)) + '</span>' +
-        '</div>';
+      return '<div class="order-item-row"><span>' + escapeHtml(item.name) + ' x ' + item.quantity + '</span><span>' + formatPrice((item.price || 0) * (item.quantity || 1)) + '</span></div>';
     }).join('');
 
-    var bodyHtml = '' +
-      '<div class="order-details">' +
+    var bodyHtml = '<div class="order-details">' +
       '<div class="order-detail-row"><strong>Client:</strong> ' + escapeHtml(order.customer_name) + '</div>' +
       '<div class="order-detail-row"><strong>Email:</strong> ' + escapeHtml(order.customer_email) + '</div>' +
       '<div class="order-detail-row"><strong>Telefon:</strong> ' + escapeHtml(order.customer_phone || '—') + '</div>' +
       '<div class="order-detail-row"><strong>Status:</strong> ' + renderStatusBadge(order.status) + '</div>' +
       '<div class="order-detail-row"><strong>Data:</strong> ' + formatDateTime(order.created_at) + '</div>' +
       '<div class="order-detail-row"><strong>Total:</strong> ' + formatPrice(order.total) + '</div>' +
-      '<hr style="border-color:var(--glass-border);margin:16px 0;">' +
-      '<h4>Produse</h4>' +
-      itemsHtml +
-      '</div>';
+      '<hr style="border-color:var(--glass-border);margin:16px 0;"><h4>Produse</h4>' + itemsHtml + '</div>';
 
     var modal = createModal('Comandă #' + order.id, bodyHtml, null, { size: 'medium' });
     modal.open();
@@ -2053,23 +1405,10 @@
   }
 
   function openStatusModal(orderId) {
-    var optionsHtml = ORDER_STATUSES.map(function (s) {
-      return '<option value="' + s + '">' + ORDER_STATUS_LABELS[s] + '</option>';
-    }).join('');
+    var optionsHtml = ORDER_STATUSES.map(function (s) { return '<option value="' + s + '">' + ORDER_STATUS_LABELS[s] + '</option>'; }).join('');
 
-    var bodyHtml = '' +
-      '<form id="orderStatusForm">' +
-      '<div class="form-group">' +
-      '<label for="order_new_status">Status Nou</label>' +
-      '<div class="input-wrapper">' +
-      '<select id="order_new_status" name="status">' + optionsHtml + '</select>' +
-      '</div>' +
-      '</div>' +
-      '</form>';
-
-    var footerHtml = '' +
-      '<button class="btn btn-ghost" data-modal-close type="button">Anulează</button>' +
-      '<button class="btn btn-primary" id="orderStatusSaveBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> Actualizează</button>';
+    var bodyHtml = '<form id="orderStatusForm"><div class="form-group"><label for="order_new_status">Status Nou</label><div class="input-wrapper"><select id="order_new_status" name="status">' + optionsHtml + '</select></div></div></form>';
+    var footerHtml = '<button class="btn btn-ghost" data-modal-close type="button">Anulează</button><button class="btn btn-primary" id="orderStatusSaveBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> Actualizează</button>';
 
     var modal = createModal('Schimbă Status Comandă #' + orderId, bodyHtml, footerHtml, { size: 'small' });
     modal.open();
@@ -2084,9 +1423,7 @@
           showToast('success', 'Statusul comenzii a fost actualizat.');
           modal.destroy();
           loadOrders();
-        } catch (err) {
-          showToast('error', err.message || 'Eroare la actualizarea statusului.');
-        }
+        } catch (err) { showToast('error', err.message || 'Eroare la actualizarea statusului.'); }
       });
     }
   }
@@ -2099,9 +1436,7 @@
     try {
       var messages = await apiGet(API_BASE + '/messages');
       renderMessages(messages);
-    } catch (err) {
-      mainContent.innerHTML = renderErrorState(err.message || 'Nu s-au putut încărca mesajele.', loadMessages);
-    }
+    } catch (err) { mainContent.innerHTML = renderErrorState(err.message || 'Nu s-au putut încărca mesajele.', loadMessages); }
   }
 
   function renderMessages(messages) {
@@ -2112,34 +1447,23 @@
       html += renderEmptyState('Nu există mesaje.', 'fa-envelope-open');
     } else {
       html += '<div class="data-table-wrap"><table class="data-table">';
-      html += '<thead><tr>';
-      html += '<th>Status</th><th>Nume</th><th>Email</th><th>Subiect</th><th>Data</th><th>Acțiuni</th>';
-      html += '</tr></thead><tbody>';
+      html += '<thead><tr><th>Status</th><th>Nume</th><th>Email</th><th>Subiect</th><th>Data</th><th>Acțiuni</th></tr></thead><tbody>';
 
       messages.forEach(function (msg) {
         var isUnread = !msg.is_read;
-        html += '' +
-          '<tr data-entity="message" data-id="' + msg.id + '" class="' + (isUnread ? 'row--unread' : '') + '">' +
+        html += '<tr data-entity="message" data-id="' + msg.id + '" class="' + (isUnread ? 'row--unread' : '') + '">' +
           '<td>' + (isUnread ? '<span class="badge badge--unread">Necitit</span>' : '<span class="badge badge--read">Citit</span>') + '</td>' +
           '<td><strong>' + escapeHtml(msg.name) + '</strong></td>' +
           '<td>' + escapeHtml(msg.email) + '</td>' +
           '<td>' + escapeHtml(msg.subject) + '</td>' +
           '<td>' + formatDateTime(msg.created_at) + '</td>' +
-          '<td>' +
-          '<div class="table-actions">' +
-          '<button class="btn btn-ghost btn-sm btn-view-message" data-view-message="' + msg.id + '" title="Citește" type="button"><i class="fa-solid fa-eye"></i></button>' +
-          (isUnread ? '<button class="btn btn-ghost btn-sm btn-mark-read" data-mark-read="' + msg.id + '" title="Marchează Citit" type="button"><i class="fa-solid fa-check"></i></button>' : '') +
-          '<button class="btn btn-ghost btn-sm btn-delete" data-delete="message" data-id="' + msg.id + '" title="Șterge" type="button"><i class="fa-solid fa-trash-can"></i></button>' +
-          '</div>' +
-          '</td>' +
+          '<td><div class="table-actions"><button class="btn btn-ghost btn-sm btn-view-message" data-view-message="' + msg.id + '" title="Citește" type="button"><i class="fa-solid fa-eye"></i></button>' + (isUnread ? '<button class="btn btn-ghost btn-sm btn-mark-read" data-mark-read="' + msg.id + '" title="Marchează Citit" type="button"><i class="fa-solid fa-check"></i></button>' : '') + '<button class="btn btn-ghost btn-sm btn-delete" data-delete="message" data-id="' + msg.id + '" title="Șterge" type="button"><i class="fa-solid fa-trash-can"></i></button></div></td>' +
           '</tr>';
       });
-
       html += '</tbody></table></div>';
     }
 
     mainContent.innerHTML = html;
-
     bindDeletes('message', loadMessages);
     bindViewMessages();
     bindMarkRead();
@@ -2153,20 +1477,14 @@
         try {
           var msg = await apiGet(API_BASE + '/messages/' + msgId);
           showMessageDetails(msg);
-          // Automat marchează citit
-          if (!msg.is_read) {
-            await apiPatch(API_BASE + '/messages/' + msgId + '/read');
-          }
-        } catch (err) {
-          showToast('error', err.message || 'Eroare la încărcarea mesajului.');
-        }
+          if (!msg.is_read) { await apiPatch(API_BASE + '/messages/' + msgId + '/read'); }
+        } catch (err) { showToast('error', err.message || 'Eroare la încărcarea mesajului.'); }
       });
     });
   }
 
   function showMessageDetails(msg) {
-    var bodyHtml = '' +
-      '<div class="message-details">' +
+    var bodyHtml = '<div class="message-details">' +
       '<div class="message-detail-row"><strong>De la:</strong> ' + escapeHtml(msg.name) + ' (' + escapeHtml(msg.email) + ')</div>' +
       '<div class="message-detail-row"><strong>Telefon:</strong> ' + escapeHtml(msg.phone || '—') + '</div>' +
       '<div class="message-detail-row"><strong>Subiect:</strong> ' + escapeHtml(msg.subject) + '</div>' +
@@ -2175,20 +1493,14 @@
       '<div class="message-body">' + escapeHtml(msg.message).replace(/\n/g, '<br>') + '</div>' +
       '</div>';
 
-    var footerHtml = '' +
-      (msg.email ? '<a href="mailto:' + escapeHtml(msg.email) + '?subject=Re: ' + encodeURIComponent(msg.subject) + '" class="btn btn-outline btn-sm"><i class="fa-solid fa-reply"></i> Răspunde</a>' : '') +
+    var footerHtml = (msg.email ? '<a href="mailto:' + escapeHtml(msg.email) + '?subject=Re: ' + encodeURIComponent(msg.subject) + '" class="btn btn-outline btn-sm"><i class="fa-solid fa-reply"></i> Răspunde</a>' : '') +
       '<button class="btn btn-ghost" data-modal-close type="button">Închide</button>';
 
     var modal = createModal('Mesaj: ' + escapeHtml(msg.subject), bodyHtml, footerHtml, { size: 'medium' });
     modal.open();
 
-    // Reîncarcă mesajele după închidere pentru badge-uri
     var origClose = modal.close;
-    modal.close = function () {
-      origClose.call(modal);
-      loadMessages();
-      loadBadges();
-    };
+    modal.close = function () { origClose.call(modal); loadMessages(); loadBadges(); };
   }
 
   function bindMarkRead() {
@@ -2201,9 +1513,7 @@
           showToast('success', 'Mesajul a fost marcat ca citit.');
           loadMessages();
           loadBadges();
-        } catch (err) {
-          showToast('error', err.message || 'Eroare.');
-        }
+        } catch (err) { showToast('error', err.message || 'Eroare.'); }
       });
     });
   }
@@ -2216,9 +1526,7 @@
     try {
       var achievements = await apiGet(API_BASE + '/achievements');
       renderAchievements(achievements);
-    } catch (err) {
-      mainContent.innerHTML = renderErrorState(err.message || 'Nu s-au putut încărca realizările.', loadAchievements);
-    }
+    } catch (err) { mainContent.innerHTML = renderErrorState(err.message || 'Nu s-au putut încărca realizările.', loadAchievements); }
   }
 
   function renderAchievements(achievements) {
@@ -2228,29 +1536,19 @@
       html += renderEmptyState('Nu există realizări configurate.', 'fa-trophy');
     } else {
       html += '<div class="data-table-wrap"><table class="data-table">';
-      html += '<thead><tr>';
-      html += '<th>Cheie</th><th>Etichetă</th><th>Valoare</th><th>Acțiuni</th>';
-      html += '</tr></thead><tbody>';
+      html += '<thead><tr><th>Cheie</th><th>Etichetă</th><th>Valoare</th><th>Acțiuni</th></tr></thead><tbody>';
 
       achievements.forEach(function (ach) {
-        html += '' +
-          '<tr data-entity="achievement" data-key="' + escapeHtml(ach.key) + '">' +
+        html += '<tr data-entity="achievement" data-key="' + escapeHtml(ach.key) + '">' +
           '<td><strong>' + escapeHtml(ach.key) + '</strong></td>' +
-          '<td>' + escapeHtml(ach.label) + '</td>' +
-          '<td>' + ach.value + '</td>' +
-          '<td>' +
-          '<div class="table-actions">' +
-          '<button class="btn btn-ghost btn-sm btn-edit-achievement" data-edit-achievement="' + escapeHtml(ach.key) + '" title="Editează" type="button"><i class="fa-solid fa-pen-to-square"></i></button>' +
-          '</div>' +
-          '</td>' +
+          '<td>' + escapeHtml(ach.label) + '</td><td>' + ach.value + '</td>' +
+          '<td><div class="table-actions"><button class="btn btn-ghost btn-sm btn-edit-achievement" data-edit-achievement="' + escapeHtml(ach.key) + '" title="Editează" type="button"><i class="fa-solid fa-pen-to-square"></i></button></div></td>' +
           '</tr>';
       });
-
       html += '</tbody></table></div>';
     }
 
     mainContent.innerHTML = html;
-
     bindAchievementEdits();
   }
 
@@ -2267,35 +1565,15 @@
   async function openAchievementModal(key) {
     try {
       var ach = await apiGet(API_BASE + '/achievements');
-      var achievement = Array.isArray(ach)
-        ? ach.find(function (a) { return a.key === key; }) || {}
-        : {};
+      var achievement = Array.isArray(ach) ? ach.find(function (a) { return a.key === key; }) || {} : {};
 
-      var bodyHtml = '' +
-        '<form id="achievementForm" novalidate>' +
-        '<div class="form-group">' +
-        '<label>Cheie</label>' +
-        '<div class="input-wrapper">' +
-        '<input type="text" value="' + escapeHtml(key) + '" disabled>' +
-        '</div>' +
-        '</div>' +
-        '<div class="form-group">' +
-        '<label for="ach_value">Valoare <span class="required">*</span></label>' +
-        '<div class="input-wrapper">' +
-        '<input type="number" id="ach_value" name="value" value="' + (achievement.value || 0) + '" min="0" required>' +
-        '</div>' +
-        '</div>' +
-        '<div class="form-group">' +
-        '<label for="ach_label">Etichetă <span class="required">*</span></label>' +
-        '<div class="input-wrapper">' +
-        '<input type="text" id="ach_label" name="label" value="' + escapeHtml(achievement.label || '') + '" maxlength="200" required>' +
-        '</div>' +
-        '</div>' +
+      var bodyHtml = '<form id="achievementForm" novalidate>' +
+        '<div class="form-group"><label>Cheie</label><div class="input-wrapper"><input type="text" value="' + escapeHtml(key) + '" disabled></div></div>' +
+        '<div class="form-group"><label for="ach_value">Valoare <span class="required">*</span></label><div class="input-wrapper"><input type="number" id="ach_value" name="value" value="' + (achievement.value || 0) + '" min="0" required></div></div>' +
+        '<div class="form-group"><label for="ach_label">Etichetă <span class="required">*</span></label><div class="input-wrapper"><input type="text" id="ach_label" name="label" value="' + escapeHtml(achievement.label || '') + '" maxlength="200" required></div></div>' +
         '</form>';
 
-      var footerHtml = '' +
-        '<button class="btn btn-ghost" data-modal-close type="button">Anulează</button>' +
-        '<button class="btn btn-primary" id="achievementSaveBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> Salvează</button>';
+      var footerHtml = '<button class="btn btn-ghost" data-modal-close type="button">Anulează</button><button class="btn btn-primary" id="achievementSaveBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> Salvează</button>';
 
       var modal = createModal('Editează Realizare', bodyHtml, footerHtml, { size: 'small' });
       modal.open();
@@ -2307,278 +1585,197 @@
           var value = parseInt(form.querySelector('[name="value"]').value, 10);
           var label = form.querySelector('[name="label"]').value.trim();
 
-          if (!label) {
-            showToast('error', 'Eticheta este obligatorie.');
-            return;
-          }
+          if (!label) { showToast('error', 'Eticheta este obligatorie.'); return; }
 
           try {
             await apiPut(API_BASE + '/achievements/' + key, { value: value, label: label });
             showToast('success', 'Realizarea a fost actualizată.');
             modal.destroy();
             loadAchievements();
-          } catch (err) {
-            showToast('error', err.message || 'Eroare la actualizarea realizării.');
-          }
+          } catch (err) { showToast('error', err.message || 'Eroare la actualizarea realizării.'); }
         });
       }
-    } catch (err) {
-      showToast('error', err.message || 'Eroare la încărcarea realizării.');
-    }
+    } catch (err) { showToast('error', err.message || 'Eroare la încărcarea realizării.'); }
   }
 
   // ---------------------------------------------------------------------------
   // === SECȚIUNEA: SEO (META TAGS, TITLE, DESCRIPTION) ===
   // ---------------------------------------------------------------------------
 
+  /** Inițializează cache-ul SEO cu date de la server */
+  function initSeoCache(serverData) {
+    var arr = Array.isArray(serverData) ? serverData : [];
+    seoDataCache = SEO_PAGES.map(function (page) {
+      var existing = null;
+      for (var i = 0; i < arr.length; i++) {
+        if (arr[i].page === page) { existing = arr[i]; break; }
+      }
+      return existing || { page: page, title: '', description: '', keywords: '', og_image: '' };
+    });
+  }
+
   async function loadSEO() {
     try {
       var seo = await apiGet(API_BASE + '/seo');
-      renderSEO(seo);
+      initSeoCache(seo);
+      renderSEO();
     } catch (err) {
       mainContent.innerHTML = renderErrorState(err.message || 'Nu s-au putut încărca setările SEO.', loadSEO);
     }
   }
 
-  function renderSEO(seo) {
-    var data = seo || {};
-    var html = renderSectionHeader('SEO Global', 'Meta-taguri, titlu și descriere pentru toate paginile');
+  function renderSEO() {
+    var html = renderSectionHeader('SEO', 'Meta-informații per pagină — optimizează titlul, descrierea și keywords');
 
-    html += '<form class="admin-form" id="seoForm" novalidate>';
-    html += '<div class="seo-tabs">';
-    html += '<div class="seo-tabs-nav">';
-    html += '<button class="seo-tab-btn active" data-seo-tab="general" type="button">General</button>';
-    html += '<button class="seo-tab-btn" data-seo-tab="social" type="button">Social / Open Graph</button>';
-    html += '<button class="seo-tab-btn" data-seo-tab="advanced" type="button">Avansat</button>';
-    html += '</div>';
-
-    // TAB: GENERAL
-    html += '<div class="seo-tab-panel active" data-seo-panel="general">';
-    html += '<div class="form-group">';
-    html += '<label for="seo_title">Title Tag (Titlu pagină)</label>';
-    html += '<div class="input-wrapper">';
-    html += '<input type="text" id="seo_title" name="title" value="' + escapeHtml(data.title || '') + '" maxlength="70" placeholder="Maxim 60-70 caractere recomandat">';
-    html += '</div>';
-    html += '<small class="field-hint" id="seo_title_hint">' + (data.title ? data.title.length : 0) + '/70 caractere</small>';
+    html += '<div class="seo-layout">';
+    html += '<div class="seo-page-list">';
+    html += '<h3 class="seo-page-list-title">Pagini</h3>';
+    SEO_PAGES.forEach(function (page, idx) {
+      var isActive = idx === 0 ? ' active' : '';
+      var seoData = seoDataCache[idx];
+      html += '<button class="seo-page-item' + isActive + '" data-seo-page="' + page + '" data-seo-index="' + idx + '" type="button">' +
+        '<span class="seo-page-icon"><i class="fa-solid ' + getPageIcon(page) + '"></i></span>' +
+        '<span class="seo-page-label">' + escapeHtml(SEO_PAGE_LABELS[page] || page) + '</span>' +
+        (seoData && seoData.title ? '<span class="seo-page-badge" title="Configurat">●</span>' : '') +
+        '</button>';
+    });
     html += '</div>';
 
-    html += '<div class="form-group">';
-    html += '<label for="seo_description">Meta Description</label>';
-    html += '<div class="input-wrapper">';
-    html += '<textarea id="seo_description" name="description" rows="3" maxlength="160" placeholder="Maxim 150-160 caractere recomandat">' + escapeHtml(data.description || '') + '</textarea>';
-    html += '</div>';
-    html += '<small class="field-hint" id="seo_description_hint">' + (data.description ? data.description.length : 0) + '/160 caractere</small>';
-    html += '</div>';
-
-    html += '<div class="form-group">';
-    html += '<label for="seo_keywords">Meta Keywords</label>';
-    html += '<div class="input-wrapper">';
-    html += '<input type="text" id="seo_keywords" name="keywords" value="' + escapeHtml(data.keywords || '') + '" maxlength="500" placeholder="cuvânt1, cuvânt2, cuvânt3">';
-    html += '</div>';
-    html += '<small class="field-hint">Separați cuvintele cheie prin virgulă.</small>';
-    html += '</div>';
-
-    html += '<div class="form-group">';
-    html += '<label for="seo_author">Autor</label>';
-    html += '<div class="input-wrapper">';
-    html += '<input type="text" id="seo_author" name="author" value="' + escapeHtml(data.author || '') + '" maxlength="200" placeholder="Numele autorului / companiei">';
+    html += '<div class="seo-editor-panel" id="seoEditorPanel">';
+    var firstPage = seoDataCache[0] || { page: 'home', title: '', description: '', keywords: '', og_image: '' };
+    html += renderSeoPageForm(firstPage, 0);
     html += '</div>';
     html += '</div>';
-
-    html += '</div>'; // .seo-tab-panel general
-
-    // TAB: SOCIAL / OPEN GRAPH
-    html += '<div class="seo-tab-panel" data-seo-panel="social">';
-    html += '<div class="form-group">';
-    html += '<label for="seo_og_title">OG Title</label>';
-    html += '<div class="input-wrapper">';
-    html += '<input type="text" id="seo_og_title" name="og_title" value="' + escapeHtml(data.og_title || '') + '" maxlength="95" placeholder="Titlu pentru share social">';
-    html += '</div>';
-    html += '</div>';
-
-    html += '<div class="form-group">';
-    html += '<label for="seo_og_description">OG Description</label>';
-    html += '<div class="input-wrapper">';
-    html += '<textarea id="seo_og_description" name="og_description" rows="3" maxlength="300" placeholder="Descriere pentru share social">' + escapeHtml(data.og_description || '') + '</textarea>';
-    html += '</div>';
-    html += '</div>';
-
-    html += '<div class="form-group">';
-    html += '<label for="seo_og_image">OG Image URL</label>';
-    html += '<div class="input-wrapper">';
-    html += '<input type="url" id="seo_og_image" name="og_image" value="' + escapeHtml(data.og_image || '') + '" maxlength="2000" placeholder="https://...">';
-    html += '</div>';
-    html += '<small class="field-hint">Imaginea afișată la share pe Facebook, LinkedIn etc. (1200×630 px recomandat).</small>';
-    html += '</div>';
-
-    html += '<div class="form-group">';
-    html += '<label for="seo_og_type">OG Type</label>';
-    html += '<div class="input-wrapper">';
-    html += '<select id="seo_og_type" name="og_type">';
-    html += '<option value="website"' + (data.og_type === 'website' || !data.og_type ? ' selected' : '') + '>website</option>';
-    html += '<option value="article"' + (data.og_type === 'article' ? ' selected' : '') + '>article</option>';
-    html += '<option value="business.business"' + (data.og_type === 'business.business' ? ' selected' : '') + '>business.business</option>';
-    html += '<option value="place"' + (data.og_type === 'place' ? ' selected' : '') + '>place</option>';
-    html += '</select>';
-    html += '</div>';
-    html += '</div>';
-
-    html += '<div class="form-group">';
-    html += '<label for="seo_og_site_name">OG Site Name</label>';
-    html += '<div class="input-wrapper">';
-    html += '<input type="text" id="seo_og_site_name" name="og_site_name" value="' + escapeHtml(data.og_site_name || '') + '" maxlength="200" placeholder="Numele site-ului">';
-    html += '</div>';
-    html += '</div>';
-
-    html += '<div class="form-group">';
-    html += '<label for="seo_twitter_card">Twitter Card</label>';
-    html += '<div class="input-wrapper">';
-    html += '<select id="seo_twitter_card" name="twitter_card">';
-    html += '<option value="summary"' + (data.twitter_card === 'summary' || !data.twitter_card ? ' selected' : '') + '>summary</option>';
-    html += '<option value="summary_large_image"' + (data.twitter_card === 'summary_large_image' ? ' selected' : '') + '>summary_large_image</option>';
-    html += '<option value="app"' + (data.twitter_card === 'app' ? ' selected' : '') + '>app</option>';
-    html += '<option value="player"' + (data.twitter_card === 'player' ? ' selected' : '') + '>player</option>';
-    html += '</select>';
-    html += '</div>';
-    html += '</div>';
-
-    html += '</div>'; // .seo-tab-panel social
-
-    // TAB: AVANSAT
-    html += '<div class="seo-tab-panel" data-seo-panel="advanced">';
-    html += '<div class="form-group">';
-    html += '<label for="seo_robots">Meta Robots</label>';
-    html += '<div class="input-wrapper">';
-    html += '<select id="seo_robots" name="robots">';
-    html += '<option value="index, follow"' + (data.robots === 'index, follow' || !data.robots ? ' selected' : '') + '>index, follow</option>';
-    html += '<option value="noindex, follow"' + (data.robots === 'noindex, follow' ? ' selected' : '') + '>noindex, follow</option>';
-    html += '<option value="index, nofollow"' + (data.robots === 'index, nofollow' ? ' selected' : '') + '>index, nofollow</option>';
-    html += '<option value="noindex, nofollow"' + (data.robots === 'noindex, nofollow' ? ' selected' : '') + '>noindex, nofollow</option>';
-    html += '</select>';
-    html += '</div>';
-    html += '</div>';
-
-    html += '<div class="form-group">';
-    html += '<label for="seo_canonical_url">Canonical URL</label>';
-    html += '<div class="input-wrapper">';
-    html += '<input type="url" id="seo_canonical_url" name="canonical_url" value="' + escapeHtml(data.canonical_url || '') + '" maxlength="2000" placeholder="https://exemplu.ro/">';
-    html += '</div>';
-    html += '</div>';
-
-    html += '<div class="form-group">';
-    html += '<label for="seo_google_site_verification">Google Site Verification</label>';
-    html += '<div class="input-wrapper">';
-    html += '<input type="text" id="seo_google_site_verification" name="google_site_verification" value="' + escapeHtml(data.google_site_verification || '') + '" maxlength="200" placeholder="Cod verificare Google Search Console">';
-    html += '</div>';
-    html += '</div>';
-
-    html += '<div class="form-group">';
-    html += '<label for="seo_google_analytics">Google Analytics ID</label>';
-    html += '<div class="input-wrapper">';
-    html += '<input type="text" id="seo_google_analytics" name="google_analytics" value="' + escapeHtml(data.google_analytics || '') + '" maxlength="50" placeholder="G-XXXXXXXXXX sau UA-XXXXXXXXX-X">';
-    html += '</div>';
-    html += '</div>';
-
-    html += '<div class="form-group">';
-    html += '<label for="seo_favicon">Favicon URL</label>';
-    html += '<div class="input-wrapper">';
-    html += '<input type="url" id="seo_favicon" name="favicon" value="' + escapeHtml(data.favicon || '') + '" maxlength="2000" placeholder="https://...">';
-    html += '</div>';
-    html += '</div>';
-
-    html += '</div>'; // .seo-tab-panel advanced
-
-    html += '</div>'; // .seo-tabs
-
-    html += '' +
-      '<div class="form-actions">' +
-      '<button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvează SEO</button>' +
-      '</div>';
-
-    html += '</form>';
 
     mainContent.innerHTML = html;
 
-    // Character counters
-    var titleInput = document.getElementById('seo_title');
-    var titleHint = document.getElementById('seo_title_hint');
-    if (titleInput && titleHint) {
-      titleInput.addEventListener('input', function () {
-        titleHint.textContent = this.value.length + '/70 caractere';
-      });
-    }
-
-    var descInput = document.getElementById('seo_description');
-    var descHint = document.getElementById('seo_description_hint');
-    if (descInput && descHint) {
-      descInput.addEventListener('input', function () {
-        descHint.textContent = this.value.length + '/160 caractere';
-      });
-    }
-
-    // Tab switching
-    var tabBtns = document.querySelectorAll('.seo-tab-btn');
-    tabBtns.forEach(function (btn) {
+    var pageBtns = document.querySelectorAll('.seo-page-item');
+    pageBtns.forEach(function (btn) {
       btn.addEventListener('click', function () {
-        var tabName = this.getAttribute('data-seo-tab');
-
-        // Active class on buttons
-        tabBtns.forEach(function (b) { b.classList.remove('active'); });
+        var index = parseInt(this.getAttribute('data-seo-index'), 10);
+        pageBtns.forEach(function (b) { b.classList.remove('active'); });
         this.classList.add('active');
-
-        // Show/hide panels
-        var panels = document.querySelectorAll('.seo-tab-panel');
-        panels.forEach(function (p) {
-          if (p.getAttribute('data-seo-panel') === tabName) {
-            p.classList.add('active');
-          } else {
-            p.classList.remove('active');
-          }
-        });
+        saveCurrentSeoFormToCache();
+        var panel = document.getElementById('seoEditorPanel');
+        if (panel) {
+          panel.innerHTML = renderSeoPageForm(seoDataCache[index], index);
+          bindSeoFormEvents(index);
+        }
       });
     });
 
-    // Bind form submit
-    var form = document.getElementById('seoForm');
-    if (form) {
-      form.addEventListener('submit', async function (e) {
-        e.preventDefault();
+    bindSeoFormEvents(0);
+  }
 
-        var formData = new FormData(form);
-        var seoObj = {};
-        formData.forEach(function (value, key) {
-          seoObj[key] = value;
-        });
+  function renderSeoPageForm(seoData, index) {
+    var data = seoData || {};
+    var page = data.page || SEO_PAGES[index] || 'home';
+    var pageLabel = SEO_PAGE_LABELS[page] || page;
 
-        var rules = {
-          title: [{ validator: 'maxLength', label: 'Title tag', param: 70 }],
-          description: [{ validator: 'maxLength', label: 'Meta description', param: 160 }],
-          og_title: [{ validator: 'maxLength', label: 'OG Title', param: 95 }],
-          og_description: [{ validator: 'maxLength', label: 'OG Description', param: 300 }],
-          keywords: [{ validator: 'maxLength', label: 'Keywords', param: 500 }],
-        };
+    var html = '<form class="admin-form seo-page-form" id="seoPageForm_' + index + '" data-seo-index="' + index + '" data-seo-page="' + page + '" novalidate>';
+    html += '<div class="seo-page-header"><h3 class="seo-page-title"><i class="fa-solid ' + getPageIcon(page) + '"></i> ' + escapeHtml(pageLabel) + '</h3><span class="seo-page-slug">/' + (page === 'home' ? '' : page) + '</span></div>';
 
-        var validation = validateForm(form, rules);
-        if (!validation.valid) {
-          displayFormErrors(form, validation.errors);
-          return;
-        }
+    html += '<div class="form-group"><label for="seo_title_' + index + '">Title Tag <span class="required">*</span></label><div class="input-wrapper"><input type="text" id="seo_title_' + index + '" name="title" value="' + escapeHtml(data.title || '') + '" maxlength="70" placeholder="Maxim 60-70 caractere recomandat"></div><div class="seo-char-counter" id="seo_title_counter_' + index + '"><span class="counter-current">' + (data.title ? data.title.length : 0) + '</span>/70</div><div class="field-error" data-error-for="title"></div></div>';
 
-        try {
-          await apiPut(API_BASE + '/seo', seoObj);
-          showToast('success', 'Setările SEO au fost salvate cu succes.');
-        } catch (err) {
-          showToast('error', err.message || 'Eroare la salvarea setărilor SEO.');
-        }
+    html += '<div class="form-group"><label for="seo_desc_' + index + '">Meta Description <span class="required">*</span></label><div class="input-wrapper"><textarea id="seo_desc_' + index + '" name="description" rows="3" maxlength="160" placeholder="Maxim 150-160 caractere recomandat">' + escapeHtml(data.description || '') + '</textarea></div><div class="seo-char-counter" id="seo_desc_counter_' + index + '"><span class="counter-current">' + (data.description ? data.description.length : 0) + '</span>/160</div><div class="field-error" data-error-for="description"></div></div>';
+
+    html += '<div class="form-group"><label for="seo_keywords_' + index + '">Meta Keywords</label><div class="input-wrapper"><input type="text" id="seo_keywords_' + index + '" name="keywords" value="' + escapeHtml(data.keywords || '') + '" maxlength="1000" placeholder="cuvânt1, cuvânt2, cuvânt3"></div><small class="field-hint">Separați cuvintele cheie prin virgulă.</small><div class="field-error" data-error-for="keywords"></div></div>';
+
+    html += '<div class="form-group"><label for="seo_og_image_' + index + '">OG Image URL</label><div class="input-wrapper"><input type="url" id="seo_og_image_' + index + '" name="og_image" value="' + escapeHtml(data.og_image || '') + '" maxlength="2000" placeholder="https://..."></div><small class="field-hint">Imaginea afișată la share social (1200×630 px recomandat).</small><div class="field-error" data-error-for="og_image"></div></div>';
+
+    html += '<div class="seo-preview-card"><div class="preview-label">Google Search Preview</div><div class="seo-preview-url">boxing-champions.ro' + (page === 'home' ? '' : '/' + page) + ' ›</div><div class="seo-preview-title" id="seo_preview_title_' + index + '">' + escapeHtml(data.title || SEO_PAGE_LABELS[page] + ' — Boxing Champions') + '</div><div class="seo-preview-desc" id="seo_preview_desc_' + index + '">' + escapeHtml(data.description || '') + '</div></div>';
+
+    html += '<div class="form-actions"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvează ' + escapeHtml(pageLabel) + '</button></div>';
+    html += '</form>';
+
+    return html;
+  }
+
+  function saveCurrentSeoFormToCache() {
+    var activePageBtn = document.querySelector('.seo-page-item.active');
+    if (!activePageBtn) return;
+    var index = parseInt(activePageBtn.getAttribute('data-seo-index'), 10);
+    if (Number.isNaN(index) || index < 0 || index >= seoDataCache.length) return;
+
+    var form = document.getElementById('seoPageForm_' + index);
+    if (!form) return;
+
+    var formData = new FormData(form);
+    seoDataCache[index] = {
+      page: form.getAttribute('data-seo-page') || SEO_PAGES[index],
+      title: (formData.get('title') || '').trim(),
+      description: (formData.get('description') || '').trim(),
+      keywords: (formData.get('keywords') || '').trim(),
+      og_image: (formData.get('og_image') || '').trim(),
+    };
+  }
+
+  function bindSeoFormEvents(index) {
+    var form = document.getElementById('seoPageForm_' + index);
+    if (!form) return;
+
+    var titleInput = document.getElementById('seo_title_' + index);
+    var titleCounter = document.getElementById('seo_title_counter_' + index);
+    var descInput = document.getElementById('seo_desc_' + index);
+    var descCounter = document.getElementById('seo_desc_counter_' + index);
+    var previewTitle = document.getElementById('seo_preview_title_' + index);
+    var previewDesc = document.getElementById('seo_preview_desc_' + index);
+
+    if (titleInput && titleCounter && previewTitle) {
+      titleInput.addEventListener('input', function () {
+        var len = this.value.length;
+        titleCounter.querySelector('.counter-current').textContent = len;
+        titleCounter.className = 'seo-char-counter' + (len > 60 ? ' warn' : '') + (len > 70 ? ' danger' : '');
+        previewTitle.textContent = this.value || (SEO_PAGE_LABELS[SEO_PAGES[index]] + ' — Boxing Champions');
       });
     }
+
+    if (descInput && descCounter && previewDesc) {
+      descInput.addEventListener('input', function () {
+        var len = this.value.length;
+        descCounter.querySelector('.counter-current').textContent = len;
+        descCounter.className = 'seo-char-counter' + (len > 150 ? ' warn' : '') + (len > 160 ? ' danger' : '');
+        previewDesc.textContent = this.value || '';
+      });
+    }
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      saveCurrentSeoFormToCache();
+
+      var rules = {
+        title: [{ validator: 'required', label: 'Title tag' }, { validator: 'maxLength', label: 'Title tag', param: 70 }],
+        description: [{ validator: 'required', label: 'Meta description' }, { validator: 'maxLength', label: 'Meta description', param: 160 }],
+        keywords: [{ validator: 'maxLength', label: 'Keywords', param: 1000 }],
+        og_image: [{ validator: 'maxLength', label: 'OG Image URL', param: 2000 }],
+      };
+
+      var validation = validateForm(form, rules);
+      if (!validation.valid) { displayFormErrors(form, validation.errors); return; }
+
+      var payload = seoDataCache.map(function (item) {
+        return {
+          page: item.page,
+          title: item.title || '',
+          description: item.description || '',
+          keywords: item.keywords || '',
+          og_image: item.og_image || '',
+        };
+      });
+
+      try {
+        await apiPut(API_BASE + '/seo', payload);
+        showToast('success', 'Setările SEO au fost salvate cu succes.');
+      } catch (err) {
+        showToast('error', err.message || 'Eroare la salvarea setărilor SEO.');
+      }
+    });
   }
 
   // ---------------------------------------------------------------------------
   // BINDING-URI GENERICE PENTRU TABELE
   // ---------------------------------------------------------------------------
 
-  /** Leagă toggle-urile (active/inactive) */
   function bindToggles(entityType) {
     var toggles = document.querySelectorAll('.toggle-input[data-entity="' + entityType + '"]');
     toggles.forEach(function (toggle) {
@@ -2589,7 +1786,6 @@
           var url = API_BASE + '/' + entityType + 's/' + id + '/toggle';
           await apiPatch(url);
           showToast('success', 'Starea a fost actualizată.');
-          // Reîncarcă lista
           switch (entityType) {
             case 'coach': loadCoaches(); break;
             case 'event': loadEvents(); break;
@@ -2597,15 +1793,11 @@
             case 'subscription': loadSubscriptions(); break;
             case 'product': loadProducts(); break;
           }
-        } catch (err) {
-          showToast('error', err.message || 'Eroare la comutarea stării.');
-          this.checked = !newState; // Revert
-        }
+        } catch (err) { showToast('error', err.message || 'Eroare la comutarea stării.'); this.checked = !newState; }
       });
     });
   }
 
-  /** Leagă butoanele de editare */
   function bindEdits(entityType, modalFn) {
     var btns = document.querySelectorAll('.btn-edit[data-edit="' + entityType + '"]');
     btns.forEach(function (btn) {
@@ -2615,14 +1807,11 @@
           var url = API_BASE + '/' + entityType + 's/' + id;
           var data = await apiGet(url);
           modalFn(data);
-        } catch (err) {
-          showToast('error', err.message || 'Eroare la încărcarea datelor.');
-        }
+        } catch (err) { showToast('error', err.message || 'Eroare la încărcarea datelor.'); }
       });
     });
   }
 
-  /** Leagă butoanele de ștergere */
   function bindDeletes(entityType, reloadFn) {
     var btns = document.querySelectorAll('.btn-delete[data-delete="' + entityType + '"]');
     btns.forEach(function (btn) {
@@ -2634,9 +1823,7 @@
           await apiDelete(url);
           showToast('success', 'Elementul a fost șters.');
           reloadFn();
-        } catch (err) {
-          showToast('error', err.message || 'Eroare la ștergere.');
-        }
+        } catch (err) { showToast('error', err.message || 'Eroare la ștergere.'); }
       });
     });
   }
@@ -2647,24 +1834,94 @@
 
   async function loadBadges() {
     try {
-      // Mesaje necitite
       var messages = await apiGet(API_BASE + '/messages');
       var unreadCount = messages.filter(function (m) { return !m.is_read; }).length;
-      if (badgeMessages) {
-        badgeMessages.textContent = unreadCount;
-        badgeMessages.style.display = unreadCount > 0 ? 'flex' : 'none';
-      }
+      if (badgeMessages) { badgeMessages.textContent = unreadCount; badgeMessages.style.display = unreadCount > 0 ? 'flex' : 'none'; }
 
-      // Comenzi în așteptare
       var orders = await apiGet(API_BASE + '/orders');
       var pendingCount = orders.filter(function (o) { return o.status === 'pending'; }).length;
-      if (badgeOrders) {
-        badgeOrders.textContent = pendingCount;
-        badgeOrders.style.display = pendingCount > 0 ? 'flex' : 'none';
-      }
-    } catch (_) {
-      // Ignorăm erorile la badge-uri
+      if (badgeOrders) { badgeOrders.textContent = pendingCount; badgeOrders.style.display = pendingCount > 0 ? 'flex' : 'none'; }
+    } catch (_) { /* ignore */ }
+  }
+
+  // ---------------------------------------------------------------------------
+  // INIT: LOGICĂ UI DIN DASHBOARD (mutată din inline-script pentru CSP nonce)
+  // ---------------------------------------------------------------------------
+
+  function initDashboardUI() {
+    var hamburger   = document.getElementById('hamburgerMenu');
+    var sidebarEl   = document.getElementById('adminSidebar');
+    var overlay     = document.getElementById('sidebarOverlay');
+    var btnRefresh  = document.getElementById('btnRefresh');
+    var pageTitle   = document.getElementById('pageTitle');
+    var globalSearch = document.getElementById('globalSearch');
+
+    var sectionTitles = {
+      settings: 'Setări Generale', coaches: 'Antrenori', events: 'Evenimente',
+      schedule: 'Program Săptămânal', subscriptions: 'Abonamente', products: 'Produse',
+      orders: 'Comenzi', messages: 'Mesaje', achievements: 'Realizări', seo: 'SEO',
+    };
+
+    if (hamburger && sidebarEl && overlay) {
+      hamburger.addEventListener('click', function () {
+        var isOpen = sidebarEl.classList.contains('mobile-open');
+        if (isOpen) {
+          sidebarEl.classList.remove('mobile-open');
+          overlay.classList.remove('active');
+          overlay.setAttribute('aria-hidden', 'true');
+          document.body.style.overflow = '';
+        } else {
+          sidebarEl.classList.add('mobile-open');
+          overlay.classList.add('active');
+          overlay.setAttribute('aria-hidden', 'false');
+          document.body.style.overflow = 'hidden';
+        }
+      });
+      overlay.addEventListener('click', function () {
+        sidebarEl.classList.remove('mobile-open');
+        overlay.classList.remove('active');
+        overlay.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+      });
     }
+
+    if (mainContent && pageTitle) {
+      var observer = new MutationObserver(function () {
+        var activeNav = document.querySelector('.sidebar-nav-item.active');
+        if (activeNav) {
+          var section = activeNav.getAttribute('data-section');
+          if (section && sectionTitles[section]) pageTitle.textContent = sectionTitles[section];
+        }
+      });
+      observer.observe(mainContent, { childList: true, subtree: false });
+    }
+
+    if (btnRefresh) {
+      btnRefresh.addEventListener('click', function () {
+        var activeNav = document.querySelector('.sidebar-nav-item.active');
+        if (activeNav) activeNav.click();
+      });
+    }
+
+    if (globalSearch) {
+      globalSearch.addEventListener('input', function () {
+        var query = this.value.trim().toLowerCase();
+        var rows = document.querySelectorAll('.data-table tbody tr');
+        rows.forEach(function (row) {
+          if (!query) { row.style.display = ''; return; }
+          var text = row.textContent.toLowerCase();
+          row.style.display = text.includes(query) ? '' : 'none';
+        });
+      });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && sidebarEl && sidebarEl.classList.contains('mobile-open')) {
+        sidebarEl.classList.remove('mobile-open');
+        if (overlay) { overlay.classList.remove('active'); overlay.setAttribute('aria-hidden', 'true'); }
+        document.body.style.overflow = '';
+      }
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -2672,18 +1929,17 @@
   // ---------------------------------------------------------------------------
 
   function init() {
-    // Capture referințe DOM
     sidebar = document.querySelector('.sidebar');
     mainContent = document.querySelector('.main-content');
     badgeMessages = document.getElementById('badge-messages');
     badgeOrders = document.getElementById('badge-orders');
 
-    // Verifică sesiunea
+    initDashboardUI();
+
     checkSession().then(function (ok) {
       if (!ok) return;
       startSessionCheck();
 
-      // Bind navigare sidebar
       var navItems = document.querySelectorAll('.sidebar-nav-item');
       navItems.forEach(function (item) {
         item.addEventListener('click', function (e) {
@@ -2693,19 +1949,11 @@
         });
       });
 
-      // Bind buton logout
       var logoutBtn = document.getElementById('btnLogout');
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', function (e) {
-          e.preventDefault();
-          logout();
-        });
-      }
+      if (logoutBtn) { logoutBtn.addEventListener('click', function (e) { e.preventDefault(); logout(); }); }
 
-      // Încarcă badge-uri
       loadBadges();
 
-      // Încarcă secțiunea implicită (setări)
       var initialSection = document.querySelector('.sidebar-nav-item.active');
       if (initialSection) {
         var section = initialSection.getAttribute('data-section');
@@ -2716,14 +1964,12 @@
     });
   }
 
-  // Pornește când DOM-ul e gata
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
 
-  // Expune API-ul global (pentru depanare / extensii)
   window.AdminDashboard = {
     switchSection: switchSection,
     loadCoaches: loadCoaches,

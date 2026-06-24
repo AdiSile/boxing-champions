@@ -266,6 +266,7 @@ describe('Auth — POST /api/auth/login', () => {
 
     const data = response.json();
     expect(data).toBeDefined();
+    expect(data.success).toBe(true);
     expect(data.admin).toBeDefined();
     expect(data.admin.id).toBe(1);
     expect(data.admin.email).toBe('admin@boxing-champions.ro');

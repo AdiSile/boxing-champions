@@ -27,6 +27,7 @@
 //   Orders         GET /, GET /:id, PATCH /:id/status, DELETE /:id
 //   Messages       GET /, GET /:id, PATCH /:id/read, DELETE /:id
 //   Achievements   GET /, PUT /:key
+//   SEO            GET /, PUT /
 //
 // Stripe integration: uses STRIPE_KEY from env, creates checkout sessions
 // with line_items from cart, stores order via db.createOrder.
@@ -1540,6 +1541,79 @@ adminRouter.put('/achievements/:key', (req, res) => {
   } catch (err) {
     console.error('[API] PUT /admin/achievements/:key error:', err.message);
     return res.status(500).json({ error: 'Eroare la actualizarea realizării.' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Admin: SEO
+// ---------------------------------------------------------------------------
+
+adminRouter.get('/seo', (_req, res) => {
+  try {
+    const seo = db.getAllSeo();
+    return res.json(seo);
+  } catch (err) {
+    console.error('[API] GET /admin/seo error:', err.message);
+    return res.status(500).json({ error: 'Eroare la obținerea setărilor SEO.' });
+  }
+});
+
+adminRouter.put('/seo', (req, res) => {
+  try {
+    const seoArray = req.body;
+    if (!Array.isArray(seoArray) || seoArray.length === 0) {
+      return res.status(400).json({ error: 'Corpul trebuie să fie un array de obiecte SEO.' });
+    }
+
+    const VALID_PAGES = [
+      'home', 'about', 'coaches', 'schedule',
+      'subscriptions', 'events', 'shop', 'contact',
+    ];
+
+    const errors = [];
+    for (let i = 0; i < seoArray.length; i++) {
+      const seo = seoArray[i];
+      const prefix = `Element[${i}]: `;
+
+      if (!seo || typeof seo !== 'object') {
+        errors.push(`${prefix}trebuie să fie un obiect.`);
+        continue;
+      }
+
+      if (!isString(seo.page, 50) || !VALID_PAGES.includes(seo.page.trim())) {
+        errors.push(`${prefix}câmpul "page" trebuie să fie unul din: ${VALID_PAGES.join(', ')}.`);
+      }
+      if (seo.title !== undefined && !isString(seo.title, 500)) {
+        errors.push(`${prefix}câmpul "title" trebuie să fie un string de max 500 caractere.`);
+      }
+      if (seo.description !== undefined && !isString(seo.description, 1000)) {
+        errors.push(`${prefix}câmpul "description" trebuie să fie un string de max 1000 caractere.`);
+      }
+      if (seo.keywords !== undefined && !isString(seo.keywords, 1000)) {
+        errors.push(`${prefix}câmpul "keywords" trebuie să fie un string de max 1000 caractere.`);
+      }
+      if (seo.og_image !== undefined && !isString(seo.og_image, 2000)) {
+        errors.push(`${prefix}câmpul "og_image" trebuie să fie un string de max 2000 caractere.`);
+      }
+    }
+
+    if (errors.length > 0) {
+      return res.status(400).json({ error: 'Date invalide.', details: errors });
+    }
+
+    const sanitized = seoArray.map((seo) => ({
+      page: sanitizeString(seo.page),
+      title: sanitizeString(seo.title ?? ''),
+      description: sanitizeString(seo.description ?? ''),
+      keywords: sanitizeString(seo.keywords ?? ''),
+      og_image: sanitizeString(seo.og_image ?? ''),
+    }));
+
+    const updated = db.updateSeoBatch(sanitized);
+    return res.json(updated);
+  } catch (err) {
+    console.error('[API] PUT /admin/seo error:', err.message);
+    return res.status(500).json({ error: 'Eroare la actualizarea setărilor SEO.' });
   }
 });
 

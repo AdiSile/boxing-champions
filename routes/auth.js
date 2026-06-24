@@ -139,7 +139,7 @@ function verifyToken(req, res, next) {
  * Body (JSON):
  *   { "email": "...", "password": "..." }
  *
- * On success returns: { admin: { id, email } }
+ * On success returns: { success: true, admin: { id, email } }
  * Also sets the auth_token cookie.
  */
 router.post('/login', (req, res) => {
@@ -194,6 +194,7 @@ router.post('/login', (req, res) => {
 
   // --- 7. Respond ---
   return res.json({
+    success: true,
     admin: {
       id: admin.id,
       email: admin.email,
