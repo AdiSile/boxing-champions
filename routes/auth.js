@@ -3,16 +3,17 @@
 // Autentificare centralizată: folosește middleware-ul și helper-ele din
 // middleware/auth.js pentru signare, verificare, cookie-uri și CSRF.
 //
-// POST /api/auth/login   – autentificare (bcrypt + setAuthCookies)
-// GET  /api/auth/check   – verificare token (optionalAuth)
-// POST /api/auth/logout  – ștergere cookie-uri + revocare (clearAuthCookies)
-// POST /api/auth/refresh – refresh token rotation (refreshTokenHandler)
+// POST /api/auth/register – creare cont nou (bcrypt + createUserAccount)
+// POST /api/auth/login    – autentificare (bcrypt + setAuthCookies)
+// GET  /api/auth/check    – verificare token (optionalAuth)
+// POST /api/auth/logout   – ștergere cookie-uri + revocare (clearAuthCookies)
+// POST /api/auth/refresh  – refresh token rotation (refreshTokenHandler)
 // ---------------------------------------------------------------------------
 
 const express = require('express');
 const bcrypt = require('bcrypt');
 const { getDb } = require('../config/db');
-const { loginSchema, validate } = require('../middleware/validate');
+const { loginSchema, userCreateSchema, validate } = require('../middleware/validate');
 const { authRateLimiter } = require('../middleware/security');
 const {
   authenticate,
@@ -32,6 +33,87 @@ const router = express.Router();
 
 /** Costul bcrypt pentru hash-ul parolei */
 const BCRYPT_SALT_ROUNDS = 12;
+
+// ---------------------------------------------------------------------------
+// Helpers – creare cont utilizator
+// ---------------------------------------------------------------------------
+
+/**
+ * Creează un cont de utilizator în baza de date.
+ *
+ * Validează unicitatea email-ului, hash-uiește parola și inserează
+ * înregistrarea. Returnează utilizatorul creat (fără parolă).
+ *
+ * @param {object} params
+ * @param {string} params.name - Numele utilizatorului
+ * @param {string} params.email - Adresa de email
+ * @param {string} params.password - Parola în clar (va fi hash-uită)
+ * @param {string} [params.role='user'] - Rolul utilizatorului ('user' sau 'coach')
+ * @param {string|null} [params.phone=null] - Numărul de telefon
+ * @returns {{ success: boolean, user: object|null, error: string|null }}
+ */
+function createUserAccount({ name, email, password, role = 'user', phone = null }) {
+  try {
+    const db = getDb();
+
+    // Verifică dacă tabela users există
+    const tableExists = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+    ).get();
+
+    if (!tableExists) {
+      return { success: false, user: null, error: 'Tabela users nu există.' };
+    }
+
+    // Verifică dacă email-ul este deja utilizat
+    const existingUser = db.prepare(
+      'SELECT id FROM users WHERE email = ?'
+    ).get(email);
+
+    if (existingUser) {
+      return {
+        success: false,
+        user: null,
+        error: 'Un cont cu această adresă de email există deja.',
+      };
+    }
+
+    // Hash-uiește parola
+    const hashedPassword = bcrypt.hashSync(password, BCRYPT_SALT_ROUNDS);
+
+    // Inserează utilizatorul
+    const result = db.prepare(`
+      INSERT INTO users (name, email, password, role, phone, is_active, email_verified_at)
+      VALUES (?, ?, ?, ?, ?, 1, NULL)
+    `).run(name, email, hashedPassword, role, phone);
+
+    console.log(`[auth] Cont creat: ${email} (rol: ${role})`);
+
+    return {
+      success: true,
+      user: {
+        id: result.lastInsertRowid,
+        name,
+        email,
+        role,
+      },
+      error: null,
+    };
+  } catch (err) {
+    console.error('[auth] Eroare la crearea contului:', err.message);
+
+    // Detectează eroarea de constrângere UNIQUE pentru email (fallback)
+    if (err.message && err.message.includes('UNIQUE constraint')) {
+      return {
+        success: false,
+        user: null,
+        error: 'Un cont cu această adresă de email există deja.',
+      };
+    }
+
+    return { success: false, user: null, error: 'Eroare internă la crearea contului.' };
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Helpers – admin
@@ -162,6 +244,54 @@ function ensureAdminOnStartup() {
 }
 
 ensureAdminOnStartup();
+
+// ---------------------------------------------------------------------------
+// POST /api/auth/register
+// ---------------------------------------------------------------------------
+
+router.post(
+  '/api/auth/register',
+  authRateLimiter,
+  validate(userCreateSchema),
+  (req, res) => {
+    try {
+      const { name, email, password, role = 'user', phone } = req.body;
+
+      // Creează contul utilizatorului
+      const result = createUserAccount({ name, email, password, role, phone });
+
+      if (!result.success) {
+        // Dacă eroarea e legată de email duplicat, returnăm 409 Conflict
+        if (result.error && result.error.includes('există deja')) {
+          return res.status(409).json({
+            error: result.error,
+            code: 'EMAIL_ALREADY_EXISTS',
+          });
+        }
+
+        return res.status(500).json({
+          error: result.error || 'Eroare la crearea contului.',
+          code: 'ACCOUNT_CREATION_FAILED',
+        });
+      }
+
+      // Autentificare automată după înregistrare: setează cookie-urile
+      const { csrfToken } = setAuthCookies(res, result.user);
+
+      return res.status(201).json({
+        message: 'Cont creat cu succes.',
+        user: result.user,
+        csrfToken,
+      });
+    } catch (err) {
+      console.error('[auth] Register error:', err.message);
+      return res.status(500).json({
+        error: 'Internal server error.',
+        code: 'INTERNAL_ERROR',
+      });
+    }
+  }
+);
 
 // ---------------------------------------------------------------------------
 // POST /api/auth/login

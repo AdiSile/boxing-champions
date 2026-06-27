@@ -1,12 +1,13 @@
 // ---------------------------------------------------------------------------
 // routes/orders.js
-// GET și PUT /api/orders
+// GET, POST și PUT /api/orders
 //
 // GET    /api/orders       – listare comenzi cu paginare, sortare, căutare, filtrare
 //                             Admin: vede toate comenzile
 //                             User/Coach: vede doar comenzile proprii
 // GET    /api/orders/:id   – detalii comandă (admin sau proprietar)
-// POST   /api/orders       – creare comandă (autentificare opțională)
+// POST   /api/orders       – creare comandă cu auto-creare cont, billing_address,
+//                             trimitere email de confirmare
 // PUT    /api/orders/:id   – admin, actualizare comandă (status, billing, notes)
 //
 // Autentificare & autorizare: middleware centralizat din middleware/auth.js
@@ -14,6 +15,7 @@
 
 const express = require('express');
 const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 const { getDb } = require('../config/db');
 const {
   validate,
@@ -29,6 +31,10 @@ const {
   optionalAuth,
   csrfProtection,
 } = require('../middleware/auth');
+const {
+  sendOrderConfirmation,
+  sendWelcomeEmail,
+} = require('../utils/email');
 
 const router = express.Router();
 
@@ -54,7 +60,8 @@ function parseOrderRow(row) {
     order_number: row.order_number, status: row.status,
     total_amount: row.total_amount !== null ? Number(row.total_amount) : 0,
     items, billing_name: row.billing_name || null, billing_email: row.billing_email || null,
-    billing_phone: row.billing_phone || null, notes: row.notes || null,
+    billing_phone: row.billing_phone || null, billing_address: row.billing_address || null,
+    notes: row.notes || null,
     paid_at: row.paid_at || null, created_at: row.created_at, updated_at: row.updated_at,
     user_name: row.user_name || null, user_email: row.user_email || null,
   };
@@ -175,30 +182,98 @@ router.get('/api/orders/:id', authenticate, validate(paramsIdSchema), (req, res)
 // ---------------------------------------------------------------------------
 // POST /api/orders
 // Middleware: optionalAuth (public + auth users)
+//
+// Funcționalități:
+//   - Acceptă billing_address
+//   - Auto-creare cont utilizator din billing_email dacă utilizatorul nu este
+//     autentificat și nu se specifică un user_id
+//   - Trimite email de confirmare a comenzii
+//   - Trimite email de bun venit dacă s-a creat automat un cont
 // ---------------------------------------------------------------------------
 
-router.post('/api/orders', optionalAuth, validate(orderCreateSchema), (req, res) => {
+router.post('/api/orders', optionalAuth, validate(orderCreateSchema), async (req, res) => {
   try {
     const db = getDb();
-    const { user_id, items, billing_name, billing_email, billing_phone, notes } = req.body;
+    const { user_id, items, billing_name, billing_email, billing_phone, billing_address, notes } = req.body;
+
+    // ------------------------------------------------------------------
+    // 1. Determină userId-ul efectiv + auto-creare cont
+    // ------------------------------------------------------------------
     let effectiveUserId = null;
+    let accountWasCreated = false;
+    let generatedPassword = null;
+
     if (req.user) {
-      if (req.user.role === 'admin' && user_id !== undefined) effectiveUserId = user_id;
-      else effectiveUserId = req.user.userId;
+      // Utilizator autentificat
+      if (req.user.role === 'admin' && user_id !== undefined && user_id !== null) {
+        effectiveUserId = Number(user_id);
+      } else {
+        effectiveUserId = req.user.userId;
+      }
     } else if (user_id !== undefined && user_id !== null) {
-      effectiveUserId = user_id;
+      // user_id explicit în request (fără autentificare)
+      effectiveUserId = Number(user_id);
+    } else if (billing_email && typeof billing_email === 'string' && billing_email.trim()) {
+      // Nu există user autentificat și nici user_id explicit.
+      // AUTO-CREARE CONT pe baza billing_email.
+      const normalizedEmail = billing_email.trim().toLowerCase();
+
+      // Verificăm dacă există deja un utilizator cu acest email
+      const existingUser = db.prepare(
+        'SELECT id, is_active FROM users WHERE email = ?'
+      ).get(normalizedEmail);
+
+      if (existingUser) {
+        if (!existingUser.is_active) {
+          return res.status(400).json({
+            error: 'A user account with this email exists but is inactive. Please contact support.',
+            code: 'USER_INACTIVE',
+          });
+        }
+        effectiveUserId = existingUser.id;
+      } else {
+        // Creăm un cont nou automat
+        generatedPassword = crypto.randomBytes(12).toString('base64').replace(/[+/=]/g, '').slice(0, 16);
+        const saltRounds = 10;
+        const hashedPassword = bcrypt.hashSync(generatedPassword, saltRounds);
+
+        const userName = billing_name && billing_name.trim()
+          ? billing_name.trim()
+          : normalizedEmail.split('@')[0];
+
+        const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+
+        const createResult = db.prepare(`
+          INSERT INTO users (name, email, password, role, is_active, email_verified_at, created_at, updated_at)
+          VALUES (?, ?, ?, 'user', 1, ?, ?, ?)
+        `).run(userName, normalizedEmail, hashedPassword, now, now, now);
+
+        effectiveUserId = createResult.lastInsertRowid;
+        accountWasCreated = true;
+
+        console.log(`[orders] Auto-created account for ${normalizedEmail} (user_id=${effectiveUserId})`);
+      }
     }
+
+    // ------------------------------------------------------------------
+    // 2. Validare utilizator (dacă există un userId)
+    // ------------------------------------------------------------------
     if (effectiveUserId !== null && effectiveUserId !== undefined) {
       const user = db.prepare('SELECT id, is_active FROM users WHERE id = ?').get(effectiveUserId);
       if (!user) return res.status(400).json({ error: 'User not found.', code: 'USER_NOT_FOUND' });
       if (!user.is_active) return res.status(400).json({ error: 'User account is inactive.', code: 'USER_INACTIVE' });
     }
+
+    // ------------------------------------------------------------------
+    // 3. Validare și procesare items
+    // ------------------------------------------------------------------
     let parsedItems;
     try { parsedItems = typeof items === 'string' ? JSON.parse(items) : items; } catch {
       return res.status(400).json({ error: 'Items must be a valid JSON array.', code: 'VALIDATION_ERROR' });
     }
     if (!Array.isArray(parsedItems) || parsedItems.length === 0)
       return res.status(400).json({ error: 'Order must contain at least one item.', code: 'VALIDATION_ERROR' });
+
     let totalAmount = 0;
     const validatedItems = [];
     for (const item of parsedItems) {
@@ -220,6 +295,10 @@ router.post('/api/orders', optionalAuth, validate(orderCreateSchema), (req, res)
       validatedItems.push({ product_id: productId, product_name: product.name, quantity, unit_price: unitPrice, line_total: lineTotal });
       totalAmount += lineTotal;
     }
+
+    // ------------------------------------------------------------------
+    // 4. Generează număr de comandă unic
+    // ------------------------------------------------------------------
     let orderNumber;
     let attempts = 0;
     const maxAttempts = 10;
@@ -231,22 +310,76 @@ router.post('/api/orders', optionalAuth, validate(orderCreateSchema), (req, res)
     } while (attempts < maxAttempts);
     if (attempts >= maxAttempts)
       return res.status(500).json({ error: 'Could not generate a unique order number. Please try again.', code: 'INTERNAL_ERROR' });
+
+    // ------------------------------------------------------------------
+    // 5. Inserează comanda (include billing_address)
+    // ------------------------------------------------------------------
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const sanitizedBillingAddress = billing_address && typeof billing_address === 'string'
+      ? billing_address.trim().slice(0, 512)
+      : null;
+
     const result = db.prepare(`
-      INSERT INTO orders (user_id, order_number, status, total_amount, items, billing_name, billing_email, billing_phone, notes, created_at, updated_at)
-      VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(effectiveUserId, orderNumber, totalAmount, JSON.stringify(validatedItems), billing_name || null, billing_email || null, billing_phone || null, notes || null, now, now);
+      INSERT INTO orders (user_id, order_number, status, total_amount, items, billing_name, billing_email, billing_phone, billing_address, notes, created_at, updated_at)
+      VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      effectiveUserId, orderNumber, totalAmount, JSON.stringify(validatedItems),
+      billing_name || null, billing_email || null, billing_phone || null,
+      sanitizedBillingAddress, notes || null, now, now,
+    );
+
+    // ------------------------------------------------------------------
+    // 6. Actualizează stocul produselor
+    // ------------------------------------------------------------------
     for (const item of validatedItems) {
       const product = db.prepare('SELECT stock FROM products WHERE id = ?').get(item.product_id);
       if (product && product.stock !== null)
         db.prepare('UPDATE products SET stock = stock - ?, updated_at = ? WHERE id = ? AND stock IS NOT NULL').run(item.quantity, now, item.product_id);
     }
+
+    // ------------------------------------------------------------------
+    // 7. Citește comanda creată
+    // ------------------------------------------------------------------
     const created = db.prepare(`
       SELECT o.*, u.name AS user_name, u.email AS user_email
       FROM orders o LEFT JOIN users u ON o.user_id = u.id WHERE o.id = ?
     `).get(result.lastInsertRowid);
     const order = parseOrderRow(created);
-    return res.status(201).json({ message: 'Order created successfully.', data: order });
+
+    // ------------------------------------------------------------------
+    // 8. Trimite email de confirmare (async, non-blocking)
+    // ------------------------------------------------------------------
+    const recipientEmail = billing_email || (effectiveUserId ? created.user_email : null);
+
+    // Email de confirmare comandă
+    if (recipientEmail) {
+      sendOrderConfirmation(order, recipientEmail).catch(err => {
+        console.error('[orders] Order confirmation email error:', err.message);
+      });
+    }
+
+    // Email de bun venit dacă s-a creat cont automat
+    if (accountWasCreated && recipientEmail) {
+      const newUser = { name: created.user_name || billing_name, email: recipientEmail };
+      sendWelcomeEmail(newUser, generatedPassword).catch(err => {
+        console.error('[orders] Welcome email error:', err.message);
+      });
+    }
+
+    // ------------------------------------------------------------------
+    // 9. Răspuns
+    // ------------------------------------------------------------------
+    const responsePayload = {
+      message: 'Order created successfully.',
+      data: order,
+    };
+
+    if (accountWasCreated) {
+      responsePayload.account_created = true;
+      responsePayload.message += ' A new account was created for your email address.';
+    }
+
+    return res.status(201).json(responsePayload);
   } catch (err) {
     console.error('[orders] POST error:', err.message);
     if (err.message && err.message.includes('UNIQUE constraint'))
@@ -286,7 +419,7 @@ router.put('/api/orders/:id', authenticate, csrfProtection, authorize('admin'), 
       if ((newStatus === 'cancelled' || newStatus === 'refunded') && existing.status !== 'cancelled' && existing.status !== 'refunded')
         shouldRestoreStock = true;
     }
-    const textFields = ['billing_name', 'billing_email', 'billing_phone', 'notes'];
+    const textFields = ['billing_name', 'billing_email', 'billing_phone', 'billing_address', 'notes'];
     for (const field of textFields) {
       if (req.body[field] !== undefined) { updates[field] = req.body[field] || null; setClauses.push(`${field} = ?`); }
     }

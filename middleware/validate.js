@@ -1075,6 +1075,7 @@ const orderCreateSchema = {
     billing_name: { type: 'name', minLength: 2, maxLength: 128 },
     billing_email: { type: 'email' },
     billing_phone: { type: 'phone' },
+    billing_address: { type: 'text', maxLength: 512 },
     notes: { type: 'text', maxLength: 2048 },
   },
 };
@@ -1086,6 +1087,7 @@ const orderUpdateSchema = {
     billing_name: { type: 'name', minLength: 2, maxLength: 128 },
     billing_email: { type: 'email' },
     billing_phone: { type: 'phone' },
+    billing_address: { type: 'text', maxLength: 512 },
     notes: { type: 'text', maxLength: 2048 },
   },
 };

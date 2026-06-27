@@ -215,12 +215,21 @@ function initializeDatabase() {
       billing_name  TEXT    DEFAULT NULL,
       billing_email TEXT    DEFAULT NULL,
       billing_phone TEXT    DEFAULT NULL,
+      billing_address TEXT  DEFAULT NULL,
       notes         TEXT    DEFAULT NULL,
       paid_at       TEXT    DEFAULT NULL,
       created_at    TEXT    DEFAULT (datetime('now')),
       updated_at    TEXT    DEFAULT (datetime('now'))
     );
   `);
+
+  // ── Migration: billing_address (safe add if not exists) ──
+  const ordersColumns = db.prepare('PRAGMA table_info(orders)').all();
+  const hasBillingAddress = ordersColumns.some(col => col.name === 'billing_address');
+  if (!hasBillingAddress) {
+    db.exec('ALTER TABLE orders ADD COLUMN billing_address TEXT DEFAULT NULL');
+    console.log('[DB] Migration: added billing_address column to orders.');
+  }
 
   // ── contact_messages ─────────────────────────────────────
   db.exec(`

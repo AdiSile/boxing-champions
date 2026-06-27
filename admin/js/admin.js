@@ -1555,6 +1555,7 @@
     document.getElementById('order-billing-name').value = '';
     document.getElementById('order-billing-email').value = '';
     document.getElementById('order-billing-phone').value = '';
+    document.getElementById('order-billing-address').value = '';
     document.getElementById('order-notes').value = '';
     document.getElementById('order-total-display').textContent = '0 RON';
     var itemsContainer = document.getElementById('order-items-list');
@@ -1570,6 +1571,7 @@
     document.getElementById('order-billing-name').value = order.billing_name || '';
     document.getElementById('order-billing-email').value = order.billing_email || '';
     document.getElementById('order-billing-phone').value = order.billing_phone || '';
+    document.getElementById('order-billing-address').value = order.billing_address || '';
     document.getElementById('order-notes').value = order.notes || '';
     document.getElementById('order-total-display').textContent = formatPrice(order.total_amount) + ' RON';
     if (itemsContainer) {
@@ -1601,6 +1603,7 @@
       billing_name: document.getElementById('order-billing-name').value.trim() || null,
       billing_email: document.getElementById('order-billing-email').value.trim() || null,
       billing_phone: document.getElementById('order-billing-phone').value.trim() || null,
+      billing_address: document.getElementById('order-billing-address').value.trim() || null,
       notes: document.getElementById('order-notes').value.trim() || null,
     };
     try {

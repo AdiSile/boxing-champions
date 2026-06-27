@@ -82,6 +82,7 @@ const checkoutSchema = {
     billing_name: { type: 'name', minLength: 2, maxLength: 128 },
     billing_email: { type: 'email' },
     billing_phone: { type: 'phone' },
+    billing_address: { type: 'text', maxLength: 512 },
     notes: { type: 'text', maxLength: 2048 },
     success_url: {
       type: 'string',
@@ -144,7 +145,7 @@ function getStripe() {
 // Body (validat cu checkoutSchema):
 //   - items (required): array de { product_id, quantity }
 //   - promo_code (optional): string cu codul promoțional
-//   - billing_name, billing_email, billing_phone, notes (opționale)
+//   - billing_name, billing_email, billing_phone, billing_address, notes (opționale)
 //   - success_url, cancel_url (opționale – overrides)
 // ---------------------------------------------------------------------------
 
@@ -161,6 +162,7 @@ router.post('/api/checkout', validate(checkoutSchema), async (req, res) => {
       billing_name,
       billing_email,
       billing_phone,
+      billing_address,
       notes,
       success_url,
       cancel_url,
@@ -301,8 +303,8 @@ router.post('/api/checkout', validate(checkoutSchema), async (req, res) => {
     const orderResult = db.prepare(`
       INSERT INTO orders
         (user_id, order_number, status, total_amount, items,
-         billing_name, billing_email, billing_phone, notes, created_at, updated_at)
-      VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)
+         billing_name, billing_email, billing_phone, billing_address, notes, created_at, updated_at)
+      VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       null,
       orderNumber,
@@ -311,6 +313,7 @@ router.post('/api/checkout', validate(checkoutSchema), async (req, res) => {
       billing_name || null,
       billing_email || null,
       billing_phone || null,
+      billing_address || null,
       notes || null,
       now,
       now,

@@ -11,6 +11,7 @@
  *   6. Toast notifications
  *   7. Fallback offline cu produse hardcodate
  *   8. Sincronizare promoții cu serverul (DB)
+ *   9. Modal de checkout cu câmpuri client + POST /api/orders
  * ===========================================================================
  */
 
@@ -592,7 +593,7 @@
     if (checkoutBtn) {
       checkoutBtn.addEventListener('click', function () {
         if (Cart.isEmpty()) return;
-        checkout({ onSuccess: function () { closeCartDrawer(); } });
+        openCheckoutModal();
       });
     }
 
@@ -789,6 +790,311 @@
         setTimeout(function () { countSpan.classList.remove('cart-floating-icon__count--pulse'); }, 400);
       }
     }
+  }
+
+  /* ========================================================================
+     Checkout Modal
+     ======================================================================== */
+
+  function injectCheckoutModalStyles() {
+    if (document.getElementById('checkout-modal-styles')) return;
+
+    var styles = '' +
+      '.checkout-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 7000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }' +
+      '.checkout-modal-overlay--visible { opacity: 1; pointer-events: auto; }' +
+      '.checkout-modal { background: #1a1a1a; border: 1px solid rgba(212,168,67,0.25); border-radius: 16px; width: min(480px, 92vw); max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.7); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1); }' +
+      '.checkout-modal-overlay--visible .checkout-modal { transform: translateY(0); }' +
+      '.checkout-modal__header { display: flex; align-items: center; justify-content: space-between; padding: 1.4rem 1.8rem; border-bottom: 1px solid rgba(255,255,255,0.08); }' +
+      '.checkout-modal__title { font-family: "Oswald", "Arial Black", sans-serif; font-size: 1.25rem; text-transform: uppercase; letter-spacing: 0.06em; color: #d4a843; margin: 0; }' +
+      '.checkout-modal__close { background: none; border: none; color: #aaa; font-size: 1.6rem; cursor: pointer; padding: 0; line-height: 1; transition: color 0.2s; }' +
+      '.checkout-modal__close:hover { color: #d4a843; }' +
+      '.checkout-modal__body { padding: 1.4rem 1.8rem; }' +
+      '.checkout-modal__summary { background: rgba(255,255,255,0.04); border-radius: 10px; padding: 1rem; margin-bottom: 1.3rem; }' +
+      '.checkout-modal__summary-title { font-family: "Oswald", "Arial Black", sans-serif; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: #aaa; margin-bottom: 0.6rem; }' +
+      '.checkout-modal__summary-items { font-size: 0.78rem; color: #ccc; margin-bottom: 0.5rem; max-height: 120px; overflow-y: auto; }' +
+      '.checkout-modal__summary-item { display: flex; justify-content: space-between; padding: 0.2em 0; }' +
+      '.checkout-modal__summary-total { display: flex; justify-content: space-between; font-family: "Oswald", "Arial Black", sans-serif; font-size: 1.05rem; color: #d4a843; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.6em; margin-top: 0.4em; }' +
+      '.checkout-modal__field { margin-bottom: 1rem; }' +
+      '.checkout-modal__label { display: block; font-size: 0.78rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.3em; }' +
+      '.checkout-modal__input { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 0.65em 0.9em; color: #eee; font-size: 0.88rem; outline: none; transition: border-color 0.2s; font-family: inherit; }' +
+      '.checkout-modal__input:focus { border-color: #d4a843; box-shadow: 0 0 0 3px rgba(212,168,67,0.1); }' +
+      '.checkout-modal__input--error { border-color: #f44336; }' +
+      '.checkout-modal__error { font-size: 0.72rem; color: #f44336; margin-top: 0.25em; min-height: 1em; }' +
+      '.checkout-modal__submit { width: 100%; font-family: "Oswald", "Arial Black", sans-serif; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.8em; border: none; border-radius: 12px; background: linear-gradient(135deg, #d4a843, #b8860b); color: #000; cursor: pointer; font-weight: 700; transition: all 0.3s; box-shadow: 0 4px 20px rgba(212,168,67,0.25); margin-top: 0.5rem; }' +
+      '.checkout-modal__submit:hover:not(:disabled) { box-shadow: 0 6px 28px rgba(212,168,67,0.4); transform: translateY(-1px); }' +
+      '.checkout-modal__submit:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none; }' +
+      '@media (max-width: 480px) { .checkout-modal__header { padding: 1rem 1.2rem; } .checkout-modal__body { padding: 1rem 1.2rem; } }';
+
+    var styleEl = document.createElement('style');
+    styleEl.id = 'checkout-modal-styles';
+    styleEl.textContent = styles;
+    document.head.appendChild(styleEl);
+  }
+
+  function createCheckoutModal() {
+    if (document.getElementById('checkout-modal-overlay')) return;
+
+    var modalHTML = '' +
+      '<div class="checkout-modal-overlay" id="checkout-modal-overlay" aria-hidden="true">' +
+      '  <div class="checkout-modal" role="dialog" aria-labelledby="checkout-modal-title" aria-modal="true">' +
+      '    <div class="checkout-modal__header">' +
+      '      <h3 class="checkout-modal__title" id="checkout-modal-title"><i class="fa-solid fa-credit-card"></i> Finalizeaz\u0103 comanda</h3>' +
+      '      <button class="checkout-modal__close" id="checkout-modal-close" aria-label="\u00CEnchide">&times;</button>' +
+      '    </div>' +
+      '    <div class="checkout-modal__body">' +
+      '      <div class="checkout-modal__summary" id="checkout-modal-summary"></div>' +
+      '      <form id="checkout-form" novalidate>' +
+      '        <div class="checkout-modal__field">' +
+      '          <label class="checkout-modal__label" for="checkout-name">Nume <span style="color:#f44336">*</span></label>' +
+      '          <input class="checkout-modal__input" type="text" id="checkout-name" name="name" placeholder="Numele t\u0103u complet" required maxlength="100" autocomplete="name">' +
+      '          <div class="checkout-modal__error" id="checkout-name-error"></div>' +
+      '        </div>' +
+      '        <div class="checkout-modal__field">' +
+      '          <label class="checkout-modal__label" for="checkout-email">Email <span style="color:#f44336">*</span></label>' +
+      '          <input class="checkout-modal__input" type="email" id="checkout-email" name="email" placeholder="email@exemplu.com" required maxlength="150" autocomplete="email">' +
+      '          <div class="checkout-modal__error" id="checkout-email-error"></div>' +
+      '        </div>' +
+      '        <div class="checkout-modal__field">' +
+      '          <label class="checkout-modal__label" for="checkout-phone">Telefon <span style="color:#f44336">*</span></label>' +
+      '          <input class="checkout-modal__input" type="tel" id="checkout-phone" name="phone" placeholder="07xx xxx xxx" required maxlength="20" autocomplete="tel">' +
+      '          <div class="checkout-modal__error" id="checkout-phone-error"></div>' +
+      '        </div>' +
+      '        <div class="checkout-modal__field">' +
+      '          <label class="checkout-modal__label" for="checkout-address">Adres\u0103 <span style="color:#f44336">*</span></label>' +
+      '          <input class="checkout-modal__input" type="text" id="checkout-address" name="address" placeholder="Strada, num\u0103r, ora\u0219, jude\u021B" required maxlength="250" autocomplete="street-address">' +
+      '          <div class="checkout-modal__error" id="checkout-address-error"></div>' +
+      '        </div>' +
+      '        <button type="submit" class="checkout-modal__submit" id="checkout-submit-btn">' +
+      '          <i class="fa-solid fa-paper-plane"></i> Trimite comanda' +
+      '        </button>' +
+      '      </form>' +
+      '    </div>' +
+      '  </div>' +
+      '</div>';
+
+    var container = document.createElement('div');
+    container.innerHTML = modalHTML;
+    document.body.appendChild(container.firstElementChild);
+
+    injectCheckoutModalStyles();
+    bindCheckoutModalEvents();
+  }
+
+  function bindCheckoutModalEvents() {
+    var overlay = document.getElementById('checkout-modal-overlay');
+    var closeBtn = document.getElementById('checkout-modal-close');
+    var form = document.getElementById('checkout-form');
+
+    if (overlay) {
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closeCheckoutModal();
+      });
+    }
+    if (closeBtn) closeBtn.addEventListener('click', closeCheckoutModal);
+
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        submitOrder();
+      });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        var modalOverlay = document.getElementById('checkout-modal-overlay');
+        if (modalOverlay && modalOverlay.classList.contains('checkout-modal-overlay--visible')) {
+          closeCheckoutModal();
+        }
+      }
+    });
+  }
+
+  function openCheckoutModal() {
+    createCheckoutModal();
+    populateCheckoutSummary();
+    clearCheckoutForm();
+
+    var overlay = document.getElementById('checkout-modal-overlay');
+    if (overlay) {
+      overlay.classList.add('checkout-modal-overlay--visible');
+      overlay.setAttribute('aria-hidden', 'false');
+    }
+    document.body.style.overflow = 'hidden';
+
+    // Focus first input
+    setTimeout(function () {
+      var nameInput = document.getElementById('checkout-name');
+      if (nameInput) nameInput.focus();
+    }, 100);
+  }
+
+  function closeCheckoutModal() {
+    var overlay = document.getElementById('checkout-modal-overlay');
+    if (overlay) {
+      overlay.classList.remove('checkout-modal-overlay--visible');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+    document.body.style.overflow = '';
+  }
+
+  function clearCheckoutForm() {
+    var form = document.getElementById('checkout-form');
+    if (form) form.reset();
+
+    var errorEls = document.querySelectorAll('.checkout-modal__error');
+    for (var i = 0; i < errorEls.length; i++) { errorEls[i].textContent = ''; }
+
+    var inputs = document.querySelectorAll('.checkout-modal__input--error');
+    for (var j = 0; j < inputs.length; j++) { inputs[j].classList.remove('checkout-modal__input--error'); }
+
+    var submitBtn = document.getElementById('checkout-submit-btn');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Trimite comanda'; }
+  }
+
+  function populateCheckoutSummary() {
+    var summaryEl = document.getElementById('checkout-modal-summary');
+    if (!summaryEl) return;
+
+    var itemsHTML = '';
+    for (var i = 0; i < Cart.items.length; i++) {
+      var item = Cart.items[i];
+      var lineTotal = Math.round(item.price * item.quantity * 100) / 100;
+      itemsHTML += '<div class="checkout-modal__summary-item"><span>' + escapeHTML(item.name) + ' x' + item.quantity + '</span><span>' + lineTotal.toLocaleString('ro-RO') + ' RON</span></div>';
+    }
+
+    var subtotal = Cart.getSubtotal();
+    var total = Cart.getTotal();
+    var hasPromo = Cart.appliedPromoCode && Cart.appliedPromoDiscount > 0;
+    var discountRow = hasPromo ? '<div class="checkout-modal__summary-item" style="color:#4caf50"><span>Reducere (' + escapeHTML(Cart.appliedPromoCode) + ' -' + Cart.appliedPromoDiscount + '%)</span><span>-' + Math.round((subtotal - total) * 100) / 100 + ' RON</span></div>' : '';
+
+    summaryEl.innerHTML = '' +
+      '<div class="checkout-modal__summary-title"><i class="fa-solid fa-box"></i> Rezumat comand\u0103</div>' +
+      '<div class="checkout-modal__summary-items">' + itemsHTML + '</div>' +
+      discountRow +
+      '<div class="checkout-modal__summary-total"><span>Total</span><span>' + total.toLocaleString('ro-RO') + ' RON</span></div>';
+  }
+
+  function validateCheckoutForm() {
+    var nameInput = document.getElementById('checkout-name');
+    var emailInput = document.getElementById('checkout-email');
+    var phoneInput = document.getElementById('checkout-phone');
+    var addressInput = document.getElementById('checkout-address');
+
+    var nameError = document.getElementById('checkout-name-error');
+    var emailError = document.getElementById('checkout-email-error');
+    var phoneError = document.getElementById('checkout-phone-error');
+    var addressError = document.getElementById('checkout-address-error');
+
+    // Clear previous errors
+    nameError.textContent = '';
+    emailError.textContent = '';
+    phoneError.textContent = '';
+    addressError.textContent = '';
+    nameInput.classList.remove('checkout-modal__input--error');
+    emailInput.classList.remove('checkout-modal__input--error');
+    phoneInput.classList.remove('checkout-modal__input--error');
+    addressInput.classList.remove('checkout-modal__input--error');
+
+    var valid = true;
+    var name = nameInput.value.trim();
+    var email = emailInput.value.trim();
+    var phone = phoneInput.value.trim();
+    var address = addressInput.value.trim();
+
+    if (!name) {
+      nameError.textContent = 'Numele este obligatoriu.';
+      nameInput.classList.add('checkout-modal__input--error');
+      valid = false;
+    } else if (name.length < 3) {
+      nameError.textContent = 'Numele trebuie s\u0103 aib\u0103 cel pu\u021Bin 3 caractere.';
+      nameInput.classList.add('checkout-modal__input--error');
+      valid = false;
+    }
+
+    if (!email) {
+      emailError.textContent = 'Email-ul este obligatoriu.';
+      emailInput.classList.add('checkout-modal__input--error');
+      valid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      emailError.textContent = 'Adresa de email nu este valid\u0103.';
+      emailInput.classList.add('checkout-modal__input--error');
+      valid = false;
+    }
+
+    if (!phone) {
+      phoneError.textContent = 'Num\u0103rul de telefon este obligatoriu.';
+      phoneInput.classList.add('checkout-modal__input--error');
+      valid = false;
+    } else if (!/^[\d\s\-+()]{7,20}$/.test(phone)) {
+      phoneError.textContent = 'Num\u0103rul de telefon nu este valid.';
+      phoneInput.classList.add('checkout-modal__input--error');
+      valid = false;
+    }
+
+    if (!address) {
+      addressError.textContent = 'Adresa este obligatorie.';
+      addressInput.classList.add('checkout-modal__input--error');
+      valid = false;
+    } else if (address.length < 5) {
+      addressError.textContent = 'Adresa trebuie s\u0103 aib\u0103 cel pu\u021Bin 5 caractere.';
+      addressInput.classList.add('checkout-modal__input--error');
+      valid = false;
+    }
+
+    return valid ? {
+      name: name,
+      email: email,
+      phone: phone,
+      address: address,
+    } : null;
+  }
+
+  function submitOrder() {
+    var customerData = validateCheckoutForm();
+    if (!customerData) return;
+
+    var submitBtn = document.getElementById('checkout-submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Se proceseaz\u0103...';
+
+    var payload = {
+      customer: {
+        name: customerData.name,
+        email: customerData.email,
+        phone: customerData.phone,
+        address: customerData.address,
+      },
+      items: Cart.items.map(function (item) {
+        return {
+          product_id: item.id,
+          quantity: item.quantity,
+        };
+      }),
+      promo_code: Cart.appliedPromoCode || undefined,
+    };
+
+    fetchJSON('/api/orders', {
+      method: 'POST',
+      body: payload,
+    })
+      .then(function (data) {
+        var orderInfo = data.order || data;
+        showToast(
+          'Comand\u0103 plasat\u0103 cu succes! #' + (orderInfo.order_number || 'N/A') +
+          ' | Total: ' + (orderInfo.total_amount || 0) + ' RON',
+          'success',
+          6000
+        );
+        Cart.clear();
+        updateCartUI();
+        closeCheckoutModal();
+      })
+      .catch(function (err) {
+        console.error('[submitOrder] Eroare:', err);
+        showToast('Eroare la plasarea comenzii: ' + (err.message || 'Eroare necunoscut\u0103'), 'error', 5000);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Trimite comanda';
+      });
   }
 
   /* ========================================================================

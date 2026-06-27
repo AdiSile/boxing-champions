@@ -730,6 +730,677 @@
       transform: translateX(-50%) translateY(0);
     }
 
+    /* ---- Cart Icon (Nav) ---- */
+    .nav__cart {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid var(--glass-border-light);
+      background: rgba(255,255,255,0.04);
+      color: var(--gold-primary);
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all var(--dur-normal);
+      text-decoration: none;
+      margin-left: 0.6rem;
+      flex-shrink: 0;
+    }
+
+    .nav__cart:hover {
+      border-color: var(--gold-primary);
+      background: rgba(212,168,67,0.08);
+      box-shadow: 0 4px 16px rgba(212,168,67,0.15);
+    }
+
+    .nav__cart-badge {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 50px;
+      background: var(--red-vivid);
+      color: #fff;
+      font-family: var(--font-heading);
+      font-size: 0.65rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 5px;
+      line-height: 1;
+      pointer-events: none;
+      opacity: 0;
+      transform: scale(0.6);
+      transition: opacity 0.25s, transform 0.25s var(--ease-out-expo);
+    }
+
+    .nav__cart-badge--visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* ============================================================
+       CHECKOUT MODAL
+       ============================================================ */
+
+    .checkout-modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--dur-normal);
+    }
+
+    .checkout-modal-overlay--open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .checkout-modal {
+      background: var(--black-card);
+      border: 1px solid var(--glass-border-light);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 700px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 72px rgba(0,0,0,0.6);
+      position: relative;
+      transform: translateY(20px);
+      transition: transform var(--dur-normal) var(--ease-out-expo);
+    }
+
+    .checkout-modal-overlay--open .checkout-modal {
+      transform: translateY(0);
+    }
+
+    .checkout-modal__close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid var(--glass-border-light);
+      background: rgba(10,10,10,0.7);
+      backdrop-filter: blur(8px);
+      color: var(--gray-smoke);
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--dur-normal);
+      z-index: 2;
+    }
+
+    .checkout-modal__close:hover {
+      border-color: var(--gold-primary);
+      color: var(--gold-primary);
+      background: rgba(212,168,67,0.08);
+    }
+
+    /* Header */
+    .checkout-modal__header {
+      padding: 2rem 2rem 1.2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      text-align: center;
+    }
+
+    .checkout-modal__icon {
+      font-size: 2.4rem;
+      margin-bottom: 0.4rem;
+      display: block;
+    }
+
+    .checkout-modal__title {
+      font-family: var(--font-display);
+      font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+      margin-bottom: 0.25rem;
+      line-height: 1.1;
+    }
+
+    .checkout-modal__title .gold {
+      background: var(--gold-metallic);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    .checkout-modal__subtitle {
+      font-size: 0.82rem;
+      color: var(--gray-smoke);
+    }
+
+    /* Steps indicator */
+    .checkout-modal__steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      margin-top: 1rem;
+    }
+
+    .checkout-modal__step {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-family: var(--font-heading);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--gray-dark);
+      transition: color var(--dur-normal);
+    }
+
+    .checkout-modal__step--active {
+      color: var(--gold-primary);
+    }
+
+    .checkout-modal__step--done {
+      color: #4caf50;
+    }
+
+    .checkout-modal__step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1px solid currentColor;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 700;
+    }
+
+    .checkout-modal__step-sep {
+      width: 28px;
+      height: 1px;
+      background: var(--glass-border);
+      margin: 0 0.3rem;
+    }
+
+    /* Body */
+    .checkout-modal__body {
+      padding: 1.6rem 2rem;
+    }
+
+    /* Cart summary inside modal */
+    .checkout-cart-summary {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 1.2rem 1.4rem;
+      margin-bottom: 1.8rem;
+    }
+
+    .checkout-cart-summary__title {
+      font-family: var(--font-heading);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--gold-primary);
+      margin-bottom: 0.8rem;
+    }
+
+    .checkout-cart-item {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .checkout-cart-item:last-child {
+      border-bottom: none;
+    }
+
+    .checkout-cart-item__img {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: var(--black-deep);
+      flex-shrink: 0;
+    }
+
+    .checkout-cart-item__info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .checkout-cart-item__name {
+      font-family: var(--font-heading);
+      font-size: 0.85rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .checkout-cart-item__qty {
+      font-size: 0.7rem;
+      color: var(--gray-smoke);
+    }
+
+    .checkout-cart-item__price {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: var(--gold-primary);
+      white-space: nowrap;
+    }
+
+    .checkout-cart-totals {
+      margin-top: 0.8rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .checkout-cart-totals__row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+    }
+
+    .checkout-cart-totals__row--total {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      color: var(--gold-primary);
+      margin-top: 0.25rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .checkout-cart-totals__label {
+      color: var(--gray-smoke);
+    }
+
+    /* Form */
+    .checkout-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+
+    .checkout-form__section-title {
+      font-family: var(--font-heading);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--gold-primary);
+      margin-bottom: 0.2rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .checkout-form__row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .checkout-form__row--triple {
+      grid-template-columns: 2fr 1fr 1fr;
+    }
+
+    .checkout-form__field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .checkout-form__label {
+      font-family: var(--font-heading);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gray-smoke);
+    }
+
+    .checkout-form__label .required {
+      color: var(--red-vivid);
+      margin-left: 2px;
+    }
+
+    .checkout-form__input,
+    .checkout-form__select,
+    .checkout-form__textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--glass-border-light);
+      border-radius: 10px;
+      padding: 0.7em 1em;
+      color: var(--white-soft);
+      font-family: var(--font-body);
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color var(--dur-normal), box-shadow var(--dur-normal);
+    }
+
+    .checkout-form__input:focus,
+    .checkout-form__select:focus,
+    .checkout-form__textarea:focus {
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 0 3px rgba(212,168,67,0.08);
+    }
+
+    .checkout-form__input::placeholder,
+    .checkout-form__textarea::placeholder {
+      color: rgba(255,255,255,0.18);
+    }
+
+    .checkout-form__input--error {
+      border-color: var(--red-vivid) !important;
+      box-shadow: 0 0 0 3px rgba(255,60,60,0.1) !important;
+    }
+
+    .checkout-form__error {
+      font-size: 0.7rem;
+      color: var(--red-vivid);
+      display: none;
+    }
+
+    .checkout-form__error--visible {
+      display: block;
+    }
+
+    .checkout-form__select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23d4a843' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 2.4em;
+      cursor: pointer;
+    }
+
+    .checkout-form__select option {
+      background: var(--black-card);
+      color: var(--white-soft);
+    }
+
+    .checkout-form__textarea {
+      resize: vertical;
+      min-height: 70px;
+    }
+
+    /* Payment methods */
+    .checkout-payment-methods {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.7rem;
+    }
+
+    .checkout-payment-method {
+      position: relative;
+    }
+
+    .checkout-payment-method__input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .checkout-payment-method__label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.9rem 0.6rem;
+      border-radius: 12px;
+      border: 1px solid var(--glass-border-light);
+      background: rgba(255,255,255,0.02);
+      cursor: pointer;
+      text-align: center;
+      transition: all var(--dur-normal);
+      font-family: var(--font-heading);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--gray-smoke);
+    }
+
+    .checkout-payment-method__label:hover {
+      border-color: var(--gold-primary);
+      background: rgba(212,168,67,0.04);
+    }
+
+    .checkout-payment-method__icon {
+      font-size: 1.6rem;
+    }
+
+    .checkout-payment-method__input:checked + .checkout-payment-method__label {
+      border-color: var(--gold-primary);
+      background: rgba(212,168,67,0.08);
+      color: var(--gold-primary);
+      box-shadow: 0 4px 18px rgba(212,168,67,0.12);
+    }
+
+    /* Promo code inside modal */
+    .checkout-promo {
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-end;
+    }
+
+    .checkout-promo__field {
+      flex: 1;
+    }
+
+    .checkout-promo__btn {
+      font-family: var(--font-heading);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.7em 1.4em;
+      border-radius: 50px;
+      background: transparent;
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-primary);
+      cursor: pointer;
+      font-weight: 700;
+      transition: all var(--dur-normal);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .checkout-promo__btn:hover {
+      background: rgba(212,168,67,0.1);
+    }
+
+    .checkout-promo__msg {
+      font-size: 0.7rem;
+      margin-top: 0.3rem;
+    }
+
+    .checkout-promo__msg--success {
+      color: #4caf50;
+    }
+
+    .checkout-promo__msg--error {
+      color: var(--red-vivid);
+    }
+
+    /* Footer */
+    .checkout-modal__footer {
+      padding: 1.2rem 2rem 1.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .checkout-modal__submit {
+      font-family: var(--font-heading);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 0.9em 2em;
+      border-radius: 50px;
+      background: var(--gold-metallic);
+      color: var(--black-deep);
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      width: 100%;
+      transition: all var(--dur-normal);
+    }
+
+    .checkout-modal__submit:hover {
+      box-shadow: 0 6px 28px rgba(212,168,67,0.35);
+      transform: translateY(-1px);
+    }
+
+    .checkout-modal__submit:disabled {
+      background: var(--gray-dark);
+      color: var(--gray-smoke);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .checkout-modal__submit--loading {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    .checkout-modal__secure {
+      text-align: center;
+      font-size: 0.7rem;
+      color: var(--gray-smoke);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+    }
+
+    .checkout-modal__secure-icon {
+      color: #4caf50;
+    }
+
+    /* Empty cart inside modal */
+    .checkout-modal__empty {
+      text-align: center;
+      padding: 3rem 2rem;
+    }
+
+    .checkout-modal__empty-icon {
+      font-size: 3.5rem;
+      opacity: 0.4;
+      margin-bottom: 1rem;
+    }
+
+    .checkout-modal__empty-title {
+      font-family: var(--font-heading);
+      font-size: 1.2rem;
+      color: var(--gold-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .checkout-modal__empty-text {
+      color: var(--gray-smoke);
+      font-size: 0.85rem;
+      max-width: 360px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .checkout-modal__empty-btn {
+      font-family: var(--font-heading);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.7em 1.8em;
+      border-radius: 50px;
+      background: transparent;
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-primary);
+      cursor: pointer;
+      font-weight: 700;
+      transition: all var(--dur-normal);
+    }
+
+    .checkout-modal__empty-btn:hover {
+      background: rgba(212,168,67,0.1);
+    }
+
+    /* Success view */
+    .checkout-modal__success {
+      text-align: center;
+      padding: 2rem 1.5rem;
+    }
+
+    .checkout-modal__success-icon {
+      font-size: 4rem;
+      display: block;
+      margin-bottom: 1rem;
+      animation: successPop 0.5s var(--ease-out-expo);
+    }
+
+    @keyframes successPop {
+      0% { transform: scale(0); opacity: 0; }
+      60% { transform: scale(1.15); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .checkout-modal__success-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .checkout-modal__success-text {
+      color: var(--gray-smoke);
+      font-size: 0.9rem;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .checkout-modal__success-order {
+      font-family: var(--font-heading);
+      font-size: 0.85rem;
+      color: var(--gold-primary);
+      background: rgba(212,168,67,0.06);
+      display: inline-block;
+      padding: 0.4em 1.2em;
+      border-radius: 50px;
+      letter-spacing: 0.1em;
+      margin-top: 1rem;
+    }
+
+    /* Scrollbar for modal */
+    .checkout-modal::-webkit-scrollbar { width: 6px; }
+    .checkout-modal::-webkit-scrollbar-track { background: transparent; }
+    .checkout-modal::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 20px; }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .checkout-modal-overlay { padding: 0.6rem; align-items: flex-end; }
+      .checkout-modal { border-radius: 20px 20px 0 0; max-height: 95vh; }
+      .checkout-modal__header { padding: 1.4rem 1.2rem 1rem; }
+      .checkout-modal__body { padding: 1.2rem 1.2rem; }
+      .checkout-modal__footer { padding: 1rem 1.2rem 1.5rem; }
+      .checkout-form__row { grid-template-columns: 1fr; }
+      .checkout-form__row--triple { grid-template-columns: 1fr; }
+      .checkout-payment-methods { grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
+      .checkout-payment-method__label { padding: 0.7rem 0.3rem; font-size: 0.62rem; }
+      .checkout-payment-method__icon { font-size: 1.3rem; }
+    }
+
     @media (max-width: 768px) {
       .shop-page-header { min-height: 30vh; }
       .shop__toolbar { flex-direction: column; align-items: stretch; }
@@ -789,6 +1460,10 @@
         <li role="none"><a href="/shop.html" class="nav__link nav__link--active" role="menuitem">Shop</a></li>
         <li role="none"><a href="/contact.html" class="nav__link" role="menuitem">Contact</a></li>
       </ul>
+      <button class="nav__cart" id="nav-cart-btn" aria-label="Coș de cumpărături" title="Vezi coșul">
+        🛒
+        <span class="nav__cart-badge" id="nav-cart-badge">0</span>
+      </button>
       <button class="nav__toggle" aria-label="Deschide meniul" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
@@ -894,6 +1569,220 @@
       </div>
     </div>
   </footer>
+
+  <!-- ============================================================
+       CHECKOUT MODAL
+       ============================================================ -->
+  <div class="checkout-modal-overlay" id="checkout-modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="checkout-modal-title">
+    <div class="checkout-modal" id="checkout-modal">
+
+      <button class="checkout-modal__close" id="checkout-modal-close" aria-label="Închide fereastra de checkout">&times;</button>
+
+      <!-- Header -->
+      <div class="checkout-modal__header">
+        <span class="checkout-modal__icon" aria-hidden="true">🛒</span>
+        <h2 class="checkout-modal__title" id="checkout-modal-title">Finalizează <span class="gold">Comanda</span></h2>
+        <p class="checkout-modal__subtitle">Completează datele de facturare pentru a plasa comanda</p>
+        <div class="checkout-modal__steps" aria-label="Pași checkout">
+          <span class="checkout-modal__step checkout-modal__step--active" id="checkout-step-1">
+            <span class="checkout-modal__step-num">1</span> Coș
+          </span>
+          <span class="checkout-modal__step-sep" aria-hidden="true"></span>
+          <span class="checkout-modal__step" id="checkout-step-2">
+            <span class="checkout-modal__step-num">2</span> Facturare
+          </span>
+          <span class="checkout-modal__step-sep" aria-hidden="true"></span>
+          <span class="checkout-modal__step" id="checkout-step-3">
+            <span class="checkout-modal__step-num">3</span> Confirmare
+          </span>
+        </div>
+      </div>
+
+      <!-- Body: Cart Summary + Form (default view) -->
+      <div class="checkout-modal__body" id="checkout-modal-body">
+
+        <!-- Cart Summary -->
+        <div class="checkout-cart-summary" id="checkout-cart-summary">
+          <div class="checkout-cart-summary__title">📦 Produse în coș</div>
+          <div id="checkout-cart-items">
+            <!-- Populated by JS -->
+            <p style="font-size:0.82rem;color:var(--gray-smoke);text-align:center;padding:1rem;">Coșul tău este gol.</p>
+          </div>
+          <div class="checkout-cart-totals" id="checkout-cart-totals" style="display:none;">
+            <div class="checkout-cart-totals__row">
+              <span class="checkout-cart-totals__label">Subtotal</span>
+              <span id="checkout-subtotal">0,00 lei</span>
+            </div>
+            <div class="checkout-cart-totals__row">
+              <span class="checkout-cart-totals__label">Livrare</span>
+              <span id="checkout-shipping">19,90 lei</span>
+            </div>
+            <div class="checkout-cart-totals__row" id="checkout-discount-row" style="display:none;">
+              <span class="checkout-cart-totals__label">Reducere (<span id="checkout-discount-code"></span>)</span>
+              <span id="checkout-discount" style="color:#4caf50;">-0,00 lei</span>
+            </div>
+            <div class="checkout-cart-totals__row checkout-cart-totals__row--total">
+              <span>Total</span>
+              <span id="checkout-total">0,00 lei</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Billing Form -->
+        <form class="checkout-form" id="checkout-form" novalidate>
+
+          <!-- Secțiunea: Date personale -->
+          <div class="checkout-form__section-title">👤 Date personale</div>
+
+          <div class="checkout-form__row">
+            <div class="checkout-form__field">
+              <label class="checkout-form__label" for="billing-first-name">Prenume <span class="required" aria-label="obligatoriu">*</span></label>
+              <input type="text" class="checkout-form__input" id="billing-first-name" name="firstName" placeholder="ex: Alexandru" required autocomplete="given-name" maxlength="100">
+              <span class="checkout-form__error" id="error-first-name" role="alert">Te rugăm să introduci prenumele.</span>
+            </div>
+            <div class="checkout-form__field">
+              <label class="checkout-form__label" for="billing-last-name">Nume <span class="required" aria-label="obligatoriu">*</span></label>
+              <input type="text" class="checkout-form__input" id="billing-last-name" name="lastName" placeholder="ex: Popescu" required autocomplete="family-name" maxlength="100">
+              <span class="checkout-form__error" id="error-last-name" role="alert">Te rugăm să introduci numele.</span>
+            </div>
+          </div>
+
+          <div class="checkout-form__row">
+            <div class="checkout-form__field">
+              <label class="checkout-form__label" for="billing-email">Email <span class="required" aria-label="obligatoriu">*</span></label>
+              <input type="email" class="checkout-form__input" id="billing-email" name="email" placeholder="ex: alex@email.com" required autocomplete="email" maxlength="200">
+              <span class="checkout-form__error" id="error-email" role="alert">Te rugăm să introduci o adresă de email validă.</span>
+            </div>
+            <div class="checkout-form__field">
+              <label class="checkout-form__label" for="billing-phone">Telefon <span class="required" aria-label="obligatoriu">*</span></label>
+              <input type="tel" class="checkout-form__input" id="billing-phone" name="phone" placeholder="ex: 0712 345 678" required autocomplete="tel" maxlength="20">
+              <span class="checkout-form__error" id="error-phone" role="alert">Te rugăm să introduci un număr de telefon valid.</span>
+            </div>
+          </div>
+
+          <!-- Secțiunea: Adresă de facturare -->
+          <div class="checkout-form__section-title">📍 Adresă de facturare</div>
+
+          <div class="checkout-form__field">
+            <label class="checkout-form__label" for="billing-address">Adresă <span class="required" aria-label="obligatoriu">*</span></label>
+            <input type="text" class="checkout-form__input" id="billing-address" name="address" placeholder="ex: Strada Victoriei, Nr. 12, Bl. A, Ap. 5" required autocomplete="street-address" maxlength="300">
+            <span class="checkout-form__error" id="error-address" role="alert">Te rugăm să introduci adresa.</span>
+          </div>
+
+          <div class="checkout-form__row checkout-form__row--triple">
+            <div class="checkout-form__field">
+              <label class="checkout-form__label" for="billing-city">Oraș <span class="required" aria-label="obligatoriu">*</span></label>
+              <input type="text" class="checkout-form__input" id="billing-city" name="city" placeholder="ex: București" required autocomplete="address-level2" maxlength="100">
+              <span class="checkout-form__error" id="error-city" role="alert">Te rugăm să introduci orașul.</span>
+            </div>
+            <div class="checkout-form__field">
+              <label class="checkout-form__label" for="billing-county">Județ / Sector</label>
+              <input type="text" class="checkout-form__input" id="billing-county" name="county" placeholder="ex: Sector 1" autocomplete="address-level1" maxlength="100">
+            </div>
+            <div class="checkout-form__field">
+              <label class="checkout-form__label" for="billing-postal-code">Cod poștal</label>
+              <input type="text" class="checkout-form__input" id="billing-postal-code" name="postalCode" placeholder="ex: 010001" autocomplete="postal-code" maxlength="10">
+            </div>
+          </div>
+
+          <div class="checkout-form__field">
+            <label class="checkout-form__label" for="billing-country">Țara <span class="required" aria-label="obligatoriu">*</span></label>
+            <select class="checkout-form__select" id="billing-country" name="country" required autocomplete="country-name">
+              <option value="">Selectează țara...</option>
+              <option value="RO" selected>România</option>
+              <option value="MD">Republica Moldova</option>
+              <option value="BG">Bulgaria</option>
+              <option value="HU">Ungaria</option>
+              <option value="RS">Serbia</option>
+              <option value="UA">Ucraina</option>
+              <option value="DE">Germania</option>
+              <option value="IT">Italia</option>
+              <option value="ES">Spania</option>
+              <option value="FR">Franța</option>
+              <option value="UK">Regatul Unit</option>
+              <option value="US">Statele Unite</option>
+            </select>
+            <span class="checkout-form__error" id="error-country" role="alert">Te rugăm să selectezi țara.</span>
+          </div>
+
+          <!-- Secțiunea: Metodă de plată -->
+          <div class="checkout-form__section-title">💳 Metodă de plată</div>
+
+          <div class="checkout-payment-methods" id="checkout-payment-methods" role="radiogroup" aria-label="Alege metoda de plată">
+            <div class="checkout-payment-method">
+              <input type="radio" class="checkout-payment-method__input" id="payment-card" name="paymentMethod" value="card" checked>
+              <label class="checkout-payment-method__label" for="payment-card">
+                <span class="checkout-payment-method__icon" aria-hidden="true">💳</span>
+                Card Bancar
+              </label>
+            </div>
+            <div class="checkout-payment-method">
+              <input type="radio" class="checkout-payment-method__input" id="payment-cod" name="paymentMethod" value="cod">
+              <label class="checkout-payment-method__label" for="payment-cod">
+                <span class="checkout-payment-method__icon" aria-hidden="true">💵</span>
+                Ramburs
+              </label>
+            </div>
+            <div class="checkout-payment-method">
+              <input type="radio" class="checkout-payment-method__input" id="payment-transfer" name="paymentMethod" value="transfer">
+              <label class="checkout-payment-method__label" for="payment-transfer">
+                <span class="checkout-payment-method__icon" aria-hidden="true">🏦</span>
+                Transfer Bancar
+              </label>
+            </div>
+          </div>
+
+          <!-- Secțiunea: Cod promoțional -->
+          <div class="checkout-form__section-title">🎟️ Cod promoțional</div>
+
+          <div class="checkout-promo">
+            <div class="checkout-promo__field checkout-form__field">
+              <input type="text" class="checkout-form__input" id="checkout-promo-input" placeholder="Introdu codul promoțional" maxlength="30">
+            </div>
+            <button type="button" class="checkout-promo__btn" id="checkout-promo-apply">Aplică</button>
+          </div>
+          <span class="checkout-promo__msg" id="checkout-promo-msg"></span>
+
+          <!-- Secțiunea: Note comandă -->
+          <div class="checkout-form__section-title">📝 Note suplimentare</div>
+
+          <div class="checkout-form__field">
+            <label class="checkout-form__label" for="billing-notes">Mențiuni (opțional)</label>
+            <textarea class="checkout-form__textarea" id="billing-notes" name="notes" placeholder="ex: Sunați înainte de livrare..." maxlength="500"></textarea>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- Footer -->
+      <div class="checkout-modal__footer">
+        <button type="submit" class="checkout-modal__submit" id="checkout-submit-btn" form="checkout-form">
+          Plasează comanda
+        </button>
+        <div class="checkout-modal__secure">
+          <span class="checkout-modal__secure-icon" aria-hidden="true">🔒</span>
+          Datele tale sunt criptate și procesate securizat
+        </div>
+      </div>
+
+      <!-- Empty Cart View (hidden by default) -->
+      <div class="checkout-modal__empty" id="checkout-modal-empty" style="display:none;">
+        <div class="checkout-modal__empty-icon" aria-hidden="true">🛒</div>
+        <div class="checkout-modal__empty-title">Coșul tău este gol</div>
+        <p class="checkout-modal__empty-text">Adaugă produse în coș și revino pentru a finaliza comanda.</p>
+        <button class="checkout-modal__empty-btn" id="checkout-empty-close-btn">Continuă cumpărăturile</button>
+      </div>
+
+      <!-- Success View (hidden by default) -->
+      <div class="checkout-modal__success" id="checkout-modal-success" style="display:none;">
+        <span class="checkout-modal__success-icon" aria-hidden="true">✅</span>
+        <h3 class="checkout-modal__success-title">Comanda a fost plasată!</h3>
+        <p class="checkout-modal__success-text">Îți mulțumim pentru comandă. Vei primi un email de confirmare în scurt timp.</p>
+        <div class="checkout-modal__success-order" id="checkout-success-order-id">Comanda #BC-<span id="order-ref"></span></div>
+      </div>
+
+    </div>
+  </div>
 
   <script src="/js/shared.js"></script>
   <script src="/js/shop.js"></script>
