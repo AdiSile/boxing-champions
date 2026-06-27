@@ -808,6 +808,17 @@
     CustomCursor.init();
     ScrollReveal.init();
     Navbar.init();
+
+    // Garantăm că body primește clasa 'loaded' pentru a restaura cursorul,
+    // chiar dacă preloader-ul nu există sau JS-ul este întârziat.
+    if (!document.body.classList.contains('loaded')) {
+      // Așteptăm un frame pentru a lăsa preloader-ul să se inițializeze
+      requestAnimationFrame(function () {
+        setTimeout(function () {
+          document.body.classList.add('loaded');
+        }, 200);
+      });
+    }
   }
 
   // Expune utilitarele global

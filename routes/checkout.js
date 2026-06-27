@@ -142,7 +142,7 @@ function getStripe() {
 // Creează o sesiune Stripe Checkout și returnează URL-ul de plată.
 //
 // Body (validat cu checkoutSchema):
-//   - items (required): array de { product_id, quantity, price? }
+//   - items (required): array de { product_id, quantity }
 //   - promo_code (optional): string cu codul promoțional
 //   - billing_name, billing_email, billing_phone, notes (opționale)
 //   - success_url, cancel_url (opționale – overrides)
@@ -166,7 +166,6 @@ router.post('/api/checkout', validate(checkoutSchema), async (req, res) => {
       cancel_url,
     } = req.body;
 
-    // items este deja array valid datorită schemei
     const parsedItems = items;
 
     // ------------------------------------------------------------------
@@ -247,6 +246,7 @@ router.post('/api/checkout', validate(checkoutSchema), async (req, res) => {
     let totalAmount = subtotal;
     let promoId = null;
 
+    // Verificăm că promo_code nu e gol/whitespace după sanitizare
     if (promo_code && promo_code.trim() !== '') {
       const validation = validatePromoCode(promo_code, { applies_to: 'products' });
 
@@ -283,9 +283,6 @@ router.post('/api/checkout', validate(checkoutSchema), async (req, res) => {
           );
         }
       }
-      // Pentru discount fix, adăugăm un line item negativ în loc de ajustare per item
-      // (opțional — Stripe nu permite unit_amount negativ, deci îl gestionăm doar
-      //  pe partea noastră de calcul)
     }
 
     if (totalAmount < 0.50) {
@@ -418,7 +415,7 @@ router.post('/api/checkout', validate(checkoutSchema), async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/config
-// Returnează configurări publice (cheia Stripe publică, promoții active)
+// Returnează configurări publice (cheia Stripe publică, promoții active, mod)
 // ---------------------------------------------------------------------------
 
 router.get('/api/config', (_req, res) => {
@@ -431,6 +428,8 @@ router.get('/api/config', (_req, res) => {
     stripePublishableKey = 'pk_live_placeholder';
   }
 
+  const stripeConfigured = !!(stripeKey && stripeKey !== 'sk_test_placeholder' && stripeKey.length > 20);
+
   // Obține promoțiile active din DB
   let promoList = [];
   try {
@@ -442,8 +441,8 @@ router.get('/api/config', (_req, res) => {
 
   res.json({
     stripe_publishable_key: stripePublishableKey,
-    stripe_configured: !!(stripeKey && stripeKey !== 'sk_test_placeholder' && stripeKey.length > 20),
-    mode: (stripeKey && stripeKey !== 'sk_test_placeholder' && stripeKey.length > 20) ? 'stripe' : 'simulation',
+    stripe_configured: stripeConfigured,
+    mode: stripeConfigured ? 'stripe' : 'simulation',
     promo_codes: promoList.map(p => ({
       code: p.code,
       description: p.description,
@@ -467,7 +466,6 @@ router.get('/api/checkout/validate-promo/:code', validate(promoValidateSchema), 
 
   const cartTotal = cart_total ? Number(cart_total) : 0;
 
-  // Validare din baza de date
   const validation = validatePromoCode(code, { applies_to: 'products' });
 
   if (!validation.valid) {

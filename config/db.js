@@ -412,7 +412,7 @@ function initializeDatabase() {
   ];
 
   for (const promo of promotionsData) {
-    seedPromotions.run(promo[0], promo[1], promo[2], promo[3], promo[4], promo[5], promo[6], promo[7], promo[8]);
+    seedPromotions.run(promo[0], promo[1], promo[2], promo[3], promo[4], promo[5], promo[6], promo[7]);
   }
 
   // ── Seed: contact_messages ────────────────────────────────

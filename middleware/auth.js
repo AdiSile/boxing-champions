@@ -727,7 +727,7 @@ function refreshTokenHandler(req, res, next) {
     revokeToken(payload.jti, payload.exp);
 
     // Emitem noi token-uri
-    setAuthCookies(res, user);
+    const { csrfToken } = setAuthCookies(res, user);
 
     return res.json({
       message: 'Token refreshed successfully.',
@@ -737,6 +737,7 @@ function refreshTokenHandler(req, res, next) {
         email: user.email,
         role: user.role,
       },
+      csrfToken,
     });
   } catch (dbErr) {
     console.error('[auth] Database error during token refresh:', dbErr.message);

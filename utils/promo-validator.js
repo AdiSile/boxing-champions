@@ -174,7 +174,8 @@ function incrementPromoUsage(promoId) {
 function getActivePromotions() {
   const db = getDb();
   return db.prepare(`
-    SELECT code, description, discount_type, discount_value, applies_to
+    SELECT code, description, discount_type, discount_value, applies_to,
+           start_date, end_date
     FROM promotions
     WHERE is_active = 1
       AND (start_date IS NULL OR start_date <= datetime('now'))

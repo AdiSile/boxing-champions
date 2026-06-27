@@ -301,7 +301,8 @@ function cspMiddleware(req, res, next) {
     // Script-uri: locale + Font Awesome + Stripe + inline cu nonce
     'script-src': [
       "'self'",
-      'https://cdnjs.cloudflare.com',       // Font Awesome 6
+      "'unsafe-inline'",                     // necesar pentru script-uri inline în HTML static
+      'https://cdnjs.cloudflare.com',       // Font Awesome 6 JS
       'https://js.stripe.com',               // Stripe.js (checkout)
       nonce ? `'nonce-${nonce}'` : '',
     ].filter(Boolean),
@@ -317,8 +318,9 @@ function cspMiddleware(req, res, next) {
     // Fonturi: locale + Font Awesome + Google Fonts
     'font-src': [
       "'self'",
-      'https://cdnjs.cloudflare.com',        // Font Awesome webfonts
-      'https://fonts.gstatic.com',           // Google Fonts
+      'data:',
+      'https://cdnjs.cloudflare.com',        // Font Awesome 6 webfonts
+      'https://fonts.gstatic.com',           // Google Fonts webfonts
     ],
 
     // Imagini: locale + data URI + orice HTTPS (Pexels, etc.)
@@ -331,11 +333,12 @@ function cspMiddleware(req, res, next) {
     // Media: doar locale (video, audio)
     'media-src': ["'self'"],
 
-    // Frame-uri: Stripe checkout
+    // Frame-uri: Stripe checkout + Google Maps
     'frame-src': [
       "'self'",
       'https://js.stripe.com',
       'https://hooks.stripe.com',
+      'https://www.google.com',              // Google Maps embed
     ],
 
     // Conexiuni dinamice (fetch/XHR): locale + Stripe API

@@ -1077,7 +1077,25 @@
           2000
         );
 
-        // Redirect to dashboard after a short delay
+        // Stochează CSRF token-ul primit pentru utilizare în dashboard
+        if (data && data.csrfToken) {
+          try {
+            sessionStorage.setItem('csrfToken', data.csrfToken);
+          } catch (e) {
+            console.warn('[login] Nu s-a putut salva csrfToken în sessionStorage:', e.message);
+          }
+        }
+
+        // Stochează datele utilizatorului
+        if (data && data.user) {
+          try {
+            sessionStorage.setItem('user', JSON.stringify(data.user));
+          } catch (e) {
+            console.warn('[login] Nu s-au putut salva datele user în sessionStorage:', e.message);
+          }
+        }
+
+        // Redirect to dashboard after a short delay (asigură că cookie-urile sunt procesate)
         setTimeout(function () {
           window.location.href = '/admin/views/dashboard.html';
         }, 800);

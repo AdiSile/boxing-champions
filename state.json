@@ -132,8 +132,8 @@
     },
     {
       "role": "assistant",
-      "content": "✅ Pas 1 (tdd-guide): 1 fișiere salvate.",
-      "timestamp": 1782570017.1959167
+      "content": "✅ Pas 1 (tdd-guide): 3 fișiere salvate.\n❌ Pas 2 (tdd-guide): TIMEOUT: Task-ul a depășit limita de 600 secunde.\n✅ Pas 3 (tdd-guide): 1 fișiere salvate.\n❌ Pas 4 (tdd-guide): TIMEOUT: Task-ul a depășit limita de 600 secunde.\n✅ Pas 5 (tdd-guide): 3 fișiere salvate.\n✅ Pas 6 (tdd-guide): 0 fișiere salvate.",
+      "timestamp": 1782571024.667718
     }
   ],
   "cerinta": "Creează proiectul complet „Boxing Champions\" de la zero, o aplicație web full‑stack de lux, cu prezentare club de box, magazin integrat și panou de administrare 100% funcțional. Tot conținutul public este dinamic, încărcat din API, iar modificările din dashboard se reflectă instant pe site. Design imersiv premium: temă de box cu negru profund, auriu și roșu închis, glassmorphism, particule canvas aurii, cursor personalizat, fără emoji‑uri, iconițe Font Awesome. Securitate modernă, performanță maximă, responsive perfect.  1. **Backend (Node.js + Express + SQLite):**    - `config/db.js`: inițializează curat baza de date cu `better‑sqlite3`. Creează tabelele: `settings` (cu o coloană `data TEXT` pentru JSON‑ul complet al setărilor), `users` (email, password, role), `coaches`, `events`, `schedule`, `plans`, `products`, `orders`, `contact_messages`. La prima pornire, populează `settings` cu datele implicite (nume club, slogan, contact, rețele sociale, promoție globală inactivă etc.). Dacă `users` e goală, seed‑ează adminul `admin@boxingchampions.ro` / `boxing2026` (hash bcrypt). Celelalte tabele pot rămâne goale.    - `models/settingsModel.js`: `getSettings()` returnează JSON‑ul din `data`; `updateSettings(newData)` face merge și salvează.    - Rute API (toate returnează JSON valid, array gol dacă nu există date):      * `GET /api/settings` – returnează obiectul complet de setări. `PUT /api/settings` – actualizează setările (face merge).      * `GET /api/coaches`, `POST /api/coaches`, `PUT /api/coaches/:id`, `DELETE /api/coaches/:id`      * `GET /api/events`, `POST /api/events`, `PUT /api/events/:id`, `DELETE /api/events/:id`      * `GET /api/schedule`, `PUT /api/schedule` – gestionează programul săptămânal.      * `GET /api/plans`, `POST /api/plans`, `PUT /api/plans/:id`, `DELETE /api/plans/:id` – pentru abonamente.      * `GET /api/products`, `POST /api/products`, `PUT /api/products/:id`, `DELETE /api/products/:id` – produse din magazin.      * `GET /api/contact` (admin), `POST /api/contact` (public) – mesaje de contact.      * `GET /api/orders`, `PUT /api/orders/:id` – vizualizare comenzi (pentru admin).    - `routes/auth.js`: `POST /api/auth/login` verifică email‑ul și parola (bcrypt), setează cookie `token` JWT (HttpOnly, Secure, SameSite=Strict). Fără CSRF. `GET /api/auth/check` verifică token‑ul și returnează `{authenticated: true/false}`.    - Securitate modernă: CSP cu nonces, Helmet, X‑Content‑Type‑Options, X‑Frame‑Options, rate limiting pe auth, prepared statements peste tot, validare strictă input, erori generice fără detalii.  2. **Sistem de promoții (global și per‑produs):**    - În setări există `globalPromo` cu câmpurile: `active`, `discountPercent`, `label`, `startDate`, `endDate`.    - Produsele pot avea propriul `discountPercent` și etichetă promo. Când promoția globală este activă, **se aplică doar promoția globală** pe toate produsele, ignorând reducerile individuale. Dacă globalPromo este inactiv, se aplică reducerile per‑produs (dacă există).    - Pe cardul de produs se afișează prețul vechi tăiat, prețul redus și eticheta reducerii (globală sau individuală).    - Panoul de administrare include secțiunea **Promoții** pentru a gestiona promoția globală.  3. **Paginile publice (toate dinamice, cu fallback hardcodat):**    - **`public/index.html`** (Home): Hero video/fallback imagine, nume club „BOXING CHAMPIONS\", slogan, badge „New Season 2026 – Join the Legacy\", butoane CTA. Secțiuni: Antrenori (din `/api/coaches`), Realizări (numărători animate), Program rapid (din `/api/schedule`), CTA finală. Footer cu date de contact și link‑uri sociale (din `/api/settings`).    - **`public/events.html`**: Listă evenimente trecute (din `/api/events`). Fiecare eveniment: titlu, dată, locație, descriere, galerie foto. Dacă nu există, mesaj prietenos.    - **`public/schedule.html`**: Tabel săptămânal (din `/api/schedule`), culori pe categorii (Copii, Feminin, Masculin, Mixt), legendă.    - **`public/pricing.html`**: Planuri de abonament (din `/api/plans`), toggle lunar/anual, cel mai popular evidențiat.    - **`public/shop.html`**: Grid de produse (din `/api/products`), filtre pe categorii, coș de cumpărături (localStorage), checkout Stripe (mod test, cheie setată în `.env`).    - **`public/contact.html`**: Formular (trimite la `POST /api/contact`), date de contact din `/api/settings`, hartă Google Maps, buton WhatsApp.    - Toate paginile păstrează designul premium existent. La încărcare fac `fetch` către API‑ul corespunzător. Dacă API‑ul nu răspunde, folosesc datele hardcodate curente.  4. **Panoul de administrare (complet funcțional):**    - `admin/views/login.html`: design imersiv, formular email+parolă, trimite `fetch` la `/api/auth/login`, redirecționează.    - `admin/views/dashboard.html`: sidebar cu secțiunile:      * **Setări Generale:** nume club, slogan, email, telefon, adresă, link‑uri Facebook/TikTok/Instagram.      * **Promoții:** gestiune promoție globală (active/inactive, discount, etichetă, perioadă).      * **Antrenori:** CRUD complet (nume, specializare, certificări, poză, citat, activ/inactiv).      * **Evenimente:** CRUD (titlu, dată, locație, descriere, galerie foto). Evenimentele sunt doar trecute – adminul le adaugă după ce au avut loc.      * **Program:** tabel editable cu zile/ore/categorii.      * **Abonamente:** CRUD planuri (nume, preț lunar, preț anual, beneficii, evidențiat).      * **Produse:** CRUD complet (nume, descriere, preț, preț vechi, etichetă reducere, etichetă contextuală, categorie, imagine URL, stoc, activ/inactiv).      * **Comenzi:** vizualizare comenzi primite.      * **Mesaje:** vezi mesajele din formularul de contact.    - Fiecare secțiune încarcă datele prin fetch la ruta API corespunzătoare și salvează modificările. După salvare, toast verde de confirmare.  5. **Design și experiență (toate paginile):**    - Temă: negru (#0a0a0a), auriu (#d4af37, #f0c040), roșu (#8b0000, #c62828). Glassmorphism pe carduri, navbar și formulare.    - Particule canvas aurii plutitoare pe toate paginile. Cursor personalizat (cerc auriu cu trail). Animații la scroll, carduri 3D cu tilt, preloader animat.    - Fonturi Google: 'Bebas Neue' (titluri), 'Montserrat' (corp), 'Oswald' (subtitluri).    - 100% responsive (320px–2560px), fără emoji‑uri, doar Font Awesome.  6. **Alte cerințe:**    - Serverul pornește fără erori (`node server.js`). Fișierul principal este `server.js` (nu `src/index.js`).    - În `package.json`, setează `\"start\": \"node server.js\"` și `\"engines\": { \"node\": \"20.x\" }`. Creează fișierul `.node-version` cu `20`.    - După deploy, orice modificare din dashboard se reflectă pe paginile publice după refresh.    - Proiectul este complet și gata de producție.  7. **După terminare, returnează toate fișierele modificate sau create în formatul exact:** ### cale/relativă/la/fișier.ext conținut complet ### END",
@@ -481,8 +481,14 @@
       "status": "pending"
     },
     {
-      "id": "dcb149a1",
-      "desc": "Fișier: middleware/auth.js\nȘterge prima linie (comentariu română invalid) și placeholder-ul, reconstruiește fișierul complet cu toate cele ~500 de linii originale, păstrând fix-ul pentru cookie-uri condiționate de NODE_ENV\n\nSkill-uri relevante:\nSkill: agent-introspection-debugging\n# Agent Introspection Debugging\n\nUse this skill when an agent run is failing repeatedly, consuming tokens without progress, looping on the same tools, or drifting away from the intended task.\n\nThis is a workflow skill, not a hidden runtime. It teaches the agent to debug itself systematically before \n\nSkill: angular-developer\n# Angular Developer Guidelines\n\n## When to Activate\n\n- Working in any Angular project or codebase\n- Creating or scaffolding a new Angular project, application, or library\n- Generating components, services, directives, pipes, guards, or resolvers\n- Implementing reactivity with Angular Signals, `linke\n\nSkill: api-connector-builder\n# API Connector Builder\n\nUse this when the job is to add a repo-native integration surface, not just a generic HTTP client.\n\nThe point is to match the host repository's pattern:\n\n- connector layout\n- config schema\n- auth model\n- error handling\n- test style\n- registration/discovery wiring\n\n## When to\n\nReguli:\n---\npaths:\n  - \"**/*.component.ts\"\n  - \"**/*.component.html\"\n  - \"**/*.service.ts\"\n  - \"**/*.directive.ts\"\n  - \"**/*.pipe.ts\"\n  - \"**/*.guard.ts\"\n  - \"**/*.resolver.ts\"\n  - \"**/*.module.ts\"\n---\n# Angular Coding Style\n> This file extends [common/coding-style.md](../common/coding-style.md) with Angular specific content.\nAlways check the project's Angular version before writing code — features differ significantly between versions. Run `ng version` or inspect `package.json`. When creating a new project, do not pin a version unless the user specifies one.\n\nIMPORTANT: Returnează fiecare fișier generat/modificat în formatul strict:\n### cale/relativă/la/fișier.ext\nconținutul complet al fișierului\n### END\nNu include explicații în afara blocurilor ###.\nFolosește DOAR căi relative la proiect, nu absolute.\n",
+      "id": "7e90df0f",
+      "desc": "**middleware/auth.js + routes/auth.js + admin/views/login.html** - Repară fluxul de autentificare: asigură CSRF token handling corect, repară redirect-ul după login, asigură că setările de cookie funcționează în development\n\nSkill-uri relevante:\nSkill: agent-introspection-debugging\n# Agent Introspection Debugging\n\nUse this skill when an agent run is failing repeatedly, consuming tokens without progress, looping on the same tools, or drifting away from the intended task.\n\nThis is a workflow skill, not a hidden runtime. It teaches the agent to debug itself systematically before \n\nSkill: angular-developer\n# Angular Developer Guidelines\n\n## When to Activate\n\n- Working in any Angular project or codebase\n- Creating or scaffolding a new Angular project, application, or library\n- Generating components, services, directives, pipes, guards, or resolvers\n- Implementing reactivity with Angular Signals, `linke\n\nSkill: api-connector-builder\n# API Connector Builder\n\nUse this when the job is to add a repo-native integration surface, not just a generic HTTP client.\n\nThe point is to match the host repository's pattern:\n\n- connector layout\n- config schema\n- auth model\n- error handling\n- test style\n- registration/discovery wiring\n\n## When to\n\nReguli:\n---\npaths:\n  - \"**/*.component.ts\"\n  - \"**/*.component.html\"\n  - \"**/*.service.ts\"\n  - \"**/*.directive.ts\"\n  - \"**/*.pipe.ts\"\n  - \"**/*.guard.ts\"\n  - \"**/*.resolver.ts\"\n  - \"**/*.module.ts\"\n---\n# Angular Coding Style\n> This file extends [common/coding-style.md](../common/coding-style.md) with Angular specific content.\nAlways check the project's Angular version before writing code — features differ significantly between versions. Run `ng version` or inspect `package.json`. When creating a new project, do not pin a version unless the user specifies one.\n\nIMPORTANT: Returnează fiecare fișier generat/modificat în formatul strict:\n### cale/relativă/la/fișier.ext\nconținutul complet al fișierului\n### END\nNu include explicații în afara blocurilor ###.\nFolosește DOAR căi relative la proiect, nu absolute.\n",
+      "agent": "tdd-guide",
+      "status": "pending"
+    },
+    {
+      "id": "767ed107",
+      "desc": "**server.js + public/css/style.css + public/js/shared.js** - Integrare finală: repară chain-ul de middleware, repară CSP pentru Font Awesome și Google Fonts, repară probleme CSS (preloader, cursor, responsive), asigură că serverul pornește corect cu toate rutele, descarcă imaginile lipsă\n\nSkill-uri relevante:\nSkill: agent-introspection-debugging\n# Agent Introspection Debugging\n\nUse this skill when an agent run is failing repeatedly, consuming tokens without progress, looping on the same tools, or drifting away from the intended task.\n\nThis is a workflow skill, not a hidden runtime. It teaches the agent to debug itself systematically before \n\nSkill: angular-developer\n# Angular Developer Guidelines\n\n## When to Activate\n\n- Working in any Angular project or codebase\n- Creating or scaffolding a new Angular project, application, or library\n- Generating components, services, directives, pipes, guards, or resolvers\n- Implementing reactivity with Angular Signals, `linke\n\nSkill: api-connector-builder\n# API Connector Builder\n\nUse this when the job is to add a repo-native integration surface, not just a generic HTTP client.\n\nThe point is to match the host repository's pattern:\n\n- connector layout\n- config schema\n- auth model\n- error handling\n- test style\n- registration/discovery wiring\n\n## When to\n\nReguli:\n---\npaths:\n  - \"**/*.component.ts\"\n  - \"**/*.component.html\"\n  - \"**/*.service.ts\"\n  - \"**/*.directive.ts\"\n  - \"**/*.pipe.ts\"\n  - \"**/*.guard.ts\"\n  - \"**/*.resolver.ts\"\n  - \"**/*.module.ts\"\n---\n# Angular Coding Style\n> This file extends [common/coding-style.md](../common/coding-style.md) with Angular specific content.\nAlways check the project's Angular version before writing code — features differ significantly between versions. Run `ng version` or inspect `package.json`. When creating a new project, do not pin a version unless the user specifies one.\n\nIMPORTANT: Returnează fiecare fișier generat/modificat în formatul strict:\n### cale/relativă/la/fișier.ext\nconținutul complet al fișierului\n### END\nNu include explicații în afara blocurilor ###.\nFolosește DOAR căi relative la proiect, nu absolute.\n",
       "agent": "tdd-guide",
       "status": "pending"
     }
@@ -490,35 +496,38 @@
   "plan": [],
   "status": "completed",
   "checkpoint": {
-    "step": 1,
+    "step": 6,
     "files": {
       ".env": "e79b6b83ad870624b4b7b98259d14b61",
       ".node-version": "183ee5c38f5718616e4d909d5298b395",
       "generated.html": "30d511fef444864ac032e6e841c1ae18",
+      "generated.js": "f5bcb6fa79cc344a68b8371a1a184977",
       "package-lock.json": "ffdb81dc999415e1e2501ec5fd70dcf2",
       "package.json": "dd5e722ec81e639dd738b2184035f3c1",
       "plan.md": "38f53ee07f8e5a55e52edd2b265127cd",
       "README.md": "196403285299eb09c05cd702f04c1b88",
-      "server.js": "0d7a336e68e2a03d94f055cf4633c007",
-      "state.json": "ff92994ae8f3201d6fd7ff1c40ab899d",
+      "server.js": "8aacb8401ffd56ba5d866ee85264c56a",
+      "server.log": "f393068995cb155c9217474a58d21809",
+      "server_output.log": "f393068995cb155c9217474a58d21809",
+      "state.json": "cc0c92ffc05e4bef4175445996002b82",
       "_auth_output.txt": "a117a64fe517cb9a66e11d9cfed51765",
       "admin\\css\\admin.css": "729675882b97df506dc4baa3b2b3665a",
       "admin\\images\\admin-badge.png": "d55e8a046f52307b86fe909a8cd4b2e4",
       "admin\\images\\admin-bg.jpg": "fce4b2a029bf894b807c17b85d381ab0",
-      "admin\\js\\admin.js": "1482d8d2841cb87d061591d5dfebbc22",
+      "admin\\js\\admin.js": "2cd7099f163fc3ed2112a3c3e50a2cf8",
       "admin\\views\\dashboard.html": "45eee1ed333e8656786d2e7a502c2676",
-      "admin\\views\\login.html": "14371953c5a024dbbc6617deb655ee96",
-      "config\\db.js": "1192965c794218e18fe3658a327f454c",
-      "middleware\\auth.js": "153a06465f76159c3f0364b6f15c4ae4",
-      "middleware\\security.js": "0f0ade17cfbb9d179b7c5fad982d90ec",
+      "admin\\views\\login.html": "4b30b01265d591c8382b67faf0f34a02",
+      "config\\db.js": "f5555c6e770df050fa63f50cde2e0bb7",
+      "middleware\\auth.js": "76103b46d89afb4bdc8136553844586c",
+      "middleware\\security.js": "b25decb9a6968b451feb13a33da43475",
       "middleware\\validate.js": "c5c6ad002da60358cfd1d550d4ca7ffd",
       "models\\settingsModel.js": "8bada19115854efcf7d947013606968a",
-      "public\\contact.html": "42d9d8c284919a7d897beedf444c0cbe",
-      "public\\events.html": "13ba83ec55a80e23923c3be9f3baf0ac",
-      "public\\index.html": "f539d3f11e809c5fa8b13cfb8728cb17",
-      "public\\pricing.html": "8fe8f0cb365586b07bdd6d302f2e6ed6",
-      "public\\schedule.html": "ce27fb3f19469d4c83a23b721df7e5a7",
-      "public\\shop.html": "0380b33c5b01a144b813ecc121dfe412",
+      "public\\contact.html": "972181aba56968eb6687c5b778f78195",
+      "public\\events.html": "63f3ba54b7b0c81969ffb70955a51b95",
+      "public\\index.html": "acf2261fe42ae44c33d58bff276289aa",
+      "public\\pricing.html": "5e335052fa496f5c0a2b5096c9e847e3",
+      "public\\schedule.html": "a9c3e20ad0f9d89cb644640072a7290a",
+      "public\\shop.html": "90807671aff1ae9f2928fcb72a8ec632",
       "public\\css\\style.css": "a5fe131fdf8abd5ce43154a3e6c1dc92",
       "public\\images\\about-boxing.jpg": "bbeb1590f95ad6abe1e787795efbe48f",
       "public\\images\\badge.png": "d55e8a046f52307b86fe909a8cd4b2e4",
@@ -545,11 +554,11 @@
       "public\\images\\shop-shoes.jpg": "f9716c0e2c1ca5e46fa8f5bf11f027c9",
       "public\\images\\shop-wraps.jpg": "7f94a24c74bfaad316137753ea8f3373",
       "public\\images\\trophy.jpg": "6bfa547031ae5a4b09d6e764d6d2bedd",
-      "public\\js\\shared.js": "9d7d77975cbb1060a72b4cee459e8a40",
-      "public\\js\\shop.js": "ba4758ef99d7c10488a79bfdce673f3a",
+      "public\\js\\shared.js": "9f9530de2a30bd75263f1ad02ef27ea9",
+      "public\\js\\shop.js": "3a7b85d5723f2a70423e84b16fc4edb4",
       "public\\video\\hero-boxing.mp4": "049798d5f1d44b20c9593c3f26f44ba9",
       "routes\\auth.js": "8c8ea25262a18b7875918f1c354d537e",
-      "routes\\checkout.js": "bd7297ad297849fb7dd2f3a986961c91",
+      "routes\\checkout.js": "9d57c56efc4d74ea9c0ef23a9dc54589",
       "routes\\coaches.js": "38a35b8d4eb4089c18a1d2937324bd60",
       "routes\\contact.js": "bf24122833d6dfe49de10ce1dda42d59",
       "routes\\dashboard.js": "9e1d6de4fcac186fb83bbe275610b637",
@@ -560,15 +569,16 @@
       "routes\\promotions.js": "ae1da1e1909940c92e38722dfdd607cf",
       "routes\\schedule.js": "0a750b8b25b51fe90a25456d3bbaa188",
       "routes\\settings.js": "8b86373ecb1ab3dbbca76cdb2a942fff",
-      "tests\\run.js": "078912309ffa0a4fb84c40e8e30d4a4f",
+      "tests\\run.js": "44628f6502de52b3a5247cc782772c26",
+      "tests\\run.js.tmp": "44628f6502de52b3a5247cc782772c26",
       "tests\\test-auth.js": "feae06107004ca011680e69201fd30cd",
       "tests\\test-checkout.js": "bb7805dbcfdb4290f2dcdaee3cbe87ff",
       "tests\\test-coaches.js": "d1380554cfff5a1b948d31215278a61f",
       "tests\\test-events.js": "e532276fcc4bb456babbbd222a647e16",
       "tests\\test-products.js": "34a6b4eef1ff4367244db27c811d7482",
-      "utils\\promo-validator.js": "594f1f530b2b21d93030e34dafe23423"
+      "utils\\promo-validator.js": "64cb66fddbd3425f765b8c2009f56d14"
     }
   },
   "modified_files": {},
-  "updated": 1782570017.1822438
+  "updated": 1782571024.6521096
 }

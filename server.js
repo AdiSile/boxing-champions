@@ -68,18 +68,16 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-// 6. Body size limit
-app.use(bodySizeLimit());
-
-// 7. Sanitizare globală input
+// 6. Sanitizare globală input
 app.use(globalSanitize);
 
-// 8. Content-Type enforcement pentru metodele care trimit body
-app.use(requireJsonContentType);
-
-// 9. CSP cu nonces (pentru script-uri inline)
+// 7. CSP cu nonces (pentru script-uri inline)
 app.use(nonceMiddleware);
 app.use(cspMiddleware);
+
+// 8. Body size limit + Content-Type enforcement DOAR pentru rutele API
+app.use('/api/', bodySizeLimit());
+app.use('/api/', requireJsonContentType);
 
 // ---------------------------------------------------------------------------
 // Fișiere statice — public/

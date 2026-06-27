@@ -299,18 +299,51 @@
     return parts.join(' ');
   }
 
+  /**
+   * Obține token-ul CSRF din sessionStorage.
+   * Se actualizează la login și la refresh token.
+   */
+  function getCsrfToken() {
+    try {
+      return sessionStorage.getItem('csrfToken') || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /**
+   * Setează token-ul CSRF în sessionStorage.
+   */
+  function setCsrfToken(token) {
+    try {
+      if (token) {
+        sessionStorage.setItem('csrfToken', token);
+      }
+    } catch (e) {
+      // sessionStorage poate fi indisponibil
+    }
+  }
+
   async function apiFetch(url, options) {
     options = options || {};
     var isFormData = options.body instanceof FormData;
+    var method = (options.method || 'GET').toUpperCase();
     var headers = {
       'Accept': 'application/json, text/plain, */*',
       'X-Requested-With': 'XMLHttpRequest',
     };
+    // Adaugă CSRF token pentru metodele care modifică stare
+    if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+      var csrf = getCsrfToken();
+      if (csrf) {
+        headers['x-csrf-token'] = csrf;
+      }
+    }
     if (options.body && typeof options.body === 'object' && !isFormData) {
       headers['Content-Type'] = 'application/json';
     }
     var fetchOpts = {
-      method: options.method || 'GET',
+      method: method,
       headers: headers,
       credentials: 'same-origin',
       mode: 'same-origin',
@@ -398,6 +431,11 @@
   }
 
   function redirectToLogin() {
+    // Curăță sessionStorage la redirecționarea către login
+    try {
+      sessionStorage.removeItem('csrfToken');
+      sessionStorage.removeItem('user');
+    } catch (e) { /* ignore */ }
     var path = window.location.pathname;
     if (path.indexOf('/login.html') !== -1 || path.indexOf('/login') !== -1) return;
     var loginUrl = '/admin/views/login.html';
@@ -411,6 +449,11 @@
 
   async function doLogout() {
     try { await apiFetch(API.AUTH_LOGOUT, { method: 'POST' }); } catch (e) { /* ignore */ }
+    // Curăță sessionStorage la logout
+    try {
+      sessionStorage.removeItem('csrfToken');
+      sessionStorage.removeItem('user');
+    } catch (e) { /* ignore */ }
     showToast('Te-ai deconectat cu succes.', 'info', 2000);
     setTimeout(function () { redirectToLogin(); }, 800);
   }

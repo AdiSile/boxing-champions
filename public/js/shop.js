@@ -1,16 +1,17 @@
 /**
  * ===========================================================================
  *  shop.js — Boxing Champions Shop
- *  ===========================================================================
- *  Features:
- *    1. Coș cumpărături localStorage (persistent)
- *    2. Checkout Stripe (test mode) via /api/checkout
- *    3. Logică promoții (coduri, discount per produs)
- *    4. Cart Drawer (offcanvas)
- *    5. Randare produse, filtre, căutare, sortare, paginare
- *    6. Toast notifications
- *    7. Fallback offline cu produse hardcodate
- *  ===========================================================================
+ * ===========================================================================
+ * Features:
+ *   1. Coș cumpărături localStorage (persistent)
+ *   2. Checkout Stripe (test mode) via /api/checkout
+ *   3. Logică promoții (coduri, discount per produs)
+ *   4. Cart Drawer (offcanvas)
+ *   5. Randare produse, filtre, căutare, sortare, paginare
+ *   6. Toast notifications
+ *   7. Fallback offline cu produse hardcodate
+ *   8. Sincronizare promoții cu serverul (DB)
+ * ===========================================================================
  */
 
 (function () {
@@ -35,7 +36,7 @@
   var refreshScrollReveal = BC.refreshScrollReveal || function () {};
 
   /**
-   * fetchJSON — wrapper sigur, folosește BC.fetchJSON dacă există,
+   * fetchJSON — wrapper sigur; folosește BC.fetchJSON dacă există,
    * altfel implementează local parsing JSON + error handling.
    */
   function fetchJSON(url, opts) {
@@ -96,14 +97,14 @@
     globalBannerText: 'Promoție de vară: până la 35% reducere',
     globalBannerCode: 'CHAMP35',
     promos: [
-      // Globale pe categorie
-      { id: 'global-gloves',   targetType: 'category', targetId: 'gloves',    discountPercent: 25, label: 'Reducere -25%', code: 'GLOVES25', active: true },
-      { id: 'global-footwear', targetType: 'category', targetId: 'footwear',  discountPercent: 20, label: 'Reducere -20%', code: 'KICKS20',  active: true },
-      { id: 'global-headgear', targetType: 'category', targetId: 'headgear',  discountPercent: 15, label: 'Reducere -15%', code: 'HEAD15',   active: true },
-      { id: 'global-all',      targetType: 'all',      targetId: null,        discountPercent: 10, label: 'Reducere -10%', code: 'ALL10',    active: true },
+      // Globale pe categorie (fallback)
+      { id: 'global-gloves',   targetType: 'category', targetId: 'gloves',    discountPercent: 25, label: 'Reducere -25%', code: 'GLOVES25', active: true, discount_type: 'percentage', discount_value: 25 },
+      { id: 'global-footwear', targetType: 'category', targetId: 'footwear',  discountPercent: 20, label: 'Reducere -20%', code: 'KICKS20',  active: true, discount_type: 'percentage', discount_value: 20 },
+      { id: 'global-headgear', targetType: 'category', targetId: 'headgear',  discountPercent: 15, label: 'Reducere -15%', code: 'HEAD15',   active: true, discount_type: 'percentage', discount_value: 15 },
+      { id: 'global-all',      targetType: 'all',      targetId: null,        discountPercent: 10, label: 'Reducere -10%', code: 'ALL10',    active: true, discount_type: 'percentage', discount_value: 10 },
       // Per-produs (prioritate maximă)
-      { id: 'prod-special-1',  targetType: 'product',  targetId: 1,           discountPercent: 35, label: 'Super Reducere -35%', code: null, active: true },
-      { id: 'prod-special-2',  targetType: 'product',  targetId: 3,           discountPercent: 30, label: 'Ofertă Specială -30%', code: null, active: true },
+      { id: 'prod-special-1',  targetType: 'product',  targetId: 1,           discountPercent: 35, label: 'Super Reducere -35%', code: null, active: true, discount_type: 'percentage', discount_value: 35 },
+      { id: 'prod-special-2',  targetType: 'product',  targetId: 3,           discountPercent: 30, label: 'Ofertă Specială -30%', code: null, active: true, discount_type: 'percentage', discount_value: 30 },
     ],
   };
 
@@ -322,13 +323,13 @@
       return;
     }
 
+    // Trimitem doar product_id și quantity. Serverul folosește
+    // prețurile din baza de date pentru a preveni manipularea.
     var payload = {
       items: items.map(function (item) {
         return {
           product_id: item.id,
           quantity: item.quantity,
-          // Nu trimitem price — serverul folosește prețurile din DB
-          // pentru a preveni manipularea prețurilor din client
         };
       }),
       promo_code: promoCode || undefined,
@@ -360,7 +361,7 @@
             }
           }
         } else if (data && data.success) {
-          // Răspuns de succes fără URL (fallback)
+          // Răspuns de succes fără URL explicit
           var ord = data.order || {};
           showToast(
             'Comand\u0103 procesat\u0103 #' + (ord.order_number || 'N/A') +
@@ -379,36 +380,39 @@
       })
       .catch(function (err) {
         console.error('[checkout] Eroare:', err);
-        showToast('Eroare la procesarea plății: ' + (err.message || 'Eroare necunoscută'), 'error', 5000);
+        showToast('Eroare la procesarea pl\u0103\u021Bii: ' + (err.message || 'Eroare necunoscut\u0103'), 'error', 5000);
         if (typeof opts.onError === 'function') {
           opts.onError(err);
         }
       });
   }
 
+  /**
+   * Validează un cod promoțional. Încearcă API-ul serverului (DB),
+   * apoi fallback local pentru cazul offline.
+   */
   function validatePromoCode(code, cartTotal, callback) {
-    // Încearcă API-ul de validare (din DB)
     fetchJSON('/api/checkout/validate-promo/' + encodeURIComponent(code) + '?cart_total=' + (cartTotal || 0))
       .then(function (data) {
-        // API-ul returnează direct răspunsul de validare
+        // Serverul returnează răspunsul de validare
         if (data && data.valid) {
           callback(null, {
             valid: true,
             code: data.code,
-            discount_percent: data.discount_type === 'percentage' ? data.discount_value : null,
-            discount_amount: data.discount_amount || null,
+            discount_percent: data.discount_type === 'percentage' ? data.discount_value : 0,
+            discount_value: data.discount_type === 'fixed' ? data.discount_value : 0,
+            discount_amount: data.discount_amount || 0,
+            discount_type: data.discount_type || 'percentage',
             description: data.description,
-            discount_type: data.discount_type,
-            discount_value: data.discount_value,
           });
         } else if (data && !data.valid) {
           callback(null, {
             valid: false,
             code: code.trim().toUpperCase(),
-            error: data.error || 'Cod promoțional invalid.',
+            error: data.error || 'Cod promo\u021Bional invalid.',
           });
         } else {
-          // Fallback local
+          // Răspuns ambiguu — fallback local
           var localResult = validatePromoLocal(code, cartTotal);
           callback(null, localResult);
         }
@@ -423,29 +427,29 @@
 
   function validatePromoLocal(code, cartTotal) {
     var localPromos = {
-      'CHAMP35': { discountPercent: 35, discount_type: 'percentage', description: 'Promoție de vară -35%', minOrder: 0 },
-      'GLOVES25': { discountPercent: 25, discount_type: 'percentage', description: 'Reducere mănuși -25%', minOrder: 0 },
-      'KICKS20': { discountPercent: 20, discount_type: 'percentage', description: 'Reducere încălțăminte -20%', minOrder: 0 },
-      'HEAD15': { discountPercent: 15, discount_type: 'percentage', description: 'Reducere căști -15%', minOrder: 0 },
-      'ALL10': { discountPercent: 10, discount_type: 'percentage', description: 'Reducere generală -10%', minOrder: 0 },
-      'BOXING20': { discountPercent: 20, discount_type: 'percentage', description: 'Reducere campion -20%', minOrder: 200 },
-      'WELCOME20': { discountPercent: 20, discount_type: 'percentage', description: '20% reducere pentru noii membri', minOrder: 0 },
-      'BOXER10': { discountPercent: 10, discount_type: 'percentage', description: '10% reducere la produse', minOrder: 0 },
-      'CAMP2025': { discountPercent: 0, discount_value: 100, discount_type: 'fixed', description: '100 RON reducere tabără', minOrder: 0 },
+      'CHAMP35': { discountPercent: 35, discount_type: 'percentage', discount_value: 35, description: 'Promo\u021Bie de var\u0103 -35%', minOrder: 0 },
+      'GLOVES25': { discountPercent: 25, discount_type: 'percentage', discount_value: 25, description: 'Reducere m\u0103nu\u0219i -25%', minOrder: 0 },
+      'KICKS20': { discountPercent: 20, discount_type: 'percentage', discount_value: 20, description: 'Reducere \u00EEnc\u0103l\u021B\u0103minte -20%', minOrder: 0 },
+      'HEAD15': { discountPercent: 15, discount_type: 'percentage', discount_value: 15, description: 'Reducere c\u0103\u0219ti -15%', minOrder: 0 },
+      'ALL10': { discountPercent: 10, discount_type: 'percentage', discount_value: 10, description: 'Reducere general\u0103 -10%', minOrder: 0 },
+      'BOXING20': { discountPercent: 20, discount_type: 'percentage', discount_value: 20, description: 'Reducere campion -20%', minOrder: 200 },
+      'WELCOME20': { discountPercent: 20, discount_type: 'percentage', discount_value: 20, description: '20% reducere pentru noii membri', minOrder: 0 },
+      'BOXER10': { discountPercent: 10, discount_type: 'percentage', discount_value: 10, description: '10% reducere la produse', minOrder: 0 },
+      'CAMP2025': { discountPercent: 0, discount_value: 100, discount_type: 'fixed', description: '100 RON reducere tab\u0103r\u0103', minOrder: 0 },
     };
 
     var normalized = code.trim().toUpperCase();
     var promo = localPromos[normalized];
 
     if (!promo) {
-      return { valid: false, code: normalized, error: 'Cod promoțional invalid.' };
+      return { valid: false, code: normalized, error: 'Cod promo\u021Bional invalid.' };
     }
 
     if (cartTotal < promo.minOrder) {
       return {
         valid: false,
         code: normalized,
-        error: 'Necesită comandă minimă de ' + promo.minOrder + ' RON.',
+        error: 'Necesit\u0103 comand\u0103 minim\u0103 de ' + promo.minOrder + ' RON.',
         min_order: promo.minOrder,
       };
     }
@@ -470,23 +474,23 @@
 
     var drawerHTML = '' +
       '<div class="cart-drawer-overlay" id="cart-drawer-overlay" aria-hidden="true"></div>' +
-      '<aside class="cart-drawer" id="cart-drawer" aria-label="Coș de cumpărături" aria-hidden="true">' +
+      '<aside class="cart-drawer" id="cart-drawer" aria-label="Co\u0219 de cump\u0103r\u0103turi" aria-hidden="true">' +
       '  <div class="cart-drawer__header">' +
-      '    <h3 class="cart-drawer__title">🛒 Coșul tău</h3>' +
+      '    <h3 class="cart-drawer__title"><i class="fa-solid fa-cart-shopping"></i> Co\u0219ul t\u0103u</h3>' +
       '    <span class="cart-drawer__count" id="cart-drawer-count">0 articole</span>' +
-      '    <button class="cart-drawer__close" id="cart-drawer-close" aria-label="Închide coșul">&times;</button>' +
+      '    <button class="cart-drawer__close" id="cart-drawer-close" aria-label="\u00CEnchide co\u0219ul">&times;</button>' +
       '  </div>' +
       '  <div class="cart-drawer__body" id="cart-drawer-body">' +
       '    <div class="cart-drawer__empty">' +
-      '      <span class="cart-drawer__empty-icon">🥊</span>' +
-      '      <p>Coșul tău este gol.</p>' +
-      '      <p class="cart-drawer__empty-hint">Adaugă produse din catalog pentru a începe.</p>' +
+      '      <span class="cart-drawer__empty-icon"><i class="fa-solid fa-box-open"></i></span>' +
+      '      <p>Co\u0219ul t\u0103u este gol.</p>' +
+      '      <p class="cart-drawer__empty-hint">Adaug\u0103 produse din catalog pentru a \u00EEncepe.</p>' +
       '    </div>' +
       '  </div>' +
       '  <div class="cart-drawer__footer" id="cart-drawer-footer">' +
       '    <div class="cart-drawer__promo" id="cart-drawer-promo">' +
-      '      <input type="text" class="cart-drawer__promo-input" id="cart-promo-input" placeholder="Cod promoțional..." maxlength="20" aria-label="Cod promoțional">' +
-      '      <button class="cart-drawer__promo-btn" id="cart-promo-apply">Aplică</button>' +
+      '      <input type="text" class="cart-drawer__promo-input" id="cart-promo-input" placeholder="Cod promo\u021Bional..." maxlength="20" aria-label="Cod promo\u021Bional">' +
+      '      <button class="cart-drawer__promo-btn" id="cart-promo-apply">Aplic\u0103</button>' +
       '    </div>' +
       '    <div class="cart-drawer__promo-msg" id="cart-promo-msg"></div>' +
       '    <div class="cart-drawer__totals">' +
@@ -504,7 +508,7 @@
       '      </div>' +
       '    </div>' +
       '    <button class="cart-drawer__checkout-btn" id="cart-checkout-btn" disabled>' +
-      '      Finalizează comanda 💳' +
+      '      <i class="fa-solid fa-credit-card"></i> Finalizeaz\u0103 comanda' +
       '    </button>' +
       '  </div>' +
       '</aside>';
@@ -662,7 +666,7 @@
     if (checkoutBtn) checkoutBtn.disabled = Cart.isEmpty();
 
     if (Cart.isEmpty()) {
-      body.innerHTML = '<div class="cart-drawer__empty"><span class="cart-drawer__empty-icon">🥊</span><p>Coșul tău este gol.</p><p class="cart-drawer__empty-hint">Adaugă produse din catalog pentru a începe.</p></div>';
+      body.innerHTML = '<div class="cart-drawer__empty"><span class="cart-drawer__empty-icon"><i class="fa-solid fa-box-open"></i></span><p>Co\u0219ul t\u0103u este gol.</p><p class="cart-drawer__empty-hint">Adaug\u0103 produse din catalog pentru a \u00EEncepe.</p></div>';
     } else {
       var itemsHTML = '';
       for (var i = 0; i < Cart.items.length; i++) {
@@ -672,8 +676,8 @@
         itemsHTML += '<div class="cart-drawer__item" data-cart-item="' + item.id + '">' +
           '<img class="cart-drawer__item-img" src="' + escapeHTML(imgSrc) + '" alt="' + escapeHTML(item.name) + '" loading="lazy" onerror="this.src=\'/images/product-gloves.jpg\'">' +
           '<div class="cart-drawer__item-info"><div class="cart-drawer__item-name">' + escapeHTML(item.name) + '</div><div class="cart-drawer__item-price">' + lineTotal.toLocaleString('ro-RO') + ' RON</div></div>' +
-          '<div class="cart-drawer__item-qty"><button class="cart-drawer__qty-btn" data-cart-dec="' + item.id + '" aria-label="Scade cantitatea">−</button><span class="cart-drawer__qty-val">' + item.quantity + '</span><button class="cart-drawer__qty-btn" data-cart-inc="' + item.id + '" aria-label="Crește cantitatea">+</button></div>' +
-          '<button class="cart-drawer__item-remove" data-cart-remove="' + item.id + '" aria-label="Elimină ' + escapeHTML(item.name) + '" title="Elimină">🗑</button></div>';
+          '<div class="cart-drawer__item-qty"><button class="cart-drawer__qty-btn" data-cart-dec="' + item.id + '" aria-label="Scade cantitatea">\u2212</button><span class="cart-drawer__qty-val">' + item.quantity + '</span><button class="cart-drawer__qty-btn" data-cart-inc="' + item.id + '" aria-label="Cre\u0219te cantitatea">+</button></div>' +
+          '<button class="cart-drawer__item-remove" data-cart-remove="' + item.id + '" aria-label="Elimin\u0103 ' + escapeHTML(item.name) + '" title="Elimin\u0103"><i class="fa-solid fa-trash"></i></button></div>';
       }
       body.innerHTML = itemsHTML;
       bindCartItemEvents();
@@ -681,9 +685,9 @@
 
     if (promoMsg) {
       if (hasPromo) {
-        promoMsg.innerHTML = '<div class="cart-drawer__promo-applied"><span>🎫 Cod <span class="cart-drawer__promo-applied-code">' + escapeHTML(Cart.appliedPromoCode) + '</span> aplicat (-' + Cart.appliedPromoDiscount + '%)</span><button class="cart-drawer__promo-applied-remove" id="cart-promo-remove" aria-label="Elimină codul promoțional">&times;</button></div>';
+        promoMsg.innerHTML = '<div class="cart-drawer__promo-applied"><span><i class="fa-solid fa-ticket"></i> Cod <span class="cart-drawer__promo-applied-code">' + escapeHTML(Cart.appliedPromoCode) + '</span> aplicat (-' + Cart.appliedPromoDiscount + '%)</span><button class="cart-drawer__promo-applied-remove" id="cart-promo-remove" aria-label="Elimin\u0103 codul promo\u021Bional">&times;</button></div>';
         var removeBtn = document.getElementById('cart-promo-remove');
-        if (removeBtn) removeBtn.addEventListener('click', function () { Cart.removePromo(); updateCartUI(); showToast('Codul promoțional a fost eliminat.', 'info', 2500); });
+        if (removeBtn) removeBtn.addEventListener('click', function () { Cart.removePromo(); updateCartUI(); showToast('Codul promo\u021Bional a fost eliminat.', 'info', 2500); });
       } else {
         promoMsg.innerHTML = '';
       }
@@ -716,7 +720,7 @@
         var item = findCartItem(id);
         Cart.remove(id);
         updateCartUI();
-        if (item) showToast('🗑 ' + escapeHTML(item.name) + ' eliminat din coș.', 'info', 2500);
+        if (item) showToast('<i class="fa-solid fa-trash"></i> ' + escapeHTML(item.name) + ' eliminat din co\u0219.', 'info', 2500);
       });
     }
   }
@@ -757,13 +761,13 @@
         _cartIconEl = document.createElement('button');
         _cartIconEl.id = 'cart-floating-icon';
         _cartIconEl.className = 'cart-floating-icon';
-        _cartIconEl.setAttribute('aria-label', 'Deschide coșul de cumpărături');
-        _cartIconEl.innerHTML = '<span class="cart-floating-icon__emoji">🛒</span><span class="cart-floating-icon__count" id="cart-floating-count">0</span>';
+        _cartIconEl.setAttribute('aria-label', 'Deschide co\u0219ul de cump\u0103r\u0103turi');
+        _cartIconEl.innerHTML = '<span class="cart-floating-icon__icon"><i class="fa-solid fa-cart-shopping"></i></span><span class="cart-floating-icon__count" id="cart-floating-count">0</span>';
         _cartIconEl.addEventListener('click', function (e) { e.preventDefault(); openCartDrawer(); });
         document.body.appendChild(_cartIconEl);
         var iconStyles = '.cart-floating-icon { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 5000; width: 56px; height: 56px; border-radius: 50%; border: 2px solid #d4a843; background: rgba(10,10,10,0.9); backdrop-filter: blur(10px); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }' +
           '.cart-floating-icon:hover { border-color: #fff; box-shadow: 0 6px 28px rgba(212,168,67,0.35); transform: translateY(-2px); }' +
-          '.cart-floating-icon__emoji { font-size: 1.4rem; }' +
+          '.cart-floating-icon__icon { font-size: 1.3rem; color: #d4a843; }' +
           '.cart-floating-icon__count { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; border-radius: 50%; background: #d4a843; color: #000; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; font-family: "Arial", sans-serif; transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55); }' +
           '.cart-floating-icon__count--pulse { transform: scale(1.4); }' +
           '@media (max-width: 480px) { .cart-floating-icon { width: 48px; height: 48px; bottom: 1rem; right: 1rem; } .cart-floating-icon__count { min-width: 20px; height: 20px; font-size: 0.65rem; top: -5px; right: -5px; } }';
@@ -804,18 +808,18 @@
   };
 
   var CATEGORY_LABELS = {
-    'general': 'Generale', 'gloves': 'Mănuși', 'headgear': 'Căști', 'footwear': 'Încălțăminte',
-    'apparel': 'Îmbrăcăminte', 'protection': 'Protecție', 'accessories': 'Accesorii', 'equipment': 'Echipament',
+    'general': 'Generale', 'gloves': 'M\u0103nu\u0219i', 'headgear': 'C\u0103\u0219ti', 'footwear': '\u00CEnc\u0103l\u021B\u0103minte',
+    'apparel': '\u00CEmbr\u0103c\u0103minte', 'protection': 'Protec\u021Bie', 'accessories': 'Accesorii', 'equipment': 'Echipament',
   };
 
   var FALLBACK_PRODUCTS = [
-    { id: 1, name: 'Mănuși Profesionale Gold', slug: 'manusi-profesionale-gold', price: 349.99, category: 'gloves', image: '/images/shop-gloves.jpg', stock: 25, is_active: true },
-    { id: 2, name: 'Cască de Protecție Elite', slug: 'casca-protectie-elite', price: 249.99, category: 'headgear', image: '/images/shop-headgear.jpg', stock: 18, is_active: true },
-    { id: 3, name: 'Încălțăminte Box RingMaster', slug: 'incaltaminte-box-ringmaster', price: 449.99, category: 'footwear', image: '/images/shop-shoes.jpg', stock: 12, is_active: true },
-    { id: 4, name: 'Bandaje Mâini Premium 5m', slug: 'bandaje-maini-premium', price: 49.99, category: 'accessories', image: '/images/product-gloves.jpg', stock: 50, is_active: true },
-    { id: 5, name: 'Gură de Protecție Pro', slug: 'gura-protectie-pro', price: 79.99, category: 'protection', image: '/images/product-gloves.jpg', stock: 0, is_active: true },
-    { id: 6, name: 'Mănuși Antrenament Lite', slug: 'manusi-antrenament-lite', price: 199.99, category: 'gloves', image: '/images/product-gloves.jpg', stock: 33, is_active: true },
-    { id: 7, name: 'Top Fără Mâneci BC Pro', slug: 'top-fara-maneci-bc-pro', price: 129.99, category: 'apparel', image: '/images/shop-gloves.jpg', stock: 40, is_active: true },
+    { id: 1, name: 'M\u0103nu\u0219i Profesionale Gold', slug: 'manusi-profesionale-gold', price: 349.99, category: 'gloves', image: '/images/shop-gloves.jpg', stock: 25, is_active: true },
+    { id: 2, name: 'Casc\u0103 de Protec\u021Bie Elite', slug: 'casca-protectie-elite', price: 249.99, category: 'headgear', image: '/images/shop-headgear.jpg', stock: 18, is_active: true },
+    { id: 3, name: '\u00CEnc\u0103l\u021B\u0103minte Box RingMaster', slug: 'incaltaminte-box-ringmaster', price: 449.99, category: 'footwear', image: '/images/shop-shoes.jpg', stock: 12, is_active: true },
+    { id: 4, name: 'Bandaje M\u00E2ini Premium 5m', slug: 'bandaje-maini-premium', price: 49.99, category: 'accessories', image: '/images/product-gloves.jpg', stock: 50, is_active: true },
+    { id: 5, name: 'Gur\u0103 de Protec\u021Bie Pro', slug: 'gura-protectie-pro', price: 79.99, category: 'protection', image: '/images/product-gloves.jpg', stock: 0, is_active: true },
+    { id: 6, name: 'M\u0103nu\u0219i Antrenament Lite', slug: 'manusi-antrenament-lite', price: 199.99, category: 'gloves', image: '/images/product-gloves.jpg', stock: 33, is_active: true },
+    { id: 7, name: 'Top F\u0103r\u0103 M\u00E2neci BC Pro', slug: 'top-fara-maneci-bc-pro', price: 129.99, category: 'apparel', image: '/images/shop-gloves.jpg', stock: 40, is_active: true },
     { id: 8, name: 'Sac Box 45kg Heavy Duty', slug: 'sac-box-heavy-duty', price: 699.99, category: 'equipment', image: '/images/product-gloves.jpg', stock: 5, is_active: true },
   ];
 
@@ -866,7 +870,7 @@
     if (stock !== null) {
       if (stock === 0) { stockInfo = '<span class="product-card__stock product-card__stock--out"><span class="product-card__stock-dot"></span>Stoc epuizat</span>'; tags.push('<span class="product-card__tag product-card__tag--outofstock">Epuizat</span>'); }
       else if (stock <= 5) { stockInfo = '<span class="product-card__stock product-card__stock--low"><span class="product-card__stock-dot"></span>Ultimele ' + stock + ' buc.</span>'; tags.push('<span class="product-card__tag product-card__tag--lowstock">Stoc limitat</span>'); }
-      else { stockInfo = '<span class="product-card__stock"><span class="product-card__stock-dot"></span>În stoc</span>'; }
+      else { stockInfo = '<span class="product-card__stock"><span class="product-card__stock-dot"></span>\u00CEn stoc</span>'; }
     }
 
     var tagsHTML = tags.length > 0 ? '<div class="product-card__tags">' + tags.join('') + '</div>' : '';
@@ -881,11 +885,11 @@
 
     var actionsHTML = '';
     if (stock === null || stock > 0) {
-      actionsHTML = '<div class="product-card__actions"><button class="product-card__action-btn" title="Adaugă în coș" aria-label="Adaugă ' + name + ' în coș" data-add-cart="' + product.id + '">🛒</button><button class="product-card__action-btn" title="Vezi detalii" aria-label="Detalii ' + name + '" data-view-detail="' + product.id + '">🔍</button></div>';
+      actionsHTML = '<div class="product-card__actions"><button class="product-card__action-btn" title="Adaug\u0103 \u00EEn co\u0219" aria-label="Adaug\u0103 ' + name + ' \u00EEn co\u0219" data-add-cart="' + product.id + '"><i class="fa-solid fa-cart-plus"></i></button><button class="product-card__action-btn" title="Vezi detalii" aria-label="Detalii ' + name + '" data-view-detail="' + product.id + '"><i class="fa-solid fa-magnifying-glass"></i></button></div>';
     }
 
     var isOutOfStock = (stock !== null && stock === 0);
-    var addBtnHTML = '<button class="product-card__add-btn" ' + (isOutOfStock ? 'disabled' : 'data-add-cart="' + product.id + '"') + '>' + (isOutOfStock ? 'Epuizat' : 'Adaugă în coș') + '</button>';
+    var addBtnHTML = '<button class="product-card__add-btn" ' + (isOutOfStock ? 'disabled' : 'data-add-cart="' + product.id + '"') + '>' + (isOutOfStock ? 'Epuizat' : 'Adaug\u0103 \u00EEn co\u0219') + '</button>';
 
     return '<div class="product-card glass glass--card reveal" data-product-id="' + product.id + '">' +
       '<div class="product-card__img"><img src="' + image + '" alt="' + name + '" loading="lazy" width="300" height="300" onerror="this.src=\'/images/product-gloves.jpg\'">' + tagsHTML + actionsHTML + '</div>' +
@@ -904,9 +908,9 @@
 
   function buildEmptyState() {
     if (state.search || state.activeCategory) {
-      return '<div class="shop-empty glass glass--card reveal"><div class="shop-empty__icon" aria-hidden="true">🔍</div><h3 class="shop-empty__title">Niciun produs găsit</h3><p class="shop-empty__text">Nu am găsit produse care să corespundă criteriilor tale. Încearcă să modifici filtrele sau termenii de căutare.</p><button class="btn btn--outline" id="shop-clear-filters">Resetează filtrele</button></div>';
+      return '<div class="shop-empty glass glass--card reveal"><div class="shop-empty__icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></div><h3 class="shop-empty__title">Niciun produs g\u0103sit</h3><p class="shop-empty__text">Nu am g\u0103sit produse care s\u0103 corespund\u0103 criteriilor tale. \u00CEncearc\u0103 s\u0103 modifici filtrele sau termenii de c\u0103utare.</p><button class="btn btn--outline" id="shop-clear-filters">Reseteaz\u0103 filtrele</button></div>';
     }
-    return '<div class="shop-empty glass glass--card reveal"><div class="shop-empty__icon" aria-hidden="true">🥊</div><h3 class="shop-empty__title">Magazinul se pregătește</h3><p class="shop-empty__text">Momentan nu sunt produse disponibile. Revino în curând — echipamentele de top sunt pe drum!</p></div>';
+    return '<div class="shop-empty glass glass--card reveal"><div class="shop-empty__icon" aria-hidden="true"><i class="fa-solid fa-box-open"></i></div><h3 class="shop-empty__title">Magazinul se preg\u0103te\u0219te</h3><p class="shop-empty__text">Momentan nu sunt produse disponibile. Revino \u00EEn cur\u00E2nd \u2014 echipamentele de top sunt pe drum!</p></div>';
   }
 
   /* ========================================================================
@@ -920,17 +924,17 @@
 
     var current = pagination.page;
     var total = pagination.totalPages;
-    var html = '<button class="shop__page-btn" data-page="' + (current - 1) + '"' + (current <= 1 ? ' disabled aria-disabled="true"' : '') + ' aria-label="Pagina anterioară">◀</button>';
+    var html = '<button class="shop__page-btn" data-page="' + (current - 1) + '"' + (current <= 1 ? ' disabled aria-disabled="true"' : '') + ' aria-label="Pagina anterioar\u0103"><i class="fa-solid fa-chevron-left"></i></button>';
     var maxVisible = 5;
     var start = Math.max(1, current - Math.floor(maxVisible / 2));
     var end = Math.min(total, start + maxVisible - 1);
     if (end - start < maxVisible - 1) start = Math.max(1, end - maxVisible + 1);
-    if (start > 1) { html += '<button class="shop__page-btn" data-page="1">1</button>'; if (start > 2) html += '<span class="shop__page-ellipsis">…</span>'; }
+    if (start > 1) { html += '<button class="shop__page-btn" data-page="1">1</button>'; if (start > 2) html += '<span class="shop__page-ellipsis">&hellip;</span>'; }
     for (var p = start; p <= end; p++) {
       html += '<button class="shop__page-btn' + (p === current ? ' shop__page-btn--active' : '') + '" data-page="' + p + '"' + (p === current ? ' aria-current="page"' : '') + '>' + p + '</button>';
     }
-    if (end < total) { if (end < total - 1) html += '<span class="shop__page-ellipsis">…</span>'; html += '<button class="shop__page-btn" data-page="' + total + '">' + total + '</button>'; }
-    html += '<button class="shop__page-btn" data-page="' + (current + 1) + '"' + (current >= total ? ' disabled aria-disabled="true"' : '') + ' aria-label="Pagina următoare">▶</button>';
+    if (end < total) { if (end < total - 1) html += '<span class="shop__page-ellipsis">&hellip;</span>'; html += '<button class="shop__page-btn" data-page="' + total + '">' + total + '</button>'; }
+    html += '<button class="shop__page-btn" data-page="' + (current + 1) + '"' + (current >= total ? ' disabled aria-disabled="true"' : '') + ' aria-label="Pagina urm\u0103toare"><i class="fa-solid fa-chevron-right"></i></button>';
     container.innerHTML = html;
 
     container.querySelectorAll('.shop__page-btn:not([disabled])').forEach(function (btn) {
@@ -951,14 +955,14 @@
     if (!grid) return;
     if (!products || products.length === 0) {
       grid.innerHTML = buildEmptyState();
-      if (countEl) countEl.innerHTML = '<strong>0</strong> produse găsite';
+      if (countEl) countEl.innerHTML = '<strong>0</strong> produse g\u0103site';
       buildPagination(null);
       var clearBtn = document.getElementById('shop-clear-filters');
       if (clearBtn) clearBtn.addEventListener('click', resetFilters);
       return;
     }
     grid.innerHTML = products.map(function (p) { return buildProductCard(p); }).join('');
-    if (countEl) { var total = pagination ? pagination.total : products.length; countEl.innerHTML = '<strong>' + total + '</strong> produse găsite'; }
+    if (countEl) { var total = pagination ? pagination.total : products.length; countEl.innerHTML = '<strong>' + total + '</strong> produse g\u0103site'; }
     buildPagination(pagination);
     bindProductActions();
     if (typeof refreshScrollReveal === 'function') refreshScrollReveal();
@@ -989,8 +993,8 @@
     }
     if (!product) return;
 
-    // Stocăm prețul original (fără reducere). Reducerile se aplică
-    // doar prin coduri promoționale la checkout, nu pre-aplicate în coș.
+    // Prețul original (din produs, fără reducere).
+    // Reducerile se aplică doar prin coduri promoționale la checkout.
     var originalPrice = Number(product.price) || 0;
 
     Cart.add({ id: product.id, name: product.name, price: originalPrice, image: product.image || null, category: product.category || 'general' }, 1);
@@ -1013,7 +1017,7 @@
     var toast = document.getElementById('cart-toast');
     if (!toast) return;
     var totalItems = Cart.getCount();
-    toast.textContent = '🛒 ' + escapeHTML(productName) + ' adăugat în coș  (' + totalItems + ')';
+    toast.textContent = '<i class="fa-solid fa-cart-shopping"></i> ' + escapeHTML(productName) + ' ad\u0103ugat \u00EEn co\u0219  (' + totalItems + ')';
     toast.classList.add('shop__cart-toast--visible');
     clearTimeout(toast._timeout);
     toast._timeout = setTimeout(function () { toast.classList.remove('shop__cart-toast--visible'); }, 2500);
@@ -1046,7 +1050,7 @@
       state.products = filtered;
       state.pagination = { page: state.page, limit: state.limit, total: filtered.length, totalPages: Math.ceil(filtered.length / state.limit) || 1 };
       renderProducts(filtered, state.pagination);
-      showToast('Se afișează datele offline. Conectează-te la server pentru informații actualizate.', 'info', 4000);
+      showToast('Se afi\u0219eaz\u0103 datele offline. Conecteaz\u0103-te la server pentru informa\u021Bii actualizate.', 'info', 4000);
     } finally { state.loading = false; }
   }
 
@@ -1078,7 +1082,7 @@
       console.error('[shop] Categories API error:', err);
       state.categories = FALLBACK_CATEGORIES;
       renderCategories(FALLBACK_CATEGORIES);
-      showToast('Categoriile se afișează offline.', 'info', 3000);
+      showToast('Categoriile se afi\u0219eaz\u0103 offline.', 'info', 3000);
     }
   }
 
@@ -1137,7 +1141,7 @@
       var now = new Date().getTime();
       var end = new Date(PROMO_CONFIG.globalEndDate).getTime();
       var diff = end - now;
-      if (diff <= 0) { countdownEl.textContent = 'Ofertă expirată'; return; }
+      if (diff <= 0) { countdownEl.textContent = 'Ofert\u0103 expirat\u0103'; return; }
       var days = Math.floor(diff / (1000 * 60 * 60 * 24));
       var hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       var minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -1145,7 +1149,7 @@
       if (days > 0) parts.push(days + 'z');
       if (hours > 0 || days > 0) parts.push(hours + 'h');
       parts.push(minutes + 'm');
-      countdownEl.textContent = '⏳ ' + parts.join(' ');
+      countdownEl.textContent = '<i class="fa-regular fa-clock"></i> ' + parts.join(' ');
     }
     updateCountdown();
     setInterval(updateCountdown, 60000);
@@ -1155,16 +1159,16 @@
     var params = new URLSearchParams(window.location.search);
     if (params.get('success') === 'true') {
       var orderNum = params.get('order') || '';
-      showToast('✅ Plata a fost procesată cu succes! Comanda #' + orderNum, 'success', 6000);
+      showToast('Plata a fost procesat\u0103 cu succes! Comanda #' + orderNum, 'success', 6000);
       Cart.clear();
       updateCartUI();
       if (window.history && window.history.replaceState) { window.history.replaceState({}, document.title, window.location.pathname); }
     } else if (params.get('canceled') === 'true') {
-      showToast('⚠️ Plata a fost anulată. Poți încerca din nou.', 'info', 4000);
+      showToast('Plata a fost anulat\u0103. Po\u021Bi \u00EEncerca din nou.', 'info', 4000);
       if (window.history && window.history.replaceState) { window.history.replaceState({}, document.title, window.location.pathname); }
     } else if (params.get('simulated') === 'true') {
       var simOrder = params.get('order') || '';
-      showToast('🧪 Comandă simulată #' + simOrder + ' (mod test)', 'info', 5000);
+      showToast('Comand\u0103 simulat\u0103 #' + simOrder + ' (mod test)', 'info', 5000);
       if (window.history && window.history.replaceState) { window.history.replaceState({}, document.title, window.location.pathname); }
     }
   }
@@ -1176,15 +1180,15 @@
         if (config.stripe_publishable_key) {
           STRIPE_CONFIG.publishableKey = config.stripe_publishable_key;
           STRIPE_CONFIG.configured = config.stripe_configured;
-          STRIPE_CONFIG.mode = config.stripe_configured ? 'stripe' : 'simulation';
+          STRIPE_CONFIG.mode = (config.mode === 'stripe') ? 'stripe' : 'simulation';
         }
         // Sincronizează promoțiile din server cu afișarea locală
-        if (config.promo_codes && Array.isArray(config.promo_codes)) {
+        if (config.promo_codes && Array.isArray(config.promo_codes) && config.promo_codes.length > 0) {
           syncPromosFromServer(config.promo_codes);
         }
       }
     } catch (err) {
-      console.log('[shop] Config API indisponibilă, se folosește configurația implicită.');
+      console.log('[shop] Config API indisponibil\u0103, se folose\u0219te configura\u021Bia implicit\u0103.');
       STRIPE_CONFIG.mode = 'simulation';
     }
   }
@@ -1208,7 +1212,7 @@
       merged.push({
         id: 'server-' + code,
         targetType: sp.applies_to || 'all',
-        targetId: sp.applies_to === 'all' ? null : null,
+        targetId: null,
         discountPercent: discountPercent,
         label: sp.description || ('Reducere -' + discountPercent + '%'),
         code: code,
@@ -1225,9 +1229,14 @@
       var lp = localPromos[j];
       var lpCode = (lp.code || '').toUpperCase();
       if (lpCode && seenCodes[lpCode]) continue;
-      // Pentru promoții per-produs fără cod, păstrăm
+      // Păstrăm promoțiile per-produs fără cod (nu vin din server)
       if (!lpCode) {
         merged.push(lp);
+      }
+      // Păstrăm și codurile locale care nu sunt pe server
+      if (lpCode && !seenCodes[lpCode]) {
+        merged.push(lp);
+        seenCodes[lpCode] = true;
       }
     }
 
