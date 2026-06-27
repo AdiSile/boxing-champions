@@ -11,6 +11,9 @@
 
   <title>Program Săptămânal | Boxing Champions</title>
 
+  <!-- Font Awesome CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
+
   <!-- CSS principal -->
   <link rel="stylesheet" href="/css/style.css">
 
@@ -397,6 +400,7 @@
       font-size: 4rem;
       margin-bottom: 1.4rem;
       opacity: 0.6;
+      color: var(--gold-primary);
     }
 
     .schedule-empty__title {
@@ -686,7 +690,7 @@
         </div>
       </div>
 
-      <!-- Legend -->
+      <!-- Legend (static initial, rebuilt dynamically by JS) -->
       <div class="schedule-legend glass" id="schedule-legend" aria-label="Legendă categorii">
         <span class="schedule-legend__title">Legendă:</span>
         <div class="schedule-legend__items">
@@ -756,16 +760,16 @@
         <div>
           <h4 class="footer__heading">Urmărește-ne</h4>
           <ul class="footer__links">
-            <li><a href="#" target="_blank" rel="noopener noreferrer">Instagram</a></li>
-            <li><a href="#" target="_blank" rel="noopener noreferrer">Facebook</a></li>
-            <li><a href="#" target="_blank" rel="noopener noreferrer">YouTube</a></li>
-            <li><a href="#" target="_blank" rel="noopener noreferrer">X / Twitter</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-instagram"></i> Instagram</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-facebook-f"></i> Facebook</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-youtube"></i> YouTube</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-x-twitter"></i> X / Twitter</a></li>
           </ul>
         </div>
       </div>
 
       <div class="footer__bottom">
-        <p>&copy; <span id="current-year">2025</span> Boxing Champions. Toate drepturile rezervate. | Construit cu pasiune.</p>
+        <p>&copy; <span id="current-year">2025</span> Boxing Champions. Toate drepturile rezervate. | Construit cu <i class="fa-solid fa-hand-fist"></i> și pasiune.</p>
       </div>
     </div>
   </footer>
@@ -866,35 +870,41 @@
     ];
 
     /* ==================================================================
-       CATEGORY DETECTION
+       CATEGORY DETECTION (robust, matches legend swatch classes)
        ================================================================== */
+
+    /**
+     * Detectează categoria pe baza titlului antrenamentului.
+     * Returnează un obiect cu `cls` (clasa CSS) și `label` (eticheta).
+     * Important: `cls` trebuie să se potrivească cu cheile din buildLegend().
+     */
     function detectCategory(title) {
-      if (!title) return { cls: 'schedule__cat--beginner', label: 'Începători' };
+      if (!title) return { cls: 'schedule__cat--beginner', label: 'Începători', key: 'beginner' };
 
       var t = title.toLowerCase();
 
       // Kids / Junior
       if (/\b(copii|copil|kids|junior|cadeți|cadet|adolescenți)\b/i.test(t)) {
-        return { cls: 'schedule__cat--kids', label: 'Copii' };
+        return { cls: 'schedule__cat--kids', label: 'Copii', key: 'kids' };
       }
 
       // Pro / Elite / Competition
       if (/\b(pro|profesionist|profesioniști|elite|competiție|competition|pregătire competițională)\b/i.test(t)) {
-        return { cls: 'schedule__cat--pro', label: 'Pro' };
+        return { cls: 'schedule__cat--pro', label: 'Pro', key: 'pro' };
       }
 
       // Advanced
-      if (/\b(avansat|avansați|advanced|intermediar|sparring|strategie|apărare avansate)\b/i.test(t)) {
-        return { cls: 'schedule__cat--advanced', label: 'Avansați' };
+      if (/\b(avansat|avansați|advanced|intermediar|sparring|strategie|apărare avansate|tehnici avansate)\b/i.test(t)) {
+        return { cls: 'schedule__cat--advanced', label: 'Avansați', key: 'advanced' };
       }
 
       // Fitness / Cardio / Strength
       if (/\b(fitness|cardio|condiție|conditie|forță|forta|stretching|recuperare|yoga|agility|exploziv|pregătire fizică)\b/i.test(t)) {
-        return { cls: 'schedule__cat--fitness', label: 'Fitness' };
+        return { cls: 'schedule__cat--fitness', label: 'Fitness', key: 'fitness' };
       }
 
       // Beginner (default)
-      return { cls: 'schedule__cat--beginner', label: 'Începători' };
+      return { cls: 'schedule__cat--beginner', label: 'Începători', key: 'beginner' };
     }
 
     /* ==================================================================
@@ -912,7 +922,7 @@
         '<td><span class="schedule__time">' + start + ' – ' + end + '</span></td>' +
         '<td><span class="schedule__title">' + title + '</span></td>' +
         '<td><span class="schedule__coach">' + coach + '</span></td>' +
-        '<td><span class="schedule__location">📍 ' + location + '</span></td>' +
+        '<td><span class="schedule__location"><i class="fa-solid fa-location-dot"></i> ' + location + '</span></td>' +
         '<td><span class="schedule__cat ' + cat.cls + '">' + cat.label + '</span></td>' +
       '</tr>';
     }
@@ -941,7 +951,7 @@
           '<table class="schedule__table" aria-label="Program ' + dayName + '">' +
             '<thead>' +
               '<tr>' +
-                '<th scope="col">Ora</th>' +
+                '<th scope="col"><i class="fa-regular fa-clock"></i> Ora</th>' +
                 '<th scope="col">Antrenament</th>' +
                 '<th scope="col">Antrenor</th>' +
                 '<th scope="col">Locație</th>' +
@@ -975,6 +985,8 @@
         var usedSet = {};
         categoriesUsed.forEach(function (c) { usedSet[c] = true; });
         filtered = allCategories.filter(function (cat) { return usedSet[cat.cls]; });
+        // If filtering removed all (shouldn't happen), show all
+        if (filtered.length === 0) filtered = allCategories;
       } else {
         filtered = allCategories;
       }
@@ -996,7 +1008,7 @@
        ================================================================== */
     function buildEmptyState(message) {
       return '<div class="schedule-empty glass reveal">' +
-        '<div class="schedule-empty__icon" aria-hidden="true">🥊</div>' +
+        '<div class="schedule-empty__icon" aria-hidden="true"><i class="fa-solid fa-hand-fist"></i></div>' +
         '<h3 class="schedule-empty__title">Niciun antrenament găsit</h3>' +
         '<p class="schedule-empty__text">' + escapeHTML(message || 'Momentan nu sunt antrenamente programate. Revino în curând!') + '</p>' +
         '<button class="btn btn--outline" id="schedule-reset-filter">Vezi toate zilele</button>' +
@@ -1011,6 +1023,7 @@
       if (!container) return;
 
       var categoriesUsed = [];
+      var categoriesUsedSet = {};
 
       // Determine which days to render
       var daysToRender = [];
@@ -1031,9 +1044,9 @@
           // Track categories used
           entries.forEach(function (entry) {
             var cat = detectCategory(entry.title);
-            var catKey = cat.cls.replace('schedule__cat--', '');
-            if (categoriesUsed.indexOf(catKey) === -1) {
-              categoriesUsed.push(catKey);
+            if (!categoriesUsedSet[cat.key]) {
+              categoriesUsedSet[cat.key] = true;
+              categoriesUsed.push(cat.key);
             }
           });
         }
@@ -1049,7 +1062,7 @@
         container.innerHTML = htmlParts.join('');
       }
 
-      // Build legend based on actual categories
+      // Build legend based on actual categories from the rendered data
       buildLegend(categoriesUsed);
 
       // Re-bind reset button if exists
@@ -1066,6 +1079,39 @@
     }
 
     /* ==================================================================
+       PARSE SCHEDULE API RESPONSE (robust)
+       ================================================================== */
+    function parseScheduleResponse(response) {
+      if (!response) return { schedule: [], grouped: null };
+
+      // Case 1: { data: [...], grouped: {...} }
+      if (Array.isArray(response.data)) {
+        return {
+          schedule: response.data,
+          grouped: response.grouped || null
+        };
+      }
+
+      // Case 2: { schedule: [...] }
+      if (Array.isArray(response.schedule)) {
+        return {
+          schedule: response.schedule,
+          grouped: response.grouped || null
+        };
+      }
+
+      // Case 3: response is a plain array
+      if (Array.isArray(response)) {
+        return {
+          schedule: response,
+          grouped: null
+        };
+      }
+
+      return { schedule: [], grouped: null };
+    }
+
+    /* ==================================================================
        LOAD SCHEDULE FROM API
        ================================================================== */
     async function loadSchedule() {
@@ -1074,22 +1120,33 @@
 
       try {
         var response = await safeFetch('/api/schedule?sort=day_of_week');
-        var schedule = response.data || [];
-        var grouped = response.grouped || {};
+        var parsed = parseScheduleResponse(response);
+        var schedule = parsed.schedule;
+        var grouped = parsed.grouped;
 
         // If empty, try without is_active filter
         if (schedule.length === 0) {
           try {
             var responseAll = await safeFetch('/api/schedule?is_active=false&sort=day_of_week');
-            schedule = responseAll.data || [];
-            grouped = responseAll.grouped || {};
+            var parsedAll = parseScheduleResponse(responseAll);
+            schedule = parsedAll.schedule;
+            grouped = parsedAll.grouped || grouped;
           } catch (_) { /* use fallback */ }
         }
 
-        // If still empty or API error, use fallback
+        // If still no schedule data, use fallback
         if (schedule.length === 0) {
           schedule = FALLBACK_SCHEDULE;
           grouped = groupByDay(FALLBACK_SCHEDULE);
+
+          if (typeof showToast === 'function') {
+            showToast('Se afișează datele offline. Conectează-te la server pentru programul actualizat.', 'info', 4000);
+          }
+        }
+
+        // If server didn't return grouped, group locally
+        if (!grouped || Object.keys(grouped).length === 0) {
+          grouped = groupByDay(schedule);
         }
 
         state.schedule = schedule;

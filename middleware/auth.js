@@ -1,42 +1,592 @@
-*(modificat — cookie `secure` și `sameSite` condiționate de `NODE_ENV === 'production'`)*
+// ---------------------------------------------------------------------------
+// middleware/auth.js
+// JWT Authentication & Authorization Middleware
+//
+// Token-ul JWT este stocat într-un cookie HttpOnly, Secure, SameSite=Strict.
+// Verificarea include validare payload, blacklist, CSRF defense-in-depth
+// și Role-Based Access Control (RBAC).
+// ---------------------------------------------------------------------------
 
-// ... (primele ~160 linii neschimbate) ...
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const { getDb } = require('../config/db');
 
+// ---------------------------------------------------------------------------
+// Constante
+// ---------------------------------------------------------------------------
+
+/** Numele cookie-ului care conține JWT-ul de acces */
+const ACCESS_TOKEN_COOKIE = 'access_token';
+
+/** Numele cookie-ului pentru refresh token */
+const REFRESH_TOKEN_COOKIE = 'refresh_token';
+
+/** Numele header-ului custom pentru CSRF defense-in-depth */
+const CSRF_HEADER = 'x-csrf-token';
+
+/** Durata de viață implicită a access token-ului */
+const ACCESS_TOKEN_TTL = process.env.JWT_ACCESS_TTL || '15m';
+
+/** Durata de viață implicită a refresh token-ului */
+const REFRESH_TOKEN_TTL = process.env.JWT_REFRESH_TTL || '7d';
+
+/** Algoritmul de semnare JWT */
+const JWT_ALGORITHM = 'HS256';
+
+/** Dimensiunea token-ului CSRF (octeți) */
+const CSRF_TOKEN_BYTES = 32;
+
+// ---------------------------------------------------------------------------
+// Blacklist în memorie pentru token-uri revocate (logout)
+// ---------------------------------------------------------------------------
+
+/**
+ * Set de token-uri revocate, stocat ca Map<jti, expiresAt>.
+ * Token-urile expiră automat din blacklist după ce JWT-ul ar fi expirat oricum.
+ */
+const tokenBlacklist = new Map();
+
+/**
+ * Curăță periodic token-urile expirate din blacklist.
+ */
+const BLACKLIST_CLEANUP_INTERVAL = 60 * 1000; // 1 minut
+
+setInterval(() => {
+  const now = Math.floor(Date.now() / 1000);
+  for (const [jti, exp] of tokenBlacklist) {
+    if (exp <= now) {
+      tokenBlacklist.delete(jti);
+    }
+  }
+}, BLACKLIST_CLEANUP_INTERVAL).unref();
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Obține secretul JWT din variabilele de mediu.
+ * Aruncă eroare dacă secretul nu este configurat (fail-fast).
+ *
+ * @returns {string} Secretul JWT
+ */
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error(
+      '[auth] JWT_SECRET nu este definit în variabilele de mediu. ' +
+      'Configurează o valoare puternică (minim 256 biți) în fișierul .env.'
+    );
+  }
+  if (secret.length < 32) {
+    throw new Error(
+      '[auth] JWT_SECRET este prea scurt. Folosește un secret de minim 32 de caractere.'
+    );
+  }
+  return secret;
+}
+
+/**
+ * Comparație constant-time între două string-uri.
+ * Previne timing attacks la compararea token-urilor CSRF.
+ *
+ * @param {string} a
+ * @param {string} b
+ * @returns {boolean} true dacă string-urile sunt identice
+ */
+function timingSafeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+
+  const bufA = Buffer.from(a, 'utf8');
+  const bufB = Buffer.from(b, 'utf8');
+
+  if (bufA.length !== bufB.length) {
+    // Pentru a preveni scurgeri de lungime, facem o comparație
+    // constant-time pe un buffer de lungime egală cu cel mai scurt
+    // și returnăm mereu false.
+    crypto.timingSafeEqual(bufA, Buffer.alloc(bufA.length));
+    return false;
+  }
+
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+/**
+ * Generează un token CSRF criptografic sigur.
+ *
+ * @returns {string} Token CSRF hex
+ */
+function generateCsrfToken() {
+  return crypto.randomBytes(CSRF_TOKEN_BYTES).toString('hex');
+}
+
+/**
+ * Hash-uiește un token CSRF pentru stocare în cookie.
+ * Folosim HMAC-SHA256 cu secretul JWT pentru a preveni
+ * ca un atacator să poată genera token-uri valide.
+ *
+ * @param {string} token - Token-ul CSRF în clar
+ * @returns {string} Hash-ul hex
+ */
+function hashCsrfToken(token) {
+  const secret = getJwtSecret();
+  return crypto.createHmac('sha256', secret).update(token).digest('hex');
+}
+
+// ---------------------------------------------------------------------------
+// Configurare cookie-uri
+// ---------------------------------------------------------------------------
+
+/**
+ * Returnează opțiunile standard pentru cookie-ul de acces.
+ * HttpOnly, Secure, SameSite=Strict.
+ *
+ * @returns {object} Opțiuni cookie
+ */
 function getAccessCookieOptions() {
   return {
-    httpOnly: true,
+    httpOnly: true,            // Inaccesibil din JavaScript (XSS protecție)
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-    path: '/',
-    maxAge: parseTtlToMs(ACCESS_TOKEN_TTL),
+    path: '/',                 // Disponibil pe toate rutele
+    maxAge: parseTtlToMs(ACCESS_TOKEN_TTL), // Expirare sincronizată cu JWT
   };
 }
 
+/**
+ * Returnează opțiunile standard pentru cookie-ul de refresh.
+ *
+ * @returns {object} Opțiuni cookie
+ */
 function getRefreshCookieOptions() {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-    path: '/api/auth/refresh',
+    path: '/api/auth/refresh', // Restricționat la ruta de refresh
     maxAge: parseTtlToMs(REFRESH_TOKEN_TTL),
   };
 }
 
-// ...
+/**
+ * Convertește un TTL stil JWT (ex: "15m", "7d") în milisecunde.
+ *
+ * @param {string} ttl - Durata (ex: "15m", "1h", "7d")
+ * @returns {number} Milisecunde
+ */
+function parseTtlToMs(ttl) {
+  const match = ttl.match(/^(\d+)(s|m|h|d)$/);
+  if (!match) return 15 * 60 * 1000; // default 15 minute
 
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+
+  const multipliers = {
+    s: 1000,
+    m: 60 * 1000,
+    h: 60 * 60 * 1000,
+    d: 24 * 60 * 60 * 1000,
+  };
+
+  return value * (multipliers[unit] || multipliers.m);
+}
+
+// ---------------------------------------------------------------------------
+// Semnare & verificare JWT
+// ---------------------------------------------------------------------------
+
+/**
+ * Semnează un access token JWT.
+ *
+ * @param {object} payload - Datele de inclus în token (userId, email, role)
+ * @returns {string} Token-ul JWT semnat
+ */
+function signAccessToken(payload) {
+  const secret = getJwtSecret();
+
+  return jwt.sign(
+    {
+      sub: payload.userId,
+      email: payload.email,
+      role: payload.role,
+      type: 'access',
+    },
+    secret,
+    {
+      algorithm: JWT_ALGORITHM,
+      expiresIn: ACCESS_TOKEN_TTL,
+      jwtid: crypto.randomUUID(),
+    }
+  );
+}
+
+/**
+ * Semnează un refresh token JWT.
+ *
+ * @param {object} payload - Datele de inclus (userId, email, role)
+ * @returns {string} Token-ul JWT semnat
+ */
+function signRefreshToken(payload) {
+  const secret = getJwtSecret();
+
+  return jwt.sign(
+    {
+      sub: payload.userId,
+      email: payload.email,
+      role: payload.role,
+      type: 'refresh',
+    },
+    secret,
+    {
+      algorithm: JWT_ALGORITHM,
+      expiresIn: REFRESH_TOKEN_TTL,
+      jwtid: crypto.randomUUID(),
+    }
+  );
+}
+
+/**
+ * Verifică și decodifică un token JWT.
+ *
+ * @param {string} token - Token-ul JWT
+ * @param {object} [options] - Opțiuni suplimentare pentru verificare
+ * @returns {{ payload: object|null, error: string|null }}
+ */
+function verifyToken(token, options = {}) {
+  try {
+    const secret = getJwtSecret();
+    const payload = jwt.verify(token, secret, {
+      algorithms: [JWT_ALGORITHM],
+      ...options,
+    });
+    return { payload, error: null };
+  } catch (err) {
+    // Mapping erori JWT la mesaje generice (fără a dezvălui detalii interne)
+    const errorMap = {
+      TokenExpiredError: 'Token expired.',
+      JsonWebTokenError: 'Invalid token.',
+      NotBeforeError: 'Token not yet active.',
+    };
+    const message = errorMap[err.name] || 'Token verification failed.';
+    return { payload: null, error: message };
+  }
+}
+
+/**
+ * Verifică dacă un token este în blacklist.
+ *
+ * @param {string} jti - JWT ID din payload
+ * @returns {boolean}
+ */
+function isTokenBlacklisted(jti) {
+  if (!jti) return true; // Fără jti = respingem
+  const exp = tokenBlacklist.get(jti);
+  if (!exp) return false;
+
+  // Verificăm dacă token-ul a expirat deja
+  const now = Math.floor(Date.now() / 1000);
+  if (exp <= now) {
+    tokenBlacklist.delete(jti);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Adaugă un token în blacklist.
+ *
+ * @param {string} jti - JWT ID
+ * @param {number} exp - Timestamp-ul de expirare al token-ului
+ */
+function revokeToken(jti, exp) {
+  if (jti) {
+    tokenBlacklist.set(jti, exp);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Validare payload
+// ---------------------------------------------------------------------------
+
+/**
+ * Validează structura payload-ului JWT.
+ * Respinge token-urile care nu respectă structura așteptată.
+ *
+ * @param {object} payload - Payload-ul decodificat
+ * @returns {boolean}
+ */
+function isValidPayload(payload) {
+  if (!payload || typeof payload !== 'object') return false;
+
+  // Verificăm câmpurile obligatorii
+  if (!payload.sub || typeof payload.sub !== 'number') return false;
+  if (!payload.email || typeof payload.email !== 'string') return false;
+  if (!payload.role || !['admin', 'user', 'coach'].includes(payload.role)) return false;
+  if (payload.type !== 'access') return false;
+  if (payload.jti && typeof payload.jti !== 'string') return false;
+
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Middleware-uri Express
+// ---------------------------------------------------------------------------
+
+/**
+ * Middleware principal de autentificare.
+ *
+ * Extrage JWT-ul din cookie-ul HttpOnly, îl verifică,
+ * validează payload-ul, verifică blacklist-ul,
+ * și atașează `req.user` la cerere.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+function authenticate(req, res, next) {
+  // 1. Extragere token din cookie
+  const token = req.cookies?.[ACCESS_TOKEN_COOKIE];
+
+  if (!token) {
+    return res.status(401).json({
+      error: 'Authentication required.',
+      code: 'AUTH_REQUIRED',
+    });
+  }
+
+  // 2. Verificare JWT
+  const { payload, error } = verifyToken(token);
+
+  if (error) {
+    // Ștergem cookie-ul invalid
+    res.clearCookie(ACCESS_TOKEN_COOKIE, getAccessCookieOptions());
+
+    return res.status(401).json({
+      error: 'Authentication failed.',
+      code: 'AUTH_FAILED',
+    });
+  }
+
+  // 3. Validare structură payload
+  if (!isValidPayload(payload)) {
+    res.clearCookie(ACCESS_TOKEN_COOKIE, getAccessCookieOptions());
+
+    return res.status(401).json({
+      error: 'Authentication failed.',
+      code: 'AUTH_FAILED',
+    });
+  }
+
+  // 4. Verificare blacklist
+  if (isTokenBlacklisted(payload.jti)) {
+    res.clearCookie(ACCESS_TOKEN_COOKIE, getAccessCookieOptions());
+
+    return res.status(401).json({
+      error: 'Session revoked.',
+      code: 'SESSION_REVOKED',
+    });
+  }
+
+  // 5. Verificare utilizator în baza de date (existent, activ)
+  try {
+    const db = getDb();
+    const user = db.prepare(
+      'SELECT id, name, email, role, is_active FROM users WHERE id = ?'
+    ).get(payload.sub);
+
+    if (!user || !user.is_active) {
+      res.clearCookie(ACCESS_TOKEN_COOKIE, getAccessCookieOptions());
+      // Revocăm token-ul pentru utilizatori inactivi
+      revokeToken(payload.jti, payload.exp);
+
+      return res.status(401).json({
+        error: 'Account inactive or deleted.',
+        code: 'ACCOUNT_INACTIVE',
+      });
+    }
+  } catch (dbErr) {
+    console.error('[auth] Database error during authentication:', dbErr.message);
+    return res.status(500).json({
+      error: 'Internal server error.',
+      code: 'INTERNAL_ERROR',
+    });
+  }
+
+  // 6. Atașare utilizator la cerere
+  req.user = {
+    userId: payload.sub,
+    email: payload.email,
+    role: payload.role,
+    jti: payload.jti,
+  };
+
+  next();
+}
+
+/**
+ * Middleware de autorizare bazată pe roluri.
+ *
+ * @param  {...string} allowedRoles - Rolurile permise (ex: 'admin', 'coach')
+ * @returns {import('express').RequestHandler}
+ */
+function authorize(...allowedRoles) {
+  return function authorizeMiddleware(req, res, next) {
+    // Necesită autentificare prealabilă
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required.',
+        code: 'AUTH_REQUIRED',
+      });
+    }
+
+    // Verificare rol
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        error: 'Insufficient permissions.',
+        code: 'FORBIDDEN',
+      });
+    }
+
+    next();
+  };
+}
+
+/**
+ * Middleware opțional de autentificare.
+ * Similar cu `authenticate`, dar nu respinge cererile neautentificate.
+ * Atașează `req.user` doar dacă token-ul este valid.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+function optionalAuth(req, res, next) {
+  const token = req.cookies?.[ACCESS_TOKEN_COOKIE];
+
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  const { payload } = verifyToken(token);
+
+  if (!payload || !isValidPayload(payload) || isTokenBlacklisted(payload.jti)) {
+    req.user = null;
+    return next();
+  }
+
+  // Verificare utilizator în BD
+  try {
+    const db = getDb();
+    const user = db.prepare(
+      'SELECT id, name, email, role, is_active FROM users WHERE id = ?'
+    ).get(payload.sub);
+
+    if (!user || !user.is_active) {
+      req.user = null;
+      return next();
+    }
+  } catch {
+    req.user = null;
+    return next();
+  }
+
+  req.user = {
+    userId: payload.sub,
+    email: payload.email,
+    role: payload.role,
+    jti: payload.jti,
+  };
+
+  next();
+}
+
+// ---------------------------------------------------------------------------
+// CSRF Defense-in-Depth
+// ---------------------------------------------------------------------------
+
+/**
+ * Middleware pentru verificarea CSRF (defense-in-depth, pe lângă SameSite=Strict).
+ *
+ * Generează un token CSRF la autentificare și îl trimite în răspunsul de login.
+ * Clientul trebuie să trimită token-ul în header-ul `x-csrf-token` la fiecare
+ * cerere de modificare (POST, PUT, PATCH, DELETE).
+ *
+ * Token-ul CSRF este stocat într-un cookie separat (lizibil de JS, dar validat
+ * prin HMAC cu secretul serverului).
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+function csrfProtection(req, res, next) {
+  // Doar pentru metode care modifică stare
+  const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
+  if (safeMethods.includes(req.method)) {
+    return next();
+  }
+
+  // Extragem token-ul CSRF din header
+  const headerToken = req.headers[CSRF_HEADER];
+
+  if (!headerToken || typeof headerToken !== 'string' || headerToken.length === 0) {
+    return res.status(403).json({
+      error: 'CSRF token missing.',
+      code: 'CSRF_MISSING',
+    });
+  }
+
+  // Comparăm hash-ul token-ului din header cu cel din cookie
+  const cookieToken = req.cookies?.['csrf_token'];
+
+  if (!cookieToken) {
+    return res.status(403).json({
+      error: 'CSRF validation failed.',
+      code: 'CSRF_FAILED',
+    });
+  }
+
+  // Hash-uim token-ul din header și comparăm constant-time
+  const headerHash = hashCsrfToken(headerToken);
+
+  if (!timingSafeEqual(headerHash, cookieToken)) {
+    return res.status(403).json({
+      error: 'CSRF validation failed.',
+      code: 'CSRF_FAILED',
+    });
+  }
+
+  next();
+}
+
+/**
+ * Setează cookie-ul CSRF în răspuns.
+ * Se apelează după autentificare (login).
+ *
+ * @param {import('express').Response} res
+ * @returns {string} Token-ul CSRF în clar (pentru a fi returnat clientului în body)
+ */
 function setCsrfCookie(res) {
   const token = generateCsrfToken();
   const hashed = hashCsrfToken(token);
+
   res.cookie('csrf_token', hashed, {
-    httpOnly: false,
+    httpOnly: false,          // Trebuie citit de JS pentru a-l pune în header
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
     path: '/',
     maxAge: parseTtlToMs(ACCESS_TOKEN_TTL),
   });
+
   return token;
 }
 
+/**
+ * Curăță cookie-ul CSRF.
+ *
+ * @param {import('express').Response} res
+ */
 function clearCsrfCookie(res) {
   res.clearCookie('csrf_token', {
     httpOnly: false,
@@ -45,3 +595,201 @@ function clearCsrfCookie(res) {
     path: '/',
   });
 }
+
+// ---------------------------------------------------------------------------
+// Login / Logout helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Setează cookie-urile de autentificare pe răspuns.
+ * Se apelează după validarea credențialelor.
+ *
+ * @param {import('express').Response} res
+ * @param {object} user - { id, email, role }
+ * @returns {{ accessToken: string, csrfToken: string }}
+ */
+function setAuthCookies(res, user) {
+  const accessToken = signAccessToken({
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+  });
+
+  const refreshToken = signRefreshToken({
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+  });
+
+  // Setăm cookie-urile
+  res.cookie(ACCESS_TOKEN_COOKIE, accessToken, getAccessCookieOptions());
+  res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, getRefreshCookieOptions());
+
+  // Generăm și setăm CSRF token
+  const csrfToken = setCsrfCookie(res);
+
+  return { accessToken, csrfToken };
+}
+
+/**
+ * Revocă token-urile și șterge cookie-urile (logout).
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
+function clearAuthCookies(req, res) {
+  // Revocăm access token-ul dacă există
+  const accessToken = req.cookies?.[ACCESS_TOKEN_COOKIE];
+  if (accessToken) {
+    const { payload } = verifyToken(accessToken, { ignoreExpiration: true });
+    if (payload?.jti && payload?.exp) {
+      revokeToken(payload.jti, payload.exp);
+    }
+  }
+
+  // Revocăm refresh token-ul dacă există
+  const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
+  if (refreshToken) {
+    const { payload } = verifyToken(refreshToken, { ignoreExpiration: true });
+    if (payload?.jti && payload?.exp) {
+      revokeToken(payload.jti, payload.exp);
+    }
+  }
+
+  // Ștergem cookie-urile
+  res.clearCookie(ACCESS_TOKEN_COOKIE, getAccessCookieOptions());
+  res.clearCookie(REFRESH_TOKEN_COOKIE, getRefreshCookieOptions());
+  clearCsrfCookie(res);
+}
+
+// ---------------------------------------------------------------------------
+// Refresh token rotation
+// ---------------------------------------------------------------------------
+
+/**
+ * Middleware pentru refresh token rotation.
+ * Verifică refresh token-ul, emite o nouă pereche de token-uri,
+ * și revocă token-ul vechi.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+function refreshTokenHandler(req, res, next) {
+  const token = req.cookies?.[REFRESH_TOKEN_COOKIE];
+
+  if (!token) {
+    return res.status(401).json({
+      error: 'Refresh token required.',
+      code: 'REFRESH_REQUIRED',
+    });
+  }
+
+  // Verificare refresh token
+  const { payload, error } = verifyToken(token);
+
+  if (error || !payload || payload.type !== 'refresh') {
+    clearAuthCookies(req, res);
+    return res.status(401).json({
+      error: 'Invalid refresh token.',
+      code: 'REFRESH_INVALID',
+    });
+  }
+
+  // Verificare blacklist
+  if (isTokenBlacklisted(payload.jti)) {
+    clearAuthCookies(req, res);
+    return res.status(401).json({
+      error: 'Refresh token revoked.',
+      code: 'REFRESH_REVOKED',
+    });
+  }
+
+  // Verificare utilizator în baza de date
+  try {
+    const db = getDb();
+    const user = db.prepare(
+      'SELECT id, name, email, role, is_active FROM users WHERE id = ?'
+    ).get(payload.sub);
+
+    if (!user || !user.is_active) {
+      // Revocăm token-ul vechi
+      revokeToken(payload.jti, payload.exp);
+      clearAuthCookies(req, res);
+
+      return res.status(401).json({
+        error: 'Account inactive or deleted.',
+        code: 'ACCOUNT_INACTIVE',
+      });
+    }
+
+    // Revocăm token-ul vechi (token rotation)
+    revokeToken(payload.jti, payload.exp);
+
+    // Emitem noi token-uri
+    setAuthCookies(res, user);
+
+    return res.json({
+      message: 'Token refreshed successfully.',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (dbErr) {
+    console.error('[auth] Database error during token refresh:', dbErr.message);
+    return res.status(500).json({
+      error: 'Internal server error.',
+      code: 'INTERNAL_ERROR',
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Exporturi
+// ---------------------------------------------------------------------------
+
+module.exports = {
+  // Middleware-uri principale
+  authenticate,
+  authorize,
+  optionalAuth,
+  csrfProtection,
+  refreshTokenHandler,
+
+  // Helpers de login / logout
+  setAuthCookies,
+  clearAuthCookies,
+  setCsrfCookie,
+  clearCsrfCookie,
+
+  // Semnare / verificare token-uri (expuse pentru teste și rute custom)
+  signAccessToken,
+  signRefreshToken,
+  verifyToken,
+  revokeToken,
+  isTokenBlacklisted,
+
+  // Constante și config
+  ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  CSRF_HEADER,
+  ACCESS_TOKEN_TTL,
+  REFRESH_TOKEN_TTL,
+  JWT_ALGORITHM,
+
+  // Interne (expuse pentru testare)
+  _internals: {
+    tokenBlacklist,
+    timingSafeEqual,
+    generateCsrfToken,
+    hashCsrfToken,
+    isValidPayload,
+    getJwtSecret,
+    getAccessCookieOptions,
+    getRefreshCookieOptions,
+    parseTtlToMs,
+  },
+};

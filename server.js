@@ -118,6 +118,7 @@ app.use(require('./routes/schedule'));
 app.use(require('./routes/plans'));
 app.use(require('./routes/products'));
 app.use(require('./routes/orders'));
+app.use(require('./routes/dashboard'));
 
 // ---------------------------------------------------------------------------
 // Rute cu rate limiting specific

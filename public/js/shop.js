@@ -31,9 +31,53 @@
      Referințe la utilitarele globale
      ======================================================================== */
   var BC = window.BoxingChampions || {};
-  var fetchJSON = BC.fetchJSON || fetch;
   var showToast = BC.showToast || function (msg, type, dur) { console.log('[toast]', type, msg); };
   var refreshScrollReveal = BC.refreshScrollReveal || function () {};
+
+  /**
+   * fetchJSON — wrapper sigur, folosește BC.fetchJSON dacă există,
+   * altfel implementează local parsing JSON + error handling.
+   */
+  function fetchJSON(url, opts) {
+    if (typeof BC.fetchJSON === 'function') {
+      return BC.fetchJSON(url, opts);
+    }
+
+    // Fallback local robust
+    var options = opts || {};
+    var method = options.method || 'GET';
+    var body = options.body || null;
+    var headers = options.headers || {};
+
+    var fetchHeaders = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+    for (var h in headers) { if (headers.hasOwnProperty(h)) fetchHeaders[h] = headers[h]; }
+    if (body && typeof body === 'object') { fetchHeaders['Content-Type'] = 'application/json'; }
+
+    return fetch(url, {
+      method: method,
+      headers: fetchHeaders,
+      body: body ? JSON.stringify(body) : undefined,
+    }).then(function (response) {
+      var ct = response.headers.get('content-type') || '';
+      if (ct.indexOf('application/json') !== -1) {
+        return response.json().then(function (data) {
+          if (!response.ok) {
+            var err = new Error(data.error || data.message || ('HTTP ' + response.status));
+            err.status = response.status;
+            err.data = data;
+            throw err;
+          }
+          return data;
+        });
+      }
+      if (!response.ok) {
+        var err2 = new Error('HTTP ' + response.status + ': ' + response.statusText);
+        err2.status = response.status;
+        throw err2;
+      }
+      return response.json();
+    });
+  }
 
   /* ========================================================================
      Configurare Stripe
@@ -224,7 +268,7 @@
         matches = true;
       } else if (promo.targetType === 'category' && promo.targetId === category) {
         matches = true;
-      } else if (promo.targetType === 'all') {
+      } else if (promo.targetType === 'all' || promo.targetType === 'products') {
         matches = true;
       }
       if (matches) {
@@ -234,6 +278,7 @@
 
     if (applicablePromos.length === 0) return null;
 
+    // Alege promoția cu cel mai mare discount (pentru percentage)
     var bestPromo = applicablePromos[0];
     for (var j = 1; j < applicablePromos.length; j++) {
       if (applicablePromos[j].discountPercent > bestPromo.discountPercent) {
@@ -242,11 +287,19 @@
     }
 
     var price = Number(product.price) || 0;
-    var discountedPrice = Math.round(price * (1 - bestPromo.discountPercent / 100) * 100) / 100;
+    var discountedPrice = price;
+
+    if (bestPromo.discount_type === 'fixed') {
+      discountedPrice = Math.round(Math.max(0, price - bestPromo.discount_value) * 100) / 100;
+    } else if (bestPromo.discountPercent > 0) {
+      discountedPrice = Math.round(price * (1 - bestPromo.discountPercent / 100) * 100) / 100;
+    }
 
     return {
-      discountPercent: bestPromo.discountPercent,
-      label: bestPromo.label,
+      discountPercent: bestPromo.discountPercent || 0,
+      discountValue: bestPromo.discount_value || 0,
+      discountType: bestPromo.discount_type || 'percentage',
+      label: bestPromo.label || ('Reducere -' + (bestPromo.discountPercent || 0) + '%'),
       code: bestPromo.code || null,
       originalPrice: price,
       discountedPrice: discountedPrice,
@@ -274,7 +327,8 @@
         return {
           product_id: item.id,
           quantity: item.quantity,
-          price: item.price,
+          // Nu trimitem price — serverul folosește prețurile din DB
+          // pentru a preveni manipularea prețurilor din client
         };
       }),
       promo_code: promoCode || undefined,
@@ -289,11 +343,13 @@
       .then(function (data) {
         if (data && data.url) {
           if (data.mode === 'stripe') {
+            // Redirecționare către Stripe Checkout
             window.location.href = data.url;
           } else if (data.mode === 'simulation') {
+            var orderInfo = data.order || {};
             showToast(
-              '✅ Comandă simulată #' + (data.order && data.order.order_number) +
-              ' | Total: ' + (data.order && data.order.total_amount) + ' RON',
+              'Comand\u0103 simulat\u0103 #' + (orderInfo.order_number || 'N/A') +
+              ' | Total: ' + (orderInfo.total_amount || 0) + ' RON',
               'success',
               5000
             );
@@ -303,13 +359,27 @@
               opts.onSuccess(data);
             }
           }
+        } else if (data && data.success) {
+          // Răspuns de succes fără URL (fallback)
+          var ord = data.order || {};
+          showToast(
+            'Comand\u0103 procesat\u0103 #' + (ord.order_number || 'N/A') +
+            ' | Total: ' + (ord.total_amount || 0) + ' RON',
+            'success',
+            5000
+          );
+          Cart.clear();
+          updateCartUI();
+          if (typeof opts.onSuccess === 'function') {
+            opts.onSuccess(data);
+          }
         } else {
           throw new Error('Răspuns invalid de la server.');
         }
       })
       .catch(function (err) {
         console.error('[checkout] Eroare:', err);
-        showToast('❌ Eroare la procesarea plății: ' + (err.message || 'Eroare necunoscută'), 'error', 5000);
+        showToast('Eroare la procesarea plății: ' + (err.message || 'Eroare necunoscută'), 'error', 5000);
         if (typeof opts.onError === 'function') {
           opts.onError(err);
         }
@@ -317,11 +387,35 @@
   }
 
   function validatePromoCode(code, cartTotal, callback) {
-    fetchJSON('/api/checkout/validate-promo/' + encodeURIComponent(code) + '?cart_total=' + cartTotal)
+    // Încearcă API-ul de validare (din DB)
+    fetchJSON('/api/checkout/validate-promo/' + encodeURIComponent(code) + '?cart_total=' + (cartTotal || 0))
       .then(function (data) {
-        callback(null, data);
+        // API-ul returnează direct răspunsul de validare
+        if (data && data.valid) {
+          callback(null, {
+            valid: true,
+            code: data.code,
+            discount_percent: data.discount_type === 'percentage' ? data.discount_value : null,
+            discount_amount: data.discount_amount || null,
+            description: data.description,
+            discount_type: data.discount_type,
+            discount_value: data.discount_value,
+          });
+        } else if (data && !data.valid) {
+          callback(null, {
+            valid: false,
+            code: code.trim().toUpperCase(),
+            error: data.error || 'Cod promoțional invalid.',
+          });
+        } else {
+          // Fallback local
+          var localResult = validatePromoLocal(code, cartTotal);
+          callback(null, localResult);
+        }
       })
       .catch(function (err) {
+        // Doar la erori de rețea folosim fallback-ul local
+        console.warn('[shop] Promo validation API error, using local fallback:', err.message);
         var localResult = validatePromoLocal(code, cartTotal);
         callback(null, localResult);
       });
@@ -329,12 +423,15 @@
 
   function validatePromoLocal(code, cartTotal) {
     var localPromos = {
-      'CHAMP35': { discountPercent: 35, description: 'Promoție de vară -35%', minOrder: 0 },
-      'GLOVES25': { discountPercent: 25, description: 'Reducere mănuși -25%', minOrder: 0 },
-      'KICKS20': { discountPercent: 20, description: 'Reducere încălțăminte -20%', minOrder: 0 },
-      'HEAD15': { discountPercent: 15, description: 'Reducere căști -15%', minOrder: 0 },
-      'ALL10': { discountPercent: 10, description: 'Reducere generală -10%', minOrder: 0 },
-      'BOXING20': { discountPercent: 20, description: 'Reducere campion -20%', minOrder: 200 },
+      'CHAMP35': { discountPercent: 35, discount_type: 'percentage', description: 'Promoție de vară -35%', minOrder: 0 },
+      'GLOVES25': { discountPercent: 25, discount_type: 'percentage', description: 'Reducere mănuși -25%', minOrder: 0 },
+      'KICKS20': { discountPercent: 20, discount_type: 'percentage', description: 'Reducere încălțăminte -20%', minOrder: 0 },
+      'HEAD15': { discountPercent: 15, discount_type: 'percentage', description: 'Reducere căști -15%', minOrder: 0 },
+      'ALL10': { discountPercent: 10, discount_type: 'percentage', description: 'Reducere generală -10%', minOrder: 0 },
+      'BOXING20': { discountPercent: 20, discount_type: 'percentage', description: 'Reducere campion -20%', minOrder: 200 },
+      'WELCOME20': { discountPercent: 20, discount_type: 'percentage', description: '20% reducere pentru noii membri', minOrder: 0 },
+      'BOXER10': { discountPercent: 10, discount_type: 'percentage', description: '10% reducere la produse', minOrder: 0 },
+      'CAMP2025': { discountPercent: 0, discount_value: 100, discount_type: 'fixed', description: '100 RON reducere tabără', minOrder: 0 },
     };
 
     var normalized = code.trim().toUpperCase();
@@ -356,7 +453,9 @@
     return {
       valid: true,
       code: normalized,
-      discount_percent: promo.discountPercent,
+      discount_percent: promo.discountPercent || 0,
+      discount_value: promo.discount_value || 0,
+      discount_type: promo.discount_type || 'percentage',
       description: promo.description,
       min_order: promo.minOrder,
     };
@@ -637,13 +736,14 @@
         return;
       }
       if (result.valid) {
-        Cart.applyPromo(result.code, result.discount_percent);
+        var discountPercent = result.discount_percent || 0;
+        Cart.applyPromo(result.code, discountPercent);
         updateCartUI();
         if (promoMsg) { promoMsg.textContent = ''; promoMsg.className = 'cart-drawer__promo-msg'; }
         if (promoInput) promoInput.value = '';
-        showToast('✅ Cod promoțional aplicat: -' + result.discount_percent + '%', 'success', 3000);
+        showToast('Cod promo\u021Bional aplicat: -' + discountPercent + '%', 'success', 3000);
       } else {
-        if (promoMsg) { promoMsg.textContent = result.error || 'Cod promoțional invalid.'; promoMsg.className = 'cart-drawer__promo-msg cart-drawer__promo-msg--error'; }
+        if (promoMsg) { promoMsg.textContent = result.error || 'Cod promo\u021Bional invalid.'; promoMsg.className = 'cart-drawer__promo-msg cart-drawer__promo-msg--error'; }
       }
     });
   }
@@ -889,15 +989,17 @@
     }
     if (!product) return;
 
-    var promo = getProductPromo(product);
-    var finalPrice = promo ? promo.discountedPrice : Number(product.price);
+    // Stocăm prețul original (fără reducere). Reducerile se aplică
+    // doar prin coduri promoționale la checkout, nu pre-aplicate în coș.
+    var originalPrice = Number(product.price) || 0;
 
-    Cart.add({ id: product.id, name: product.name, price: finalPrice, image: product.image || null, category: product.category || 'general' }, 1);
+    Cart.add({ id: product.id, name: product.name, price: originalPrice, image: product.image || null, category: product.category || 'general' }, 1);
 
     if (btnElement) {
       btnElement.classList.add('product-card__add-btn--added');
-      btnElement.textContent = '✓ Adăugat';
-      setTimeout(function () { btnElement.classList.remove('product-card__add-btn--added'); btnElement.textContent = 'Adaugă în coș'; }, 1500);
+      var originalText = btnElement.textContent;
+      btnElement.textContent = '\u2713 Ad\u0103ugat';
+      setTimeout(function () { btnElement.classList.remove('product-card__add-btn--added'); btnElement.textContent = originalText; }, 1500);
     }
 
     showCartToast(product.name);
@@ -1070,15 +1172,66 @@
   async function loadConfig() {
     try {
       var config = await safeFetch('/api/config');
-      if (config && config.stripe_publishable_key) {
-        STRIPE_CONFIG.publishableKey = config.stripe_publishable_key;
-        STRIPE_CONFIG.configured = config.stripe_configured;
-        STRIPE_CONFIG.mode = config.stripe_configured ? 'stripe' : 'simulation';
+      if (config) {
+        if (config.stripe_publishable_key) {
+          STRIPE_CONFIG.publishableKey = config.stripe_publishable_key;
+          STRIPE_CONFIG.configured = config.stripe_configured;
+          STRIPE_CONFIG.mode = config.stripe_configured ? 'stripe' : 'simulation';
+        }
+        // Sincronizează promoțiile din server cu afișarea locală
+        if (config.promo_codes && Array.isArray(config.promo_codes)) {
+          syncPromosFromServer(config.promo_codes);
+        }
       }
     } catch (err) {
       console.log('[shop] Config API indisponibilă, se folosește configurația implicită.');
       STRIPE_CONFIG.mode = 'simulation';
     }
+  }
+
+  /**
+   * Sincronizează promoțiile din server în PROMO_CONFIG local.
+   * Păstrează fallback-urile hardcodate ca bază, dar le îmbogățește
+   * cu datele reale din baza de date.
+   */
+  function syncPromosFromServer(serverPromos) {
+    var merged = [];
+    var seenCodes = {};
+
+    // Adaugă promoțiile din server primele (prioritate)
+    for (var i = 0; i < serverPromos.length; i++) {
+      var sp = serverPromos[i];
+      var code = (sp.code || '').toUpperCase();
+      if (!code) continue;
+
+      var discountPercent = sp.discount_type === 'percentage' ? sp.discount_value : 0;
+      merged.push({
+        id: 'server-' + code,
+        targetType: sp.applies_to || 'all',
+        targetId: sp.applies_to === 'all' ? null : null,
+        discountPercent: discountPercent,
+        label: sp.description || ('Reducere -' + discountPercent + '%'),
+        code: code,
+        active: true,
+        discount_type: sp.discount_type,
+        discount_value: sp.discount_value,
+      });
+      seenCodes[code] = true;
+    }
+
+    // Adaugă fallback-urile locale care nu există deja pe server
+    var localPromos = PROMO_CONFIG.promos || [];
+    for (var j = 0; j < localPromos.length; j++) {
+      var lp = localPromos[j];
+      var lpCode = (lp.code || '').toUpperCase();
+      if (lpCode && seenCodes[lpCode]) continue;
+      // Pentru promoții per-produs fără cod, păstrăm
+      if (!lpCode) {
+        merged.push(lp);
+      }
+    }
+
+    PROMO_CONFIG.promos = merged;
   }
 
   function setCurrentYear() {

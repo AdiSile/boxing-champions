@@ -8,7 +8,7 @@
  *    3. Dashboard stats (counts, revenue, recent orders)
  *    4. CRUD complet pentru: Coaches, Events, Products, Plans, Schedule,
  *       Orders, Contact, Promotions  (cu fetchOne fallback pentru edit)
- *    5. Settings management
+ *    5. Settings management — salvează în format flat (key:value)
  *    6. Toast notifications  (toate operațiile)
  *    7. Modal forms (create/edit)  — cu protecție double-submit
  *    8. Toggle switches (is_active, is_published, is_popular, is_read)
@@ -39,6 +39,7 @@
   var API = {
     AUTH_CHECK: '/api/auth/check',
     AUTH_LOGOUT: '/api/auth/logout',
+    DASHBOARD_STATS: '/api/dashboard/stats',
     COACHES: '/api/coaches',
     EVENTS: '/api/events',
     PRODUCTS: '/api/products',
@@ -333,23 +334,17 @@
     var isText = contentType.indexOf('text/') !== -1;
 
     if (isJson) {
-      // Răspuns JSON așteptat
       try {
         data = await res.json();
       } catch (parseErr) {
-        // JSON invalid — citim ca text pentru diagnostic
         var rawText = await res.text().catch(function () { return ''; });
         data = { _raw: rawText || '[JSON parse error]' };
       }
     } else if (isHtml || (!isJson && !isText)) {
-      // HTML sau binary — probabil o pagină de eroare de la server/proxy
       var rawText = await res.text().catch(function () { return ''; });
-      // Limităm textul captat la 2000 caractere pentru a nu umple memoria
       data = { _raw: rawText.substring(0, 2000) };
     } else {
-      // Text simplu (text/plain, text/csv etc.)
       var text = await res.text().catch(function () { return ''; });
-      // Încercăm să parsezi JSON din text
       try {
         data = JSON.parse(text);
       } catch (_) {
@@ -520,50 +515,74 @@
      DASHBOARD
      ======================================================================== */
   async function loadDashboard() {
+    // Folosește endpoint-ul dedicat pentru statistici (o singură cerere)
     try {
-      var results = await Promise.allSettled([
-        apiFetch(API.COACHES + '?limit=1&is_active=true'),
-        apiFetch(API.COACHES + '?limit=1&is_active=false'),
-        apiFetch(API.EVENTS + '?limit=1&is_published=true'),
-        apiFetch(API.EVENTS + '?limit=1&is_published=false'),
-        apiFetch(API.PRODUCTS + '?limit=1&is_active=true'),
-        apiFetch(API.PRODUCTS + '?limit=1&is_active=false'),
-        apiFetch(API.PLANS + '?limit=1&is_active=true'),
-        apiFetch(API.PLANS + '?limit=1&is_active=false'),
-        apiFetch(API.ORDERS + '?limit=1'),
-        apiFetch(API.CONTACT + '?limit=1&is_read=false'),
-        apiFetch(API.PROMOTIONS + '?limit=1&is_active=1'),
-        apiFetch(API.ORDERS + '?limit=5&sort=-created_at'),
-      ]);
-      var coachesTotal = getResultTotal(results[0]) + getResultTotal(results[1]);
-      var eventsTotal = getResultTotal(results[2]) + getResultTotal(results[3]);
-      var productsTotal = getResultTotal(results[4]) + getResultTotal(results[5]);
-      var plansTotal = getResultTotal(results[6]) + getResultTotal(results[7]);
-      var ordersTotal = getResultTotal(results[8]);
-      var unreadMessages = getResultTotal(results[9]);
-      var activePromotions = getResultTotal(results[10]);
-      var recentOrders = getResultData(results[11]);
-      setStatValue('stat-coaches', coachesTotal);
-      setStatValue('stat-events', eventsTotal);
-      setStatValue('stat-products', productsTotal);
-      setStatValue('stat-plans', plansTotal);
-      setStatValue('stat-orders', ordersTotal);
-      setStatValue('stat-messages', unreadMessages);
-      setStatValue('stat-promotions', activePromotions);
-      renderRecentOrders(recentOrders);
-      var revenue = 0;
-      if (recentOrders && recentOrders.length) {
-        for (var i = 0; i < recentOrders.length; i++) {
-          if (recentOrders[i].status === 'completed' || recentOrders[i].status === 'confirmed') {
-            revenue += Number(recentOrders[i].total_amount) || 0;
-          }
+      var stats = await apiFetch(API.DASHBOARD_STATS);
+      if (stats) {
+        setStatValue('stat-coaches', stats.coaches || 0);
+        setStatValue('stat-events', stats.events || 0);
+        setStatValue('stat-products', stats.products || 0);
+        setStatValue('stat-plans', stats.plans || 0);
+        setStatValue('stat-orders', stats.orders || 0);
+        setStatValue('stat-messages', stats.unread_messages || 0);
+        setStatValue('stat-promotions', stats.active_promotions || 0);
+        setStatValue('stat-revenue', formatPrice(stats.revenue || 0) + ' RON');
+        if (stats.recent_orders) {
+          renderRecentOrders(stats.recent_orders);
         }
       }
-      setStatValue('stat-revenue', formatPrice(revenue) + ' RON');
     } catch (e) {
       console.error('[admin] Dashboard load error:', e.message);
       showToast('Eroare la încărcarea dashboard-ului: ' + formatDetailedError(e), 'error');
+      // Fallback: încercăm API-urile individuale
+      try {
+        await loadDashboardFallback();
+      } catch (e2) {
+        console.error('[admin] Dashboard fallback error:', e2.message);
+      }
     }
+  }
+
+  async function loadDashboardFallback() {
+    var results = await Promise.allSettled([
+      apiFetch(API.COACHES + '?limit=1&is_active=true'),
+      apiFetch(API.COACHES + '?limit=1&is_active=false'),
+      apiFetch(API.EVENTS + '?limit=1&is_published=true'),
+      apiFetch(API.EVENTS + '?limit=1&is_published=false'),
+      apiFetch(API.PRODUCTS + '?limit=1&is_active=true'),
+      apiFetch(API.PRODUCTS + '?limit=1&is_active=false'),
+      apiFetch(API.PLANS + '?limit=1&is_active=true'),
+      apiFetch(API.PLANS + '?limit=1&is_active=false'),
+      apiFetch(API.ORDERS + '?limit=1'),
+      apiFetch(API.CONTACT + '?limit=1&is_read=false'),
+      apiFetch(API.PROMOTIONS + '?limit=1&is_active=true'),
+      apiFetch(API.ORDERS + '?limit=5&sort=-created_at'),
+    ]);
+    var coachesTotal = getResultTotal(results[0]) + getResultTotal(results[1]);
+    var eventsTotal = getResultTotal(results[2]) + getResultTotal(results[3]);
+    var productsTotal = getResultTotal(results[4]) + getResultTotal(results[5]);
+    var plansTotal = getResultTotal(results[6]) + getResultTotal(results[7]);
+    var ordersTotal = getResultTotal(results[8]);
+    var unreadMessages = getResultTotal(results[9]);
+    var activePromotions = getResultTotal(results[10]);
+    var recentOrders = getResultData(results[11]);
+    setStatValue('stat-coaches', coachesTotal);
+    setStatValue('stat-events', eventsTotal);
+    setStatValue('stat-products', productsTotal);
+    setStatValue('stat-plans', plansTotal);
+    setStatValue('stat-orders', ordersTotal);
+    setStatValue('stat-messages', unreadMessages);
+    setStatValue('stat-promotions', activePromotions);
+    renderRecentOrders(recentOrders);
+    var revenue = 0;
+    if (recentOrders && recentOrders.length) {
+      for (var i = 0; i < recentOrders.length; i++) {
+        if (recentOrders[i].status === 'completed' || recentOrders[i].status === 'confirmed') {
+          revenue += Number(recentOrders[i].total_amount) || 0;
+        }
+      }
+    }
+    setStatValue('stat-revenue', formatPrice(revenue) + ' RON');
   }
 
   function getResultTotal(result) {
@@ -1274,7 +1293,7 @@
   }
 
   /* ========================================================================
-     CRUD — SCHEDULE
+     CRUD — SCHEDULE  (reparat: CRUD individual pentru fiecare sesiune)
      ======================================================================== */
   async function loadSchedule() {
     var container = document.getElementById('schedule-container');
@@ -1356,6 +1375,13 @@
     document.getElementById('schedule-id').value = '';
     if (id) {
       var s = findById(state.schedule.data, id);
+      if (!s) {
+        // Fallback: fetch individual
+        try {
+          var resp = await apiFetch(API.SCHEDULE + '/' + id);
+          s = resp.data || resp;
+        } catch (e) { /* ignore */ }
+      }
       if (s) {
         document.getElementById('schedule-id').value = s.id;
         document.getElementById('schedule-title').value = s.title || '';
@@ -1379,6 +1405,7 @@
     var origText = submitBtn ? submitBtn.textContent : '';
     if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Se salvează…'; }
     var id = document.getElementById('schedule-id').value;
+    var isEdit = !!id;
     var entry = {
       title: document.getElementById('schedule-title').value.trim(),
       coach_id: document.getElementById('schedule-coach-id').value ? parseInt(document.getElementById('schedule-coach-id').value, 10) : null,
@@ -1395,19 +1422,14 @@
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
       return;
     }
-    if (id) entry.id = parseInt(id, 10);
     try {
-      var currentEntries = state.schedule.data.slice();
-      if (id) {
-        for (var i = 0; i < currentEntries.length; i++) {
-          if (currentEntries[i].id === parseInt(id, 10)) { currentEntries[i] = entry; break; }
-        }
-      } else { currentEntries.push(entry); }
-      var putEntries = currentEntries.map(function (e) {
-        return { id: e.id, coach_id: e.coach_id, title: e.title, day_of_week: e.day_of_week, start_time: e.start_time, end_time: e.end_time, location: e.location, max_participants: e.max_participants, is_active: e.is_active };
-      });
-      await apiFetch(API.SCHEDULE, { method: 'PUT', body: { entries: putEntries } });
-      showToast('Program actualizat cu succes!', 'success');
+      if (isEdit) {
+        await apiFetch(API.SCHEDULE + '/' + id, { method: 'PUT', body: entry });
+        showToast('Sesiune actualizată cu succes!', 'success');
+      } else {
+        await apiFetch(API.SCHEDULE, { method: 'POST', body: entry });
+        showToast('Sesiune creată cu succes!', 'success');
+      }
       closeModal('modal-schedule');
       loadSchedule();
     } catch (err) {
@@ -1415,25 +1437,6 @@
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
-    }
-  }
-
-  async function deleteScheduleEntry(id) {
-    if (state.saving) return;
-    state.saving = true;
-    var currentEntries = state.schedule.data.slice();
-    currentEntries = currentEntries.filter(function (e) { return e.id !== id; });
-    var putEntries = currentEntries.map(function (e) {
-      return { id: e.id, coach_id: e.coach_id, title: e.title, day_of_week: e.day_of_week, start_time: e.start_time, end_time: e.end_time, location: e.location, max_participants: e.max_participants, is_active: e.is_active };
-    });
-    try {
-      await apiFetch(API.SCHEDULE, { method: 'PUT', body: { entries: putEntries } });
-      showToast('Sesiune ștearsă!', 'success');
-      loadSchedule();
-    } catch (err) {
-      showToast(formatDetailedError(err), 'error');
-    } finally {
-      state.saving = false;
     }
   }
 
@@ -1662,9 +1665,12 @@
     if (markReadBtn) {
       if (!m.is_read) {
         markReadBtn.style.display = '';
-        markReadBtn.onclick = function () { markContactRead(m.id, false); };
+        // Remove old listeners by cloning
+        var newBtn = markReadBtn.cloneNode(true);
+        markReadBtn.parentNode.replaceChild(newBtn, markReadBtn);
+        markReadBtn = newBtn;
         markReadBtn.addEventListener('click', function () {
-          this.style.display = 'none';
+          markContactRead(m.id, false);
           closeModal('modal-contact-view');
         });
       } else {
@@ -1833,7 +1839,7 @@
   }
 
   /* ========================================================================
-     CRUD — SETTINGS
+     CRUD — SETTINGS  (reparat: salvează în format flat key:value)
      ======================================================================== */
   async function loadSettings() {
     var container = document.getElementById('settings-container');
@@ -1853,23 +1859,27 @@
     var container = document.getElementById('settings-container');
     if (!container) return;
     var s = state.settings;
-    var html = '<div class="panel panel--gold-border"><div class="panel__header"><h3 class="panel__title"><i class="fa-solid fa-building"></i> Informații Club</h3></div><div class="panel__body"><div class="form-grid">';
+    var html = '';
+    html += '<div class="panel panel--gold-border"><div class="panel__header"><h3 class="panel__title"><i class="fa-solid fa-building"></i> Informații Club</h3></div><div class="panel__body"><div class="form-grid">';
     html += buildSettingsField('Nume Club', 'text', 'site_name', s.site_name || 'Boxing Champions');
-    html += buildSettingsField('Slogan', 'text', 'site_tagline', s.site_tagline || '');
-    html += buildSettingsField('Adresă', 'text', 'contact_address', (s.contact || {}).address || '');
-    html += buildSettingsField('Telefon', 'text', 'contact_phone', (s.contact || {}).phone || '');
-    html += buildSettingsField('Email Contact', 'email', 'contact_email', (s.contact || {}).email || '');
+    html += buildSettingsField('Descriere Site', 'text', 'site_description', s.site_description || '');
+    html += buildSettingsField('Email Admin', 'email', 'admin_email', s.admin_email || '');
+    html += buildSettingsField('Timezone', 'text', 'timezone', s.timezone || 'Europe/Bucharest');
+    html += buildSettingsField('Locale', 'text', 'locale', s.locale || 'ro');
+    html += buildSettingsField('Elemente pe pagină', 'number', 'items_per_page', s.items_per_page || '12');
     html += '</div></div></div>';
-    html += '<div class="panel panel--gold-border"><div class="panel__header"><h3 class="panel__title"><i class="fa-solid fa-globe"></i> Social Media</h3></div><div class="panel__body"><div class="form-grid">';
-    html += buildSettingsField('Facebook URL', 'url', 'social_facebook', (s.social || {}).facebook || '');
-    html += buildSettingsField('Instagram URL', 'url', 'social_instagram', (s.social || {}).instagram || '');
-    html += buildSettingsField('YouTube URL', 'url', 'social_youtube', (s.social || {}).youtube || '');
+
+    html += '<div class="panel panel--gold-border"><div class="panel__header"><h3 class="panel__title"><i class="fa-solid fa-envelope"></i> SMTP (Email)</h3></div><div class="panel__body"><div class="form-grid">';
+    html += buildSettingsField('SMTP Host', 'text', 'smtp_host', s.smtp_host || '');
+    html += buildSettingsField('SMTP Port', 'number', 'smtp_port', s.smtp_port || '587');
+    html += buildSettingsField('SMTP Username', 'text', 'smtp_user', s.smtp_user || '');
+    html += buildSettingsField('SMTP Password', 'password', 'smtp_pass', s.smtp_pass || '');
     html += '</div></div></div>';
-    html += '<div class="panel panel--gold-border"><div class="panel__header"><h3 class="panel__title"><i class="fa-solid fa-clock"></i> Program</h3></div><div class="panel__body"><div class="form-grid">';
-    html += buildSettingsField('Luni-Vineri', 'text', 'hours_weekday', (s.hours || {}).weekday || '');
-    html += buildSettingsField('Sâmbătă', 'text', 'hours_saturday', (s.hours || {}).saturday || '');
-    html += buildSettingsField('Duminică', 'text', 'hours_sunday', (s.hours || {}).sunday || '');
+
+    html += '<div class="panel panel--gold-border"><div class="panel__header"><h3 class="panel__title"><i class="fa-solid fa-gear"></i> Mentenanță</h3></div><div class="panel__body"><div class="form-grid">';
+    html += '<div class="form-group"><label class="form-switch"><input class="form-switch__input" type="checkbox" id="setting-maintenance_mode" ' + (s.maintenance_mode === '1' ? 'checked' : '') + '><span class="form-switch__track"></span><span class="form-switch__label">Mod Mentenanță</span></label></div>';
     html += '</div></div></div>';
+
     html += '<div style="text-align:right;margin-top:1.5rem;"><button class="btn btn--primary" id="btn-save-settings"><i class="fa-solid fa-floppy-disk"></i> Salvează Setările</button></div>';
     container.innerHTML = html;
     var saveBtn = document.getElementById('btn-save-settings');
@@ -1877,7 +1887,7 @@
   }
 
   function buildSettingsField(label, type, id, value) {
-    return '<div class="form-group"><label class="form-label" for="setting-' + id + '">' + escapeHTML(label) + '</label><input class="form-input" type="' + type + '" id="setting-' + id + '" value="' + escapeHTML(value || '') + '"></div>';
+    return '<div class="form-group"><label class="form-label" for="setting-' + id + '">' + escapeHTML(label) + '</label><input class="form-input" type="' + type + '" id="setting-' + id + '" value="' + escapeHTML(value || '') + '" autocomplete="off"></div>';
   }
 
   async function saveSettings() {
@@ -1886,13 +1896,25 @@
     var saveBtn = document.getElementById('btn-save-settings');
     var origText = saveBtn ? saveBtn.textContent : '';
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Se salvează…'; }
-    var body = {
-      site_name: getSettingVal('setting-site_name'),
-      site_tagline: getSettingVal('setting-site_tagline'),
-      contact: { address: getSettingVal('setting-contact_address'), phone: getSettingVal('setting-contact_phone'), email: getSettingVal('setting-contact_email') },
-      social: { facebook: getSettingVal('setting-social_facebook'), instagram: getSettingVal('setting-social_instagram'), youtube: getSettingVal('setting-social_youtube') },
-      hours: { weekday: getSettingVal('setting-hours_weekday'), saturday: getSettingVal('setting-hours_saturday'), sunday: getSettingVal('setting-hours_sunday') },
-    };
+
+    // Trimite toate setările ca obiect flat (key:value)
+    var body = {};
+    // Informații club
+    body.site_name = getSettingVal('setting-site_name');
+    body.site_description = getSettingVal('setting-site_description');
+    body.admin_email = getSettingVal('setting-admin_email');
+    body.timezone = getSettingVal('setting-timezone');
+    body.locale = getSettingVal('setting-locale');
+    body.items_per_page = getSettingVal('setting-items_per_page');
+    // SMTP
+    body.smtp_host = getSettingVal('setting-smtp_host');
+    body.smtp_port = getSettingVal('setting-smtp_port');
+    body.smtp_user = getSettingVal('setting-smtp_user');
+    body.smtp_pass = getSettingVal('setting-smtp_pass');
+    // Mentenanță
+    var maintEl = document.getElementById('setting-maintenance_mode');
+    body.maintenance_mode = (maintEl && maintEl.checked) ? '1' : '0';
+
     try {
       await apiFetch(API.SETTINGS, { method: 'PUT', body: body });
       showToast('Setări salvate cu succes!', 'success');
@@ -1934,10 +1956,7 @@
       case 'product': url = API.PRODUCTS + '/' + id; reloadFn = loadProducts; label = 'Produs șters'; break;
       case 'plan': url = API.PLANS + '/' + id; reloadFn = loadPlans; label = 'Abonament șters'; break;
       case 'promotion': url = API.PROMOTIONS + '/' + id; reloadFn = loadPromotions; label = 'Promoție ștearsă'; break;
-      case 'schedule':
-        closeModal('modal-confirm-delete');
-        await deleteScheduleEntry(id);
-        return;
+      case 'schedule': url = API.SCHEDULE + '/' + id; reloadFn = loadSchedule; label = 'Sesiune ștearsă'; break;
       case 'contact': url = API.CONTACT + '/' + id; reloadFn = loadContact; label = 'Mesaj șters'; break;
       default:
         if (btn) { btn.disabled = false; btn.textContent = 'Șterge'; }

@@ -11,6 +11,9 @@
 
   <title>Evenimente | Boxing Champions</title>
 
+  <!-- Font Awesome CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
+
   <!-- CSS principal -->
   <link rel="stylesheet" href="/css/style.css">
 
@@ -429,6 +432,7 @@
       font-size: 4rem;
       margin-bottom: 1.4rem;
       opacity: 0.6;
+      color: var(--gold-primary);
     }
 
     .events-empty__title {
@@ -558,13 +562,11 @@
     }
 
     @media (max-width: 480px) {
-      /* ---- Single-column grid (explicit) ---- */
       .events-grid {
         grid-template-columns: 1fr;
         gap: 1.4rem;
       }
 
-      /* ---- Page header ---- */
       .events-page-header {
         min-height: 26vh;
       }
@@ -581,7 +583,6 @@
         font-size: 0.85rem;
       }
 
-      /* ---- Filters Bar ---- */
       .events-filters {
         padding: 1rem 0;
       }
@@ -611,7 +612,6 @@
         letter-spacing: 0.04em;
       }
 
-      /* ---- Card gallery arrows always visible ---- */
       .event-detail-card__gallery-arrow {
         opacity: 1;
         width: 28px;
@@ -619,84 +619,36 @@
         font-size: 0.7rem;
       }
 
-      .event-detail-card__gallery-arrow--prev {
-        left: 0.4rem;
-      }
+      .event-detail-card__gallery-arrow--prev { left: 0.4rem; }
+      .event-detail-card__gallery-arrow--next { right: 0.4rem; }
 
-      .event-detail-card__gallery-arrow--next {
-        right: 0.4rem;
-      }
-
-      /* ---- Card meta & content ---- */
-      .event-detail-card__meta {
-        gap: 0.6rem;
-      }
+      .event-detail-card__meta { gap: 0.6rem; }
 
       .event-detail-card__date-badge {
         min-width: 44px;
         padding: 0.3em 0.6em;
       }
 
-      .event-detail-card__date-day {
-        font-size: 1.25rem;
-      }
-
-      .event-detail-card__title {
-        font-size: 1.05rem;
-      }
-
-      .event-detail-card__desc {
-        font-size: 0.82rem;
-        margin-bottom: 0.6rem;
-      }
+      .event-detail-card__date-day { font-size: 1.25rem; }
+      .event-detail-card__title { font-size: 1.05rem; }
+      .event-detail-card__desc { font-size: 0.82rem; margin-bottom: 0.6rem; }
 
       .event-detail-card__footer {
         flex-direction: column;
         gap: 0.5rem;
       }
 
-      /* ---- Empty state ---- */
-      .events-empty {
-        padding: 2.5rem 1rem;
-      }
+      .events-empty { padding: 2.5rem 1rem; }
+      .events-empty__icon { font-size: 3rem; }
+      .events-empty__title { font-size: 1.2rem; }
+      .events-empty__text { font-size: 0.85rem; }
 
-      .events-empty__icon {
-        font-size: 3rem;
-      }
+      .events-pagination { gap: 0.3rem; margin-top: 2rem; }
+      .events-pagination__btn { font-size: 0.7rem; padding: 0.45em 0.8em; }
+      .events-pagination__info { font-size: 0.7rem; margin: 0 0.2rem; }
 
-      .events-empty__title {
-        font-size: 1.2rem;
-      }
-
-      .events-empty__text {
-        font-size: 0.85rem;
-      }
-
-      /* ---- Pagination ---- */
-      .events-pagination {
-        gap: 0.3rem;
-        margin-top: 2rem;
-      }
-
-      .events-pagination__btn {
-        font-size: 0.7rem;
-        padding: 0.45em 0.8em;
-      }
-
-      .events-pagination__info {
-        font-size: 0.7rem;
-        margin: 0 0.2rem;
-      }
-
-      /* ---- Skeleton ---- */
-      .event-card-skeleton__img {
-        margin-bottom: 0.8rem;
-      }
-
-      .event-card-skeleton__line {
-        height: 12px;
-        margin-bottom: 0.5rem;
-      }
+      .event-card-skeleton__img { margin-bottom: 0.8rem; }
+      .event-card-skeleton__line { height: 12px; margin-bottom: 0.5rem; }
     }
   </style>
 </head>
@@ -776,7 +728,7 @@
   <div class="events-filters" id="events-filters" aria-label="Filtre evenimente">
     <div class="events-filters__inner">
       <div class="events-filters__search">
-        <span class="events-filters__search-icon" aria-hidden="true">&#128269;</span>
+        <span class="events-filters__search-icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></span>
         <input
           type="search"
           id="events-search"
@@ -876,16 +828,16 @@
         <div>
           <h4 class="footer__heading">Urmărește-ne</h4>
           <ul class="footer__links">
-            <li><a href="#" target="_blank" rel="noopener noreferrer">Instagram</a></li>
-            <li><a href="#" target="_blank" rel="noopener noreferrer">Facebook</a></li>
-            <li><a href="#" target="_blank" rel="noopener noreferrer">YouTube</a></li>
-            <li><a href="#" target="_blank" rel="noopener noreferrer">X / Twitter</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-instagram"></i> Instagram</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-facebook-f"></i> Facebook</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-youtube"></i> YouTube</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-x-twitter"></i> X / Twitter</a></li>
           </ul>
         </div>
       </div>
 
       <div class="footer__bottom">
-        <p>&copy; <span id="current-year">2025</span> Boxing Champions. Toate drepturile rezervate. | Construit cu pasiune.</p>
+        <p>&copy; <span id="current-year">2025</span> Boxing Champions. Toate drepturile rezervate. | Construit cu <i class="fa-solid fa-hand-fist"></i> și pasiune.</p>
       </div>
     </div>
   </footer>
@@ -1084,6 +1036,7 @@
     function formatDate(dateStr) {
       if (!dateStr) return { day: '--', month: 'TBA', full: 'TBA', year: '' };
       var date = new Date(dateStr);
+      if (isNaN(date.getTime())) return { day: '--', month: 'TBA', full: dateStr, year: '' };
       var monthNames = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Noi', 'Dec'];
       var monthFull = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'];
       return {
@@ -1134,8 +1087,8 @@
 
       return '<div class="event-detail-card__gallery" data-card="' + cardIndex + '" data-current="0" data-images="' + escapeHTML(JSON.stringify(images)) + '">' +
         '<img src="' + escapeHTML(images[0]) + '" alt="' + escapeHTML(event.title) + '" loading="lazy" onerror="this.src=\'/images/event-placeholder.jpg\'">' +
-        '<button class="event-detail-card__gallery-arrow event-detail-card__gallery-arrow--prev" data-card="' + cardIndex + '" data-dir="prev" aria-label="Imaginea anterioară">&lt;</button>' +
-        '<button class="event-detail-card__gallery-arrow event-detail-card__gallery-arrow--next" data-card="' + cardIndex + '" data-dir="next" aria-label="Imaginea următoare">&gt;</button>' +
+        '<button class="event-detail-card__gallery-arrow event-detail-card__gallery-arrow--prev" data-card="' + cardIndex + '" data-dir="prev" aria-label="Imaginea anterioară"><i class="fa-solid fa-chevron-left"></i></button>' +
+        '<button class="event-detail-card__gallery-arrow event-detail-card__gallery-arrow--next" data-card="' + cardIndex + '" data-dir="next" aria-label="Imaginea următoare"><i class="fa-solid fa-chevron-right"></i></button>' +
         '<div class="event-detail-card__gallery-nav">' + dotsHTML + '</div>' +
       '</div>';
     }
@@ -1166,6 +1119,9 @@
 
       var galleryHTML = buildGalleryHTML(event, index);
 
+      var locationIcon = '<i class="fa-solid fa-location-dot"></i>';
+      var timeIcon = '<i class="fa-regular fa-clock"></i>';
+
       return '<div class="event-detail-card glass glass--card reveal">' +
         galleryHTML +
         '<div class="event-detail-card__meta">' +
@@ -1176,12 +1132,12 @@
           '<span class="event-detail-card__type event-detail-card__type--' + typeClass + '">' + typeLabel + '</span>' +
         '</div>' +
         '<h3 class="event-detail-card__title">' + escapeHTML(event.title) + '</h3>' +
-        '<div class="event-detail-card__location">' + escapeHTML(event.location || 'Locație TBA') + '</div>' +
-        (timeDisplay ? '<div class="event-detail-card__time">' + escapeHTML(timeDisplay) + '</div>' : '') +
+        '<div class="event-detail-card__location">' + locationIcon + ' ' + escapeHTML(event.location || 'Locație TBA') + '</div>' +
+        (timeDisplay ? '<div class="event-detail-card__time">' + timeIcon + ' ' + escapeHTML(timeDisplay) + '</div>' : '') +
         '<p class="event-detail-card__desc">' + escapeHTML(truncateText(event.description || '', 200)) + '</p>' +
         priceDisplay +
         '<div class="event-detail-card__footer">' +
-          (event.capacity ? '<span style="font-size:0.8rem;color:var(--gray-smoke);">Capacitate: ' + event.capacity + ' locuri</span>' : '') +
+          (event.capacity ? '<span style="font-size:0.8rem;color:var(--gray-smoke);"><i class="fa-solid fa-users"></i> Capacitate: ' + event.capacity + ' locuri</span>' : '') +
         '</div>' +
       '</div>';
     }
@@ -1191,7 +1147,7 @@
        ================================================================== */
     function buildEmptyState(message) {
       return '<div class="events-empty glass glass--card reveal">' +
-        '<div class="events-empty__icon" aria-hidden="true">&#129354;</div>' +
+        '<div class="events-empty__icon" aria-hidden="true"><i class="fa-solid fa-hand-fist"></i></div>' +
         '<h3 class="events-empty__title">Niciun eveniment găsit</h3>' +
         '<p class="events-empty__text">' + escapeHTML(message || 'Momentan nu sunt evenimente disponibile în această categorie. Revino în curând sau încearcă alt filtru.') + '</p>' +
         '<button class="btn btn--outline" onclick="document.getElementById(\'events-search\').value=\'\';document.querySelector(\'.events-filters__tab--active\')?.click();">Resetează filtrele</button>' +
@@ -1209,7 +1165,7 @@
       var current = pagination.page;
 
       // Prev button
-      html += '<button class="events-pagination__btn" data-page="' + (current - 1) + '"' + (current <= 1 ? ' disabled' : '') + ' aria-label="Pagina anterioară">&laquo; Anterior</button>';
+      html += '<button class="events-pagination__btn" data-page="' + (current - 1) + '"' + (current <= 1 ? ' disabled' : '') + ' aria-label="Pagina anterioară"><i class="fa-solid fa-chevron-left"></i> Anterior</button>';
 
       // Page numbers
       var startPage = Math.max(1, current - 2);
@@ -1234,7 +1190,7 @@
       }
 
       // Next button
-      html += '<button class="events-pagination__btn" data-page="' + (current + 1) + '"' + (current >= totalPages ? ' disabled' : '') + ' aria-label="Pagina următoare">Următor &raquo;</button>';
+      html += '<button class="events-pagination__btn" data-page="' + (current + 1) + '"' + (current >= totalPages ? ' disabled' : '') + ' aria-label="Pagina următoare">Următor <i class="fa-solid fa-chevron-right"></i></button>';
 
       return html;
     }
@@ -1372,6 +1328,46 @@
     }
 
     /* ==================================================================
+       PARSE API RESPONSE (robust: supports {data:[],pagination:{}}, array, {events:[]})
+       ================================================================== */
+    function parseEventsResponse(response) {
+      if (!response) return { events: [], pagination: null };
+
+      // Case 1: { data: [...], pagination: {...} }
+      if (Array.isArray(response.data)) {
+        return {
+          events: response.data,
+          pagination: response.pagination || null
+        };
+      }
+
+      // Case 2: { events: [...], pagination: {...} }
+      if (Array.isArray(response.events)) {
+        return {
+          events: response.events,
+          pagination: response.pagination || null
+        };
+      }
+
+      // Case 3: response is a plain array
+      if (Array.isArray(response)) {
+        var total = response.length;
+        return {
+          events: response,
+          pagination: {
+            page: state.currentPage,
+            limit: state.limit,
+            total: total,
+            totalPages: Math.ceil(total / state.limit)
+          }
+        };
+      }
+
+      // Case 4: unknown format
+      return { events: [], pagination: null };
+    }
+
+    /* ==================================================================
        LOAD EVENTS FROM API
        ================================================================== */
     async function loadEvents() {
@@ -1406,8 +1402,36 @@
         }
 
         var response = await safeFetch('/api/events' + queryParams);
-        var events = response.data || [];
-        var pagination = response.pagination || null;
+
+        // Robust parsing
+        var parsed = parseEventsResponse(response);
+        var events = parsed.events;
+        var pagination = parsed.pagination;
+
+        // If no events from API, try without sort
+        if (events.length === 0) {
+          try {
+            var retryParams = '?page=' + state.currentPage + '&limit=' + state.limit;
+            if (state.currentType && state.currentType !== 'all') {
+              retryParams += '&type=' + encodeURIComponent(state.currentType);
+            }
+            var retryResponse = await safeFetch('/api/events' + retryParams);
+            var retryParsed = parseEventsResponse(retryResponse);
+            events = retryParsed.events;
+            pagination = retryParsed.pagination || pagination;
+          } catch (_) { /* continue with fallback */ }
+        }
+
+        if (events.length === 0) {
+          // Use fallback data
+          var fallbackData = filterFallbackEvents(FALLBACK_EVENTS, state.currentType, state.searchQuery, state.currentPage, state.limit);
+          events = fallbackData.events;
+          pagination = fallbackData.pagination;
+
+          if (typeof showToast === 'function') {
+            showToast('Se afișează datele offline. Conectează-te la server pentru informații actualizate.', 'info', 4000);
+          }
+        }
 
         state.events = events;
         state.pagination = pagination;

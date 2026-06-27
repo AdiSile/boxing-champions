@@ -2,13 +2,15 @@
 // routes/checkout.js
 // Stripe Checkout – test mode
 //
-// POST   /api/checkout                    – creează o sesiune Stripe Checkout
-// GET    /api/config                       – returnează cheia publică Stripe
-// GET    /api/checkout/validate-promo/:code – validează un cod promoțional (public)
+// POST   /api/checkout                         – creează o sesiune Stripe Checkout
+// GET    /api/config                            – returnează cheia publică Stripe
+// GET    /api/checkout/validate-promo/:code     – validează un cod promoțional (public)
 //
 // Promoțiile sunt validate din tabela `promotions` (nu hardcodate).
 // Logica de promoții este unificată cu routes/promotions.js prin
 // utils/promo-validator.js.
+// Prețurile produselor sunt întotdeauna citite din baza de date,
+// nu din payload-ul clientului (previne manipularea prețurilor).
 // ---------------------------------------------------------------------------
 
 const express = require('express');
@@ -50,6 +52,7 @@ const checkoutSchema = {
     items: {
       type: 'array',
       required: true,
+      minItems: 1,
       maxItems: 50,
       validate(value) {
         if (!Array.isArray(value)) return 'items must be an array.';
@@ -61,9 +64,8 @@ const checkoutSchema = {
           if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99) {
             return 'each item must have a quantity between 1 and 99.';
           }
-          if (item.price !== undefined && (typeof item.price !== 'number' || item.price < 0)) {
-            return 'each item price must be a non-negative number.';
-          }
+          // Prețul este opțional — serverul ignoră prețul din client și
+          // folosește întotdeauna prețul din baza de date.
         }
         return true;
       },
@@ -73,7 +75,8 @@ const checkoutSchema = {
       minLength: 1,
       maxLength: 50,
       sanitize(value) {
-        return typeof value === 'string' ? value.trim().toUpperCase() : value;
+        if (typeof value !== 'string') return '';
+        return value.trim().toUpperCase();
       },
     },
     billing_name: { type: 'name', minLength: 2, maxLength: 128 },
@@ -168,6 +171,7 @@ router.post('/api/checkout', validate(checkoutSchema), async (req, res) => {
 
     // ------------------------------------------------------------------
     // 2. Verificare produse, stoc și calcul subtotal
+    //    Prețurile sunt ÎNTOTDEAUNA din baza de date (nu din client).
     // ------------------------------------------------------------------
     let subtotal = 0;
     const lineItems = [];
@@ -202,7 +206,8 @@ router.post('/api/checkout', validate(checkoutSchema), async (req, res) => {
         });
       }
 
-      const unitPrice = item.price !== undefined ? item.price : Number(product.price);
+      // Prețul este întotdeauna din DB (ignorăm orice preț trimis din client)
+      const unitPrice = Number(product.price);
       const lineTotal = Math.round(unitPrice * quantity * 100) / 100;
 
       validatedItems.push({
@@ -242,7 +247,7 @@ router.post('/api/checkout', validate(checkoutSchema), async (req, res) => {
     let totalAmount = subtotal;
     let promoId = null;
 
-    if (promo_code) {
+    if (promo_code && promo_code.trim() !== '') {
       const validation = validatePromoCode(promo_code, { applies_to: 'products' });
 
       if (!validation.valid) {
@@ -426,7 +431,7 @@ router.get('/api/config', (_req, res) => {
     stripePublishableKey = 'pk_live_placeholder';
   }
 
-  // Obține promoțiile active din DB în loc de cele hardcodate
+  // Obține promoțiile active din DB
   let promoList = [];
   try {
     promoList = getActivePromotions();
@@ -437,13 +442,16 @@ router.get('/api/config', (_req, res) => {
 
   res.json({
     stripe_publishable_key: stripePublishableKey,
-    stripe_configured: stripeKey !== 'sk_test_placeholder' && stripeKey.length > 20,
+    stripe_configured: !!(stripeKey && stripeKey !== 'sk_test_placeholder' && stripeKey.length > 20),
+    mode: (stripeKey && stripeKey !== 'sk_test_placeholder' && stripeKey.length > 20) ? 'stripe' : 'simulation',
     promo_codes: promoList.map(p => ({
       code: p.code,
       description: p.description,
       discount_type: p.discount_type,
       discount_value: p.discount_value,
       applies_to: p.applies_to,
+      start_date: p.start_date || null,
+      end_date: p.end_date || null,
     })),
   });
 });
@@ -459,6 +467,7 @@ router.get('/api/checkout/validate-promo/:code', validate(promoValidateSchema), 
 
   const cartTotal = cart_total ? Number(cart_total) : 0;
 
+  // Validare din baza de date
   const validation = validatePromoCode(code, { applies_to: 'products' });
 
   if (!validation.valid) {
@@ -474,16 +483,30 @@ router.get('/api/checkout/validate-promo/:code', validate(promoValidateSchema), 
   // Calculează discount-ul pe baza totalului coșului (dacă e furnizat)
   const discount = calculateDiscount(promo, cartTotal > 0 ? cartTotal : 0);
 
-  return res.json({
+  const response = {
     valid: true,
     code: promo.code,
     description: promo.description,
     discount_type: promo.discount_type,
     discount_value: promo.discount_value,
-    discount_amount: cartTotal > 0 ? discount.discountAmount : null,
-    total_after_discount: cartTotal > 0 ? discount.totalAfterDiscount : null,
     applies_to: promo.applies_to,
-  });
+  };
+
+  if (cartTotal > 0) {
+    response.discount_amount = discount.discountAmount;
+    response.total_after_discount = discount.totalAfterDiscount;
+  }
+
+  // Include date despre expirare și utilizări (informativ)
+  if (promo.start_date) response.start_date = promo.start_date;
+  if (promo.end_date) response.end_date = promo.end_date;
+  if (promo.usage_limit) {
+    response.usage_limit = promo.usage_limit;
+    response.usage_count = promo.usage_count;
+    response.uses_remaining = promo.usage_limit - promo.usage_count;
+  }
+
+  return res.json(response);
 });
 
 module.exports = router;

@@ -7,7 +7,8 @@
 //   - getPublicSettings()   – setări publice (exclude chei sensibile)
 //   - getSetting(key)       – o singură setare după cheie
 //   - updateSetting(key, value, description) – upsert o singură setare
-//   - updateSettings(partial) – actualizare multiplă (obiect { key: value })
+//   - updateSettings(partial) – actualizare multiplă (suportă nested)
+//   - flattenObject(obj)    – aplatizează obiecte nested → flat { key: value }
 //   - resetSettings()       – șterge toate setările și re-seed-uiește default-urile
 //   - EventEmitter          – notificări la schimbare (changed, reset)
 // ---------------------------------------------------------------------------
@@ -19,13 +20,11 @@ const { EventEmitter } = require('events');
 // Constante
 // ---------------------------------------------------------------------------
 
-/** Cheile considerate sensibile – nu se expun în răspunsul public GET */
 const SENSITIVE_KEYS = new Set([
   'smtp_pass',
   'smtp_user',
 ]);
 
-/** Valorile default pentru seed */
 const DEFAULT_SETTINGS = Object.freeze([
   { key: 'site_name', value: 'Boxing Champions', description: 'Site title' },
   { key: 'site_description', value: 'Club de box și arte marțiale - Performanță, disciplină și tradiție', description: 'Meta description' },
@@ -52,11 +51,46 @@ const emitter = new SettingsEmitter();
 // ---------------------------------------------------------------------------
 
 /**
- * Citește toate rândurile din tabela settings și returnează un obiect
- * { key: value, ... }.
+ * Aplatizează un obiect nested într-un obiect flat cu chei concatenate prin "_".
+ * De exemplu: { site: { name: "X", desc: "Y" }, smtp: { host: "H" } }
+ * devine: { site_name: "X", site_desc: "Y", smtp_host: "H" }
  *
- * @returns {object}
+ * Acceptă și obiecte deja flat (le returnează ca atare).
+ * Valorile non-obiect sunt convertite la string.
+ *
+ * @param {object} obj - Obiectul de aplatizat (poate fi nested sau flat)
+ * @param {string} [prefix] - Prefixul curent (folosit recursiv)
+ * @returns {object} Obiect flat { key: value }
  */
+function flattenObject(obj, prefix = '') {
+  const result = {};
+
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    return result;
+  }
+
+  for (const [key, value] of Object.entries(obj)) {
+    const flatKey = prefix ? `${prefix}_${key}` : key;
+
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      const nested = flattenObject(value, flatKey);
+      for (const [nestedKey, nestedValue] of Object.entries(nested)) {
+        result[nestedKey] = nestedValue;
+      }
+    } else {
+      if (Array.isArray(value)) {
+        result[flatKey] = JSON.stringify(value);
+      } else if (value === null) {
+        result[flatKey] = '';
+      } else {
+        result[flatKey] = String(value);
+      }
+    }
+  }
+
+  return result;
+}
+
 function readAllFromDb() {
   const db = getDb();
   const rows = db.prepare('SELECT key, value FROM settings ORDER BY key').all();
@@ -67,25 +101,12 @@ function readAllFromDb() {
   return result;
 }
 
-/**
- * Returnează valoarea unei chei din DB sau undefined dacă nu există.
- *
- * @param {string} key
- * @returns {string|undefined}
- */
 function readOneFromDb(key) {
   const db = getDb();
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
   return row ? row.value : undefined;
 }
 
-/**
- * Upsert o singură setare.
- *
- * @param {string} key
- * @param {string} value
- * @param {string} [description]
- */
 function writeOneToDb(key, value, description = '') {
   const db = getDb();
   const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
@@ -100,9 +121,6 @@ function writeOneToDb(key, value, description = '') {
   `).run(key, String(value), description || '', now);
 }
 
-/**
- * Seed-uiește valorile default în DB (doar dacă cheia nu există deja).
- */
 function seedDefaults() {
   const db = getDb();
   const insertStmt = db.prepare(`
@@ -118,31 +136,15 @@ function seedDefaults() {
 // Operații publice
 // ---------------------------------------------------------------------------
 
-/**
- * Returnează toate setările ca obiect { key: value, ... }.
- *
- * @returns {object}
- */
 function getSettings() {
   return readAllFromDb();
 }
 
-/**
- * Returnează o singură setare după cheie.
- *
- * @param {string} key
- * @returns {string|undefined}
- */
 function getSetting(key) {
   if (!key || typeof key !== 'string') return undefined;
   return readOneFromDb(key);
 }
 
-/**
- * Returnează setările publice (exclude cheile sensibile).
- *
- * @returns {object}
- */
 function getPublicSettings() {
   const all = readAllFromDb();
   const result = {};
@@ -154,15 +156,6 @@ function getPublicSettings() {
   return result;
 }
 
-/**
- * Actualizează o singură setare (upsert).
- * Emite evenimentul 'changed' după salvare.
- *
- * @param {string} key
- * @param {string} value
- * @param {string} [description]
- * @returns {{ key: string, value: string }}
- */
 function updateSetting(key, value, description = '') {
   if (!key || typeof key !== 'string' || key.length === 0) {
     throw new TypeError('updateSetting() așteaptă o cheie validă (string non-gol).');
@@ -185,24 +178,28 @@ function updateSetting(key, value, description = '') {
 
 /**
  * Actualizează mai multe setări deodată.
- * Primește un obiect { key: value, ... }.
+ * Primește un obiect { key: value, ... } FLAT sau NESTED.
+ * Obiectele nested sunt automat aplatizate: { site: { name: "X" } } → { site_name: "X" }.
  * Emite un singur eveniment 'changed' după toate actualizările.
  *
- * @param {object} partial - Obiect { key: value }
+ * @param {object} partial - Obiect { key: value } (flat sau nested)
  * @returns {object} Setările complete după actualizare
  */
 function updateSettings(partial) {
   if (!partial || typeof partial !== 'object' || Array.isArray(partial)) {
-    throw new TypeError('updateSettings() așteaptă un obiect plain { key: value, ... }.');
+    throw new TypeError('updateSettings() așteaptă un obiect plain { key: value, ... } (flat sau nested).');
   }
 
-  const keys = Object.keys(partial);
+  // Aplatizează automat obiectele nested
+  const flat = flattenObject(partial);
+
+  const keys = Object.keys(flat);
   if (keys.length === 0) {
     return readAllFromDb();
   }
 
   for (const key of keys) {
-    writeOneToDb(key, String(partial[key]));
+    writeOneToDb(key, String(flat[key]));
   }
 
   const fullSettings = readAllFromDb();
@@ -215,12 +212,6 @@ function updateSettings(partial) {
   return fullSettings;
 }
 
-/**
- * Resetează toate setările: șterge tot din DB și re-seed-uiește default-urile.
- * Emite evenimentul 'reset'.
- *
- * @returns {object} Setările default
- */
 function resetSettings() {
   const db = getDb();
   db.prepare('DELETE FROM settings').run();
@@ -236,22 +227,10 @@ function resetSettings() {
   return defaultObj;
 }
 
-/**
- * Expune emițătorul pentru abonare la schimbări.
- *
- * @param {string} event
- * @param {Function} listener
- */
 function on(event, listener) {
   return emitter.on(event, listener);
 }
 
-/**
- * Dezabonare.
- *
- * @param {string} event
- * @param {Function} listener
- */
 function off(event, listener) {
   return emitter.off(event, listener);
 }
@@ -267,97 +246,9 @@ module.exports = {
   updateSetting,
   updateSettings,
   resetSettings,
+  flattenObject,
   on,
   off,
   DEFAULT_SETTINGS,
   SENSITIVE_KEYS,
 };
-### routes/settings.js
-// ---------------------------------------------------------------------------
-// routes/settings.js
-// Setări aplicație: GET /api/settings (public) și PUT /api/settings (admin)
-//
-// GET  – returnează setările publice (fără chei sensibile).
-// PUT  – actualizează o singură setare per cerere (key + value).
-//        Necesită autentificare admin.
-//
-// Autentificare & autorizare: middleware centralizat din middleware/auth.js
-// Validare: schema settingsUpdateSchema din middleware/validate.js
-// ---------------------------------------------------------------------------
-
-const express = require('express');
-const settingsModel = require('../models/settingsModel');
-const {
-  authenticate,
-  authorize,
-  csrfProtection,
-} = require('../middleware/auth');
-const {
-  validate,
-  settingsUpdateSchema,
-} = require('../middleware/validate');
-
-const router = express.Router();
-
-// ---------------------------------------------------------------------------
-// GET /api/settings
-// Public – returnează setările publice (fără chei sensibile).
-// ---------------------------------------------------------------------------
-
-router.get('/api/settings', (req, res) => {
-  try {
-    const settings = settingsModel.getPublicSettings();
-
-    return res.json(settings);
-  } catch (err) {
-    console.error('[settings] GET error:', err.message);
-    return res.status(500).json({
-      error: 'Internal server error.',
-      code: 'INTERNAL_ERROR',
-    });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// PUT /api/settings
-// Admin only – actualizează o singură setare (key + value).
-// Middleware: authenticate → csrfProtection → authorize('admin') → validate
-// Body: { key: string, value: string }
-// ---------------------------------------------------------------------------
-
-router.put(
-  '/api/settings',
-  authenticate,
-  csrfProtection,
-  authorize('admin'),
-  validate(settingsUpdateSchema),
-  (req, res) => {
-    try {
-      const { key, value } = req.body;
-
-      // Actualizare per cheie
-      const result = settingsModel.updateSetting(key, value);
-
-      return res.json({
-        message: 'Settings updated successfully.',
-        setting: result,
-      });
-    } catch (err) {
-      console.error('[settings] PUT error:', err.message);
-
-      if (err instanceof TypeError) {
-        return res.status(400).json({
-          error: err.message,
-          code: 'INVALID_BODY',
-        });
-      }
-
-      return res.status(500).json({
-        error: 'Internal server error.',
-        code: 'INTERNAL_ERROR',
-      });
-    }
-  }
-);
-
-module.exports = router;

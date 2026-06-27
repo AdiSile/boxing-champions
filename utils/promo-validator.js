@@ -83,6 +83,32 @@ function validatePromoCode(code, options = {}) {
     }
   }
 
+  // Validare suplimentară: pentru discount de tip percentage, valoarea
+  // trebuie să fie între 0 și 100.
+  if (promo.discount_type === 'percentage') {
+    const dv = Number(promo.discount_value);
+    if (!Number.isFinite(dv) || dv < 0 || dv > 100) {
+      return {
+        valid: false,
+        error: 'Valoarea discount-ului procentual trebuie să fie între 0 și 100.',
+        code: 'INVALID_DISCOUNT_VALUE',
+      };
+    }
+  }
+
+  // Validare suplimentară: pentru discount de tip fixed, valoarea
+  // trebuie să fie pozitivă.
+  if (promo.discount_type === 'fixed') {
+    const dv = Number(promo.discount_value);
+    if (!Number.isFinite(dv) || dv < 0) {
+      return {
+        valid: false,
+        error: 'Valoarea discount-ului fix trebuie să fie pozitivă.',
+        code: 'INVALID_DISCOUNT_VALUE',
+      };
+    }
+  }
+
   return {
     valid: true,
     promo: {
@@ -108,21 +134,23 @@ function validatePromoCode(code, options = {}) {
  * @returns {{ discountAmount: number, totalAfterDiscount: number }}
  */
 function calculateDiscount(promo, subtotal) {
-  const safeSubtotal = Math.max(0, subtotal);
+  const safeSubtotal = Math.max(0, Number(subtotal) || 0);
   let discountAmount = 0;
 
   if (promo.discount_type === 'fixed') {
-    discountAmount = Math.min(promo.discount_value, safeSubtotal);
+    // Discount fix: nu poate depăși subtotalul
+    discountAmount = Math.min(Number(promo.discount_value) || 0, safeSubtotal);
   } else {
-    // percentage
-    discountAmount = Math.round(safeSubtotal * (promo.discount_value / 100) * 100) / 100;
+    // Percentage: valoarea trebuie să fie între 0 și 100
+    const pct = Math.min(100, Math.max(0, Number(promo.discount_value) || 0));
+    discountAmount = Math.round(safeSubtotal * (pct / 100) * 100) / 100;
   }
 
-  const totalAfterDiscount = Math.round((safeSubtotal - discountAmount) * 100) / 100;
+  const totalAfterDiscount = Math.round(Math.max(0, safeSubtotal - discountAmount) * 100) / 100;
 
   return {
-    discountAmount: Math.max(0, discountAmount),
-    totalAfterDiscount: Math.max(0, totalAfterDiscount),
+    discountAmount: Math.round(Math.max(0, discountAmount) * 100) / 100,
+    totalAfterDiscount: Math.round(Math.max(0, totalAfterDiscount) * 100) / 100,
   };
 }
 
