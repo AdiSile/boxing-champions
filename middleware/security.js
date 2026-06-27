@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // middleware/security.js
-// Configurare Helmet, CSP cu nonces, X-Content-Type-Options, X-Frame-Options,
-// rate limiting pe auth
+// Configurare Helmet, CSP cu nonces, CORS, rate limiting, request logging,
+// X-Content-Type-Options, X-Frame-Options, HSTS.
 // ---------------------------------------------------------------------------
 
 const crypto = require('crypto');
@@ -101,7 +101,7 @@ function createRateLimiter(options = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Rate limiter specific pentru autentificare
+// Rate limiter-e specifice
 // ---------------------------------------------------------------------------
 
 /**
@@ -114,6 +114,150 @@ const authRateLimiter = createRateLimiter({
   message: 'Too many login attempts. Please try again later.',
   statusCode: 429,
 });
+
+/**
+ * Rate limiter pentru ruta de contact (POST /api/contact).
+ * 5 mesaje într-o fereastră de 10 minute per IP.
+ */
+const contactRateLimiter = createRateLimiter({
+  windowMs: 10 * 60 * 1000, // 10 minute
+  max: 5,
+  message: 'Prea multe mesaje trimise. Încearcă din nou mai târziu.',
+  statusCode: 429,
+});
+
+/**
+ * Rate limiter pentru ruta de checkout (POST /api/checkout).
+ * 10 cereri într-o fereastră de 5 minute per IP.
+ */
+const checkoutRateLimiter = createRateLimiter({
+  windowMs: 5 * 60 * 1000, // 5 minute
+  max: 10,
+  message: 'Prea multe cereri de checkout. Încearcă din nou mai târziu.',
+  statusCode: 429,
+});
+
+/**
+ * Rate limiter pentru validare cod promoțional.
+ * 20 cereri într-o fereastră de 1 minut per IP.
+ */
+const promoValidateRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minut
+  max: 20,
+  message: 'Prea multe validări de cod promoțional. Încearcă din nou mai târziu.',
+  statusCode: 429,
+});
+
+/**
+ * Rate limiter general pentru toate rutele API.
+ * 200 cereri pe minut per IP.
+ */
+const globalApiRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minut
+  max: 200,
+  message: 'Too many requests. Please slow down.',
+  statusCode: 429,
+});
+
+// ---------------------------------------------------------------------------
+// CORS Middleware
+// ---------------------------------------------------------------------------
+
+/**
+ * Middleware CORS configurat corect.
+ * Permite doar originea aplicației (same-origin) și metodele necesare.
+ * Headerele de răspuns includ expunerea controlată a headerelor.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+function corsMiddleware(req, res, next) {
+  // Origin: Permitem doar aceeași origine (cea mai sigură abordare)
+  // Dacă ai nevoie de origini specifice, configurează ALLOWED_ORIGINS în .env
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
+    : [];
+
+  const requestOrigin = req.headers.origin;
+
+  // Dacă există un Origin header, verificăm
+  if (requestOrigin) {
+    // Dacă nu sunt configurate origini speciale, permitem doar same-origin
+    if (allowedOrigins.length > 0 && allowedOrigins.includes(requestOrigin)) {
+      res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+    } else if (allowedOrigins.length === 0) {
+      // Fără origini configurate explicit, folosim same-origin strict
+      // Nu setăm Access-Control-Allow-Origin deloc pentru origini necunoscute
+    }
+  }
+
+  // Headere expuse (doar cele necesare pentru frontend)
+  res.setHeader('Access-Control-Expose-Headers',
+    'X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Retry-After');
+
+  // Pentru cereri preflight (OPTIONS)
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers',
+      'Content-Type, X-CSRF-Token, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 ore
+    return res.status(204).end();
+  }
+
+  // Permitem credențiale (cookies) pentru cereri cross-origin controlate
+  if (requestOrigin && res.getHeader('Access-Control-Allow-Origin')) {
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+
+  next();
+}
+
+// ---------------------------------------------------------------------------
+// Request Logger Middleware
+// ---------------------------------------------------------------------------
+
+/**
+ * Loghează fiecare cerere HTTP cu metodă, path, status, durată și IP.
+ * Evită logarea datelor sensibile.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+function requestLogger(req, res, next) {
+  const start = Date.now();
+  const clientIp =
+    req.ip ||
+    req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+    req.socket?.remoteAddress ||
+    '-';
+
+  // Log la terminarea răspunsului
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const status = res.statusCode;
+    const method = req.method;
+    const url = req.originalUrl || req.url;
+
+    // Iconiță pentru status (colorare în terminal)
+    let statusIcon = '·';
+    if (status >= 500) statusIcon = '✗';
+    else if (status >= 400) statusIcon = '✗';
+    else if (status >= 300) statusIcon = '→';
+    else if (status >= 200) statusIcon = '✓';
+
+    // Nu logăm query string-uri care conțin parole, token-uri etc.
+    const safeUrl = url.replace(/([?&])(password|token|secret|key|auth)=[^&]*/gi, '$1$2=***');
+
+    console.log(
+      `[${new Date().toISOString()}] ${statusIcon} ${method} ${safeUrl} ${status} ${duration}ms :: ${clientIp}`
+    );
+  });
+
+  next();
+}
 
 // ---------------------------------------------------------------------------
 // CSP Nonce Middleware
@@ -131,7 +275,7 @@ function nonceMiddleware(req, res, next) {
 }
 
 // ---------------------------------------------------------------------------
-// Configurare Helmet + CSP cu nonces
+// Configurare CSP cu nonces
 // ---------------------------------------------------------------------------
 
 /**
@@ -140,52 +284,73 @@ function nonceMiddleware(req, res, next) {
  *
  * IMPORTANT: middleware-ul `nonceMiddleware` trebuie apelat ÎNAINTE de acesta,
  * pentru ca `res.locals.cspNonce` să fie disponibil.
+ *
+ * Resursele permise reflectă DOAR ceea ce este efectiv folosit în aplicație:
+ * - Font Awesome 6 CDN (css + fonturi)
+ * - Stripe (checkout + API)
+ * - Imagini locale și externe via HTTPS
+ * - Script-uri inline cu nonce
  */
 function cspMiddleware(req, res, next) {
   const nonce = res.locals?.cspNonce;
 
-  // CSP cu nonce: permite inline scripts doar dacă au nonce-ul corect
+  // CSP bazat pe resursele efectiv utilizate în aplicație
   const directives = {
     'default-src': ["'self'"],
+
+    // Script-uri: locale + Font Awesome + Stripe + inline cu nonce
     'script-src': [
       "'self'",
-      'https://cdnjs.cloudflare.com',   // Font Awesome
-      'https://js.stripe.com',           // Stripe checkout
-      'https://maps.googleapis.com',     // Google Maps (dacă se folosește)
+      'https://cdnjs.cloudflare.com',       // Font Awesome 6
+      'https://js.stripe.com',               // Stripe.js (checkout)
       nonce ? `'nonce-${nonce}'` : '',
     ].filter(Boolean),
+
+    // Stiluri: locale + Font Awesome + Google Fonts (dacă se folosește) + inline
     'style-src': [
       "'self'",
-      "'unsafe-inline'",                 // necesar pentru stiluri inline dinamice
-      'https://cdnjs.cloudflare.com',
-      'https://fonts.googleapis.com',
+      "'unsafe-inline'",                     // necesar pentru stiluri inline dinamice
+      'https://cdnjs.cloudflare.com',        // Font Awesome 6 CSS
+      'https://fonts.googleapis.com',        // Google Fonts (dacă se adaugă)
     ],
+
+    // Fonturi: locale + Font Awesome + Google Fonts
     'font-src': [
       "'self'",
-      'https://cdnjs.cloudflare.com',
-      'https://fonts.gstatic.com',
+      'https://cdnjs.cloudflare.com',        // Font Awesome webfonts
+      'https://fonts.gstatic.com',           // Google Fonts
     ],
+
+    // Imagini: locale + data URI + orice HTTPS (Pexels, etc.)
     'img-src': [
       "'self'",
       'data:',
-      'https:',                          // imagini externe (Pexels, etc.)
+      'https:',                               // imagini externe (Pexels, placeholdere, etc.)
     ],
-    'media-src': [
-      "'self'",
-    ],
+
+    // Media: doar locale (video, audio)
+    'media-src': ["'self'"],
+
+    // Frame-uri: Stripe checkout
     'frame-src': [
       "'self'",
       'https://js.stripe.com',
       'https://hooks.stripe.com',
-      'https://www.google.com',          // Google Maps embed
     ],
+
+    // Conexiuni dinamice (fetch/XHR): locale + Stripe API
     'connect-src': [
       "'self'",
       'https://api.stripe.com',
-      'https://maps.googleapis.com',
     ],
+
+    // Restricții pentru plugin-uri și obiecte
     'object-src': ["'none'"],
+
+    // Base URI
     'base-uri': ["'self'"],
+
+    // Formular: doar self (form action)
     'form-action': ["'self'"],
   };
 
@@ -207,16 +372,16 @@ function cspMiddleware(req, res, next) {
  * @param {Express} app - instanța Express
  */
 function configureSecurity(app) {
-  // Helmet cu toate headerele implicite, DAR fără CSP (îl setăm separat)
+  // Helmet cu toate headerele implicite, DAR fără CSP (îl gestionăm separat)
   app.use(
     helmet({
-      contentSecurityPolicy: false, // CSP gestionat manual cu nonce
-      xFrameOptions: true,           // X-Frame-Options: DENY (implicit)
-      xContentTypeOptions: true,     // X-Content-Type-Options: nosniff
+      contentSecurityPolicy: false,  // CSP gestionat manual cu nonce
+      xFrameOptions: true,            // X-Frame-Options: DENY (implicit)
+      xContentTypeOptions: true,      // X-Content-Type-Options: nosniff
     })
   );
 
-  // Forțăm X-Frame-Options la DENY (implicit în Helmet, dar explicit aici)
+  // Forțăm X-Frame-Options la DENY
   app.use(helmet.frameguard({ action: 'deny' }));
 
   // Forțăm X-Content-Type-Options explicit
@@ -236,6 +401,11 @@ function configureSecurity(app) {
 
   // Referrer-Policy
   app.use(helmet.referrerPolicy({ policy: 'strict-origin-when-cross-origin' }));
+
+  // Permissions-Policy: restricționează API-urile browserului
+  app.use(
+    helmet.permittedCrossDomainPolicies({ permittedPolicies: 'none' })
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -247,7 +417,15 @@ module.exports = {
   configureSecurity,
   nonceMiddleware,
   cspMiddleware,
+  corsMiddleware,
+  requestLogger,
+
+  // Rate limiter-e specifice
   authRateLimiter,
+  contactRateLimiter,
+  checkoutRateLimiter,
+  promoValidateRateLimiter,
+  globalApiRateLimiter,
 
   // Factory pentru rate limiter-uri custom
   createRateLimiter,

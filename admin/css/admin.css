@@ -357,7 +357,10 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
   color: var(--red-vivid);
 }
 
-/* ---- Sidebar Mobile Overlay ---- */
+/* ---- Sidebar Mobile Overlay ----
+   Definit în afara oricărui media query pentru robustețe.
+   pointer-events: none previne blocarea interacțiunilor pe
+   desktop când overlay-ul este invizibil. */
 .sidebar-overlay {
   position: fixed;
   inset: 0;
@@ -365,12 +368,14 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
   z-index: 899;
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
   transition: opacity var(--dur-normal), visibility var(--dur-normal);
 }
 
 .sidebar-overlay--visible {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 }
 
 /* ---- Topbar (Mobile) ---- */
@@ -2286,6 +2291,10 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
 
 /* ---- ≤ 480px (Mobile) ---- */
 @media (max-width: 480px) {
+  .admin-topbar {
+    display: flex; /* asigură topbar vizibil la acest breakpoint */
+  }
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
@@ -2368,6 +2377,10 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
 
 /* ---- ≤ 380px (Mobile Small) ---- */
 @media (max-width: 380px) {
+  .admin-topbar {
+    display: flex; /* asigură topbar vizibil la acest breakpoint */
+  }
+
   html {
     font-size: 93%;
   }
@@ -2389,12 +2402,13 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
 
 /* ---- ≤ 320px (Smallest) ---- */
 @media (max-width: 320px) {
-  html {
-    font-size: 88%;
+  .admin-topbar {
+    display: flex; /* asigură topbar vizibil la acest breakpoint */
+    padding: 0 0.8rem;
   }
 
-  .admin-topbar {
-    padding: 0 0.8rem;
+  html {
+    font-size: 88%;
   }
 
   .admin-main {

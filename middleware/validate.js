@@ -303,14 +303,18 @@ function validateField(fieldName, value, schema, source) {
   // ------------------------------------------------------------------
   // 1. Verificare required
   // ------------------------------------------------------------------
-  if (value === undefined || value === null || value === '') {
+  if (value === undefined || value === '' || (value === null && schema.nullable !== true)) {
     if (schema.required) {
       errors.push(`'${fieldName}' is required.`);
       return { valid: false, value: undefined, errors };
     }
-    // Dacă nu e required și e empty, returnăm default-ul sau undefined
+    // Dacă nu e required și e empty, returnăm default-ul sau undefined/null
     if (schema.default !== undefined) {
       return { valid: true, value: schema.default, errors: [] };
+    }
+    // Păstrează null dacă valoarea originală e null (ex: pentru a șterge un câmp opțional)
+    if (value === null) {
+      return { valid: true, value: null, errors: [] };
     }
     return { valid: true, value: undefined, errors: [] };
   }
@@ -943,6 +947,50 @@ const scheduleUpdateSchema = {
   },
 };
 
+/** Schemă pentru batch update (PUT /api/schedule) – înlocuire completă program */
+const scheduleBatchUpdateSchema = {
+  body: {
+    entries: {
+      type: 'array',
+      required: true,
+      minItems: 1,
+      validate(value) {
+        if (!Array.isArray(value)) return 'entries must be an array.';
+        if (value.length === 0) return 'entries must have at least one entry.';
+        for (let i = 0; i < value.length; i++) {
+          const entry = value[i];
+          if (typeof entry !== 'object' || entry === null)
+            return `entries[${i}] must be an object.`;
+          if (!entry.title || typeof entry.title !== 'string' || entry.title.trim().length < 2)
+            return `entries[${i}].title is required (min 2 characters).`;
+          if (entry.day_of_week === undefined || entry.day_of_week === null)
+            return `entries[${i}].day_of_week is required.`;
+          const dow = Number(entry.day_of_week);
+          if (!Number.isInteger(dow) || dow < 0 || dow > 6)
+            return `entries[${i}].day_of_week must be an integer between 0 and 6.`;
+          if (!entry.start_time || typeof entry.start_time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(entry.start_time))
+            return `entries[${i}].start_time is required and must be in HH:MM format.`;
+          if (!entry.end_time || typeof entry.end_time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(entry.end_time))
+            return `entries[${i}].end_time is required and must be in HH:MM format.`;
+          if (entry.coach_id !== undefined && entry.coach_id !== null) {
+            const cid = Number(entry.coach_id);
+            if (!Number.isInteger(cid) || cid < 1)
+              return `entries[${i}].coach_id must be a positive integer.`;
+          }
+          if (entry.max_participants !== undefined && entry.max_participants !== null) {
+            const mp = Number(entry.max_participants);
+            if (!Number.isInteger(mp) || mp < 1)
+              return `entries[${i}].max_participants must be a positive integer.`;
+          }
+          if (entry.location !== undefined && entry.location !== null && typeof entry.location === 'string' && entry.location.length > 256)
+            return `entries[${i}].location must be at most 256 characters.`;
+        }
+        return true;
+      },
+    },
+  },
+};
+
 // -- Plans -----------------------------------------------------------------
 
 const planCreateSchema = {
@@ -1050,6 +1098,70 @@ const contactMessageSchema = {
     email: { type: 'email', required: true },
     subject: { type: 'string', maxLength: 256 },
     message: { type: 'text', required: true, minLength: 10, maxLength: 10000 },
+  },
+};
+
+// -- Promotions ------------------------------------------------------------
+
+const promotionCreateSchema = {
+  body: {
+    code: {
+      type: 'string', required: true, minLength: 1, maxLength: 50,
+      sanitize(value) { return typeof value === 'string' ? value.trim().toUpperCase() : value; },
+    },
+    description: { type: 'text', maxLength: MAX_LONG_TEXT },
+    discount_type: { type: 'enum', required: true, oneOf: ['percentage', 'fixed'] },
+    discount_value: { type: 'number', required: true, min: 0 },
+    applies_to: { type: 'enum', oneOf: ['all', 'plans', 'products', 'events'], default: 'all' },
+    start_date: { type: 'date' },
+    end_date: { type: 'date' },
+    usage_limit: { type: 'integer', min: 1 },
+    is_active: { type: 'boolean', default: true },
+  },
+};
+
+const promotionUpdateSchema = {
+  params: { id: { type: 'integer', required: true, min: 1 } },
+  body: {
+    code: {
+      type: 'string', minLength: 1, maxLength: 50,
+      sanitize(value) { return typeof value === 'string' ? value.trim().toUpperCase() : value; },
+    },
+    description: { type: 'text', maxLength: MAX_LONG_TEXT },
+    discount_type: { type: 'enum', oneOf: ['percentage', 'fixed'] },
+    discount_value: { type: 'number', min: 0 },
+    applies_to: { type: 'enum', oneOf: ['all', 'plans', 'products', 'events'] },
+    start_date: { type: 'date' },
+    end_date: { type: 'date' },
+    usage_limit: { type: 'integer', min: 1 },
+    is_active: { type: 'boolean' },
+  },
+};
+
+/** Schemă pentru validare cod promoțional public (GET) */
+const promoValidateSchema = {
+  params: { code: { type: 'string', required: true, minLength: 1, maxLength: 50 } },
+  query: {
+    cart_total: { type: 'number', min: 0 },
+    applies_to: { type: 'enum', oneOf: ['all', 'plans', 'products', 'events'] },
+  },
+};
+
+/** Schemă pentru listare promoții (admin) – paginare + filtre specifice */
+const promotionListSchema = {
+  query: {
+    page: { type: 'integer', min: 1, default: 1 },
+    limit: { type: 'integer', min: 1, max: 100, default: 20 },
+    sort: {
+      type: 'string', maxLength: 32,
+      validate(value) {
+        if (/^-?[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) return true;
+        return 'must be a valid field name, optionally prefixed with "-" for descending.';
+      },
+    },
+    search: { type: 'string', maxLength: 100 },
+    is_active: { type: 'string', maxLength: 5 },
+    applies_to: { type: 'enum', oneOf: ['all', 'plans', 'products', 'events'] },
   },
 };
 
@@ -1176,6 +1288,7 @@ module.exports = {
   eventUpdateSchema,
   scheduleCreateSchema,
   scheduleUpdateSchema,
+  scheduleBatchUpdateSchema,
   planCreateSchema,
   planUpdateSchema,
   productCreateSchema,
@@ -1183,6 +1296,10 @@ module.exports = {
   orderCreateSchema,
   orderUpdateSchema,
   contactMessageSchema,
+  promotionCreateSchema,
+  promotionUpdateSchema,
+  promotionListSchema,
+  promoValidateSchema,
   settingsUpdateSchema,
   paginationSchema,
   combineSchemas,

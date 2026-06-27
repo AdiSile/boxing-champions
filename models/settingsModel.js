@@ -1,55 +1,49 @@
-const fs = require('fs');
-const path = require('path');
+// ---------------------------------------------------------------------------
+// models/settingsModel.js
+// Model key-value pentru setări, stocate în tabela SQLite `settings`.
+//
+// Oferă:
+//   - getSettings()         – toate setările (obiect { key: value })
+//   - getPublicSettings()   – setări publice (exclude chei sensibile)
+//   - getSetting(key)       – o singură setare după cheie
+//   - updateSetting(key, value, description) – upsert o singură setare
+//   - updateSettings(partial) – actualizare multiplă (obiect { key: value })
+//   - resetSettings()       – șterge toate setările și re-seed-uiește default-urile
+//   - EventEmitter          – notificări la schimbare (changed, reset)
+// ---------------------------------------------------------------------------
+
+const { getDb } = require('../config/db');
 const { EventEmitter } = require('events');
 
 // ---------------------------------------------------------------------------
 // Constante
 // ---------------------------------------------------------------------------
-const SETTINGS_FILE = path.join(__dirname, '..', 'data', 'settings.json');
-const ENCODING = 'utf8';
+
+/** Cheile considerate sensibile – nu se expun în răspunsul public GET */
+const SENSITIVE_KEYS = new Set([
+  'smtp_pass',
+  'smtp_user',
+]);
+
+/** Valorile default pentru seed */
+const DEFAULT_SETTINGS = Object.freeze([
+  { key: 'site_name', value: 'Boxing Champions', description: 'Site title' },
+  { key: 'site_description', value: 'Club de box și arte marțiale - Performanță, disciplină și tradiție', description: 'Meta description' },
+  { key: 'admin_email', value: 'admin@boxingchampions.ro', description: 'Administrator email' },
+  { key: 'timezone', value: 'Europe/Bucharest', description: 'Default timezone' },
+  { key: 'locale', value: 'ro', description: 'Default locale' },
+  { key: 'items_per_page', value: '12', description: 'Pagination limit' },
+  { key: 'smtp_host', value: '', description: 'SMTP server host' },
+  { key: 'smtp_port', value: '587', description: 'SMTP port' },
+  { key: 'smtp_user', value: '', description: 'SMTP username' },
+  { key: 'smtp_pass', value: '', description: 'SMTP password' },
+  { key: 'maintenance_mode', value: '0', description: 'Site under maintenance' },
+]);
 
 // ---------------------------------------------------------------------------
-// Valori implicite – tot ce ține de config se declară aici
+// Evenimente
 // ---------------------------------------------------------------------------
-const DEFAULTS = Object.freeze({
-  general: {
-    siteName: 'My App',
-    language: 'ro',
-    timezone: 'Europe/Bucharest',
-    maintenanceMode: false,
-  },
-  billing: {
-    currency: 'RON',
-    taxRate: 0.19,
-    invoicePrefix: 'INV-',
-    paymentTermsDays: 30,
-  },
-  notifications: {
-    email: {
-      enabled: true,
-      fromAddress: 'noreply@example.com',
-      smtp: {
-        host: 'localhost',
-        port: 587,
-        secure: false,
-      },
-    },
-    push: { enabled: false },
-  },
-  security: {
-    sessionTimeoutMinutes: 60,
-    maxLoginAttempts: 5,
-    mfaRequired: false,
-  },
-  features: {
-    darkMode: false,
-    betaAccess: false,
-  },
-});
 
-// ---------------------------------------------------------------------------
-// Evenimente pentru ca restul aplicației să poată reacționa la schimbări
-// ---------------------------------------------------------------------------
 class SettingsEmitter extends EventEmitter {}
 const emitter = new SettingsEmitter();
 
@@ -58,68 +52,66 @@ const emitter = new SettingsEmitter();
 // ---------------------------------------------------------------------------
 
 /**
- * Deep merge între două obiecte.
- * - `source` este obiectul de bază (imutabil, nu se modifică)
- * - `override` conține noile valori
- * - Array-urile se înlocuiesc complet (nu se concatenează)
- * - Valorile `null` din override șterg cheia din rezultat
+ * Citește toate rândurile din tabela settings și returnează un obiect
+ * { key: value, ... }.
+ *
+ * @returns {object}
  */
-function deepMerge(source, override) {
-  if (override === null) return null;
-  if (typeof override !== 'object' || Array.isArray(override)) {
-    return override;
+function readAllFromDb() {
+  const db = getDb();
+  const rows = db.prepare('SELECT key, value FROM settings ORDER BY key').all();
+  const result = {};
+  for (const row of rows) {
+    result[row.key] = row.value;
   }
-  if (typeof source !== 'object' || Array.isArray(source)) {
-    source = {};
-  }
-
-  const result = { ...source };
-
-  for (const key of Object.keys(override)) {
-    const overrideVal = override[key];
-
-    if (overrideVal === null) {
-      delete result[key];
-    } else if (
-      typeof overrideVal === 'object' &&
-      !Array.isArray(overrideVal) &&
-      typeof result[key] === 'object' &&
-      !Array.isArray(result[key])
-    ) {
-      result[key] = deepMerge(result[key], overrideVal);
-    } else {
-      result[key] = overrideVal;
-    }
-  }
-
   return result;
 }
 
 /**
- * Încarcă setările persistente de pe disc.
- * Returnează un obiect gol dacă fișierul nu există sau e corupt.
+ * Returnează valoarea unei chei din DB sau undefined dacă nu există.
+ *
+ * @param {string} key
+ * @returns {string|undefined}
  */
-function loadFromDisk() {
-  try {
-    if (!fs.existsSync(SETTINGS_FILE)) return {};
-    const raw = fs.readFileSync(SETTINGS_FILE, ENCODING);
-    const parsed = JSON.parse(raw);
-    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
+function readOneFromDb(key) {
+  const db = getDb();
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+  return row ? row.value : undefined;
 }
 
 /**
- * Salvează obiectul pe disc (sync, suprascrie).
- * Creează directorul `data/` dacă nu există.
+ * Upsert o singură setare.
+ *
+ * @param {string} key
+ * @param {string} value
+ * @param {string} [description]
  */
-function saveToDisk(settings) {
-  const dir = path.dirname(SETTINGS_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+function writeOneToDb(key, value, description = '') {
+  const db = getDb();
+  const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+
+  db.prepare(`
+    INSERT INTO settings (key, value, description, updated_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(key) DO UPDATE SET
+      value = excluded.value,
+      description = CASE WHEN excluded.description != '' THEN excluded.description ELSE description END,
+      updated_at = excluded.updated_at
+  `).run(key, String(value), description || '', now);
+}
+
+/**
+ * Seed-uiește valorile default în DB (doar dacă cheia nu există deja).
+ */
+function seedDefaults() {
+  const db = getDb();
+  const insertStmt = db.prepare(`
+    INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)
+  `);
+
+  for (const setting of DEFAULT_SETTINGS) {
+    insertStmt.run(setting.key, setting.value, setting.description);
   }
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), ENCODING);
 }
 
 // ---------------------------------------------------------------------------
@@ -127,42 +119,96 @@ function saveToDisk(settings) {
 // ---------------------------------------------------------------------------
 
 /**
- * Returnează setările complete (defaults + persistente, deep-merged).
- * Nu modifică fișierul de pe disc.
+ * Returnează toate setările ca obiect { key: value, ... }.
  *
- * @returns {Object} Setări complete
+ * @returns {object}
  */
 function getSettings() {
-  const persisted = loadFromDisk();
-  return deepMerge(DEFAULTS, persisted);
+  return readAllFromDb();
 }
 
 /**
- * Actualizează setările printr-un deep-merge între ce există deja pe disc
- * și noile valori primite. Salvează rezultatul și notifică ascultătorii.
+ * Returnează o singură setare după cheie.
  *
- * @param {Object} partial - Obiect parțial cu setările de actualizat
- * @param {Object} [options]
- * @param {boolean} [options.mergeArrays=false] - dacă true, concatenează array-uri
- * @returns {Object} Setările complete după actualizare
+ * @param {string} key
+ * @returns {string|undefined}
  */
-function updateSettings(partial, options = {}) {
-  if (!partial || typeof partial !== 'object' || Array.isArray(partial)) {
-    throw new TypeError('updateSettings() așteaptă un obiect plain.');
+function getSetting(key) {
+  if (!key || typeof key !== 'string') return undefined;
+  return readOneFromDb(key);
+}
+
+/**
+ * Returnează setările publice (exclude cheile sensibile).
+ *
+ * @returns {object}
+ */
+function getPublicSettings() {
+  const all = readAllFromDb();
+  const result = {};
+  for (const [key, value] of Object.entries(all)) {
+    if (!SENSITIVE_KEYS.has(key)) {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+/**
+ * Actualizează o singură setare (upsert).
+ * Emite evenimentul 'changed' după salvare.
+ *
+ * @param {string} key
+ * @param {string} value
+ * @param {string} [description]
+ * @returns {{ key: string, value: string }}
+ */
+function updateSetting(key, value, description = '') {
+  if (!key || typeof key !== 'string' || key.length === 0) {
+    throw new TypeError('updateSetting() așteaptă o cheie validă (string non-gol).');
+  }
+  if (value === undefined || value === null) {
+    throw new TypeError('updateSetting() așteaptă o valoare non-null.');
   }
 
-  const currentPersisted = loadFromDisk();
-  const mergedPersisted = options.mergeArrays
-    ? deepMergeWithArrays(currentPersisted, partial)
-    : deepMerge(currentPersisted, partial);
+  writeOneToDb(key, String(value), description);
 
-  saveToDisk(mergedPersisted);
+  const fullSettings = readAllFromDb();
 
-  const fullSettings = deepMerge(DEFAULTS, mergedPersisted);
-
-  // Emitere eveniment
   emitter.emit('changed', {
-    changedKeys: Object.keys(partial),
+    changedKeys: [key],
+    fullSettings,
+  });
+
+  return { key, value: String(value) };
+}
+
+/**
+ * Actualizează mai multe setări deodată.
+ * Primește un obiect { key: value, ... }.
+ * Emite un singur eveniment 'changed' după toate actualizările.
+ *
+ * @param {object} partial - Obiect { key: value }
+ * @returns {object} Setările complete după actualizare
+ */
+function updateSettings(partial) {
+  if (!partial || typeof partial !== 'object' || Array.isArray(partial)) {
+    throw new TypeError('updateSettings() așteaptă un obiect plain { key: value, ... }.');
+  }
+
+  const keys = Object.keys(partial);
+  if (keys.length === 0) {
+    return readAllFromDb();
+  }
+
+  for (const key of keys) {
+    writeOneToDb(key, String(partial[key]));
+  }
+
+  const fullSettings = readAllFromDb();
+
+  emitter.emit('changed', {
+    changedKeys: keys,
     fullSettings,
   });
 
@@ -170,61 +216,42 @@ function updateSettings(partial, options = {}) {
 }
 
 /**
- * Variantă de deepMerge care concatenează array-urile în loc să le înlocuiască.
- */
-function deepMergeWithArrays(source, override) {
-  if (override === null) return null;
-  if (typeof override !== 'object' || Array.isArray(override)) {
-    return override;
-  }
-  if (typeof source !== 'object' || Array.isArray(source)) {
-    source = {};
-  }
-
-  const result = { ...source };
-
-  for (const key of Object.keys(override)) {
-    const overrideVal = override[key];
-
-    if (overrideVal === null) {
-      delete result[key];
-    } else if (Array.isArray(overrideVal) && Array.isArray(result[key])) {
-      result[key] = [...result[key], ...overrideVal];
-    } else if (
-      typeof overrideVal === 'object' &&
-      !Array.isArray(overrideVal) &&
-      typeof result[key] === 'object' &&
-      !Array.isArray(result[key])
-    ) {
-      result[key] = deepMergeWithArrays(result[key], overrideVal);
-    } else {
-      result[key] = overrideVal;
-    }
-  }
-
-  return result;
-}
-
-/**
- * Resetează setările la valorile implicite (șterge fișierul persistent).
- * @returns {Object} Setările default
+ * Resetează toate setările: șterge tot din DB și re-seed-uiește default-urile.
+ * Emite evenimentul 'reset'.
+ *
+ * @returns {object} Setările default
  */
 function resetSettings() {
-  if (fs.existsSync(SETTINGS_FILE)) {
-    fs.unlinkSync(SETTINGS_FILE);
+  const db = getDb();
+  db.prepare('DELETE FROM settings').run();
+  seedDefaults();
+
+  const defaultObj = {};
+  for (const s of DEFAULT_SETTINGS) {
+    defaultObj[s.key] = s.value;
   }
-  emitter.emit('reset', { fullSettings: { ...DEFAULTS } });
-  return { ...DEFAULTS };
+
+  emitter.emit('reset', { fullSettings: defaultObj });
+
+  return defaultObj;
 }
 
 /**
  * Expune emițătorul pentru abonare la schimbări.
- * Exemplu: settingsModel.on('changed', ({ fullSettings }) => { ... })
+ *
+ * @param {string} event
+ * @param {Function} listener
  */
 function on(event, listener) {
   return emitter.on(event, listener);
 }
 
+/**
+ * Dezabonare.
+ *
+ * @param {string} event
+ * @param {Function} listener
+ */
 function off(event, listener) {
   return emitter.off(event, listener);
 }
@@ -232,11 +259,105 @@ function off(event, listener) {
 // ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
+
 module.exports = {
   getSettings,
+  getSetting,
+  getPublicSettings,
+  updateSetting,
   updateSettings,
   resetSettings,
   on,
   off,
-  DEFAULTS,
+  DEFAULT_SETTINGS,
+  SENSITIVE_KEYS,
 };
+### routes/settings.js
+// ---------------------------------------------------------------------------
+// routes/settings.js
+// Setări aplicație: GET /api/settings (public) și PUT /api/settings (admin)
+//
+// GET  – returnează setările publice (fără chei sensibile).
+// PUT  – actualizează o singură setare per cerere (key + value).
+//        Necesită autentificare admin.
+//
+// Autentificare & autorizare: middleware centralizat din middleware/auth.js
+// Validare: schema settingsUpdateSchema din middleware/validate.js
+// ---------------------------------------------------------------------------
+
+const express = require('express');
+const settingsModel = require('../models/settingsModel');
+const {
+  authenticate,
+  authorize,
+  csrfProtection,
+} = require('../middleware/auth');
+const {
+  validate,
+  settingsUpdateSchema,
+} = require('../middleware/validate');
+
+const router = express.Router();
+
+// ---------------------------------------------------------------------------
+// GET /api/settings
+// Public – returnează setările publice (fără chei sensibile).
+// ---------------------------------------------------------------------------
+
+router.get('/api/settings', (req, res) => {
+  try {
+    const settings = settingsModel.getPublicSettings();
+
+    return res.json(settings);
+  } catch (err) {
+    console.error('[settings] GET error:', err.message);
+    return res.status(500).json({
+      error: 'Internal server error.',
+      code: 'INTERNAL_ERROR',
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/settings
+// Admin only – actualizează o singură setare (key + value).
+// Middleware: authenticate → csrfProtection → authorize('admin') → validate
+// Body: { key: string, value: string }
+// ---------------------------------------------------------------------------
+
+router.put(
+  '/api/settings',
+  authenticate,
+  csrfProtection,
+  authorize('admin'),
+  validate(settingsUpdateSchema),
+  (req, res) => {
+    try {
+      const { key, value } = req.body;
+
+      // Actualizare per cheie
+      const result = settingsModel.updateSetting(key, value);
+
+      return res.json({
+        message: 'Settings updated successfully.',
+        setting: result,
+      });
+    } catch (err) {
+      console.error('[settings] PUT error:', err.message);
+
+      if (err instanceof TypeError) {
+        return res.status(400).json({
+          error: err.message,
+          code: 'INVALID_BODY',
+        });
+      }
+
+      return res.status(500).json({
+        error: 'Internal server error.',
+        code: 'INTERNAL_ERROR',
+      });
+    }
+  }
+);
+
+module.exports = router;

@@ -1,4 +1,7 @@
 // ---------------------------------------------------------------------------
+// DEPRECATED: Acest fișier este un duplicat al middleware/auth.js.
+// Păstrat temporar pentru referință. Folosește middleware/auth.js.
+// ---------------------------------------------------------------------------
 // middleware/auth.js
 // JWT Authentication & Authorization Middleware
 //

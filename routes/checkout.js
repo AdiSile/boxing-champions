@@ -2,12 +2,28 @@
 // routes/checkout.js
 // Stripe Checkout – test mode
 //
-// POST /api/checkout – creează o sesiune Stripe Checkout
-// GET  /api/config    – returnează cheia publică Stripe (pk_test_...)
+// POST   /api/checkout                    – creează o sesiune Stripe Checkout
+// GET    /api/config                       – returnează cheia publică Stripe
+// GET    /api/checkout/validate-promo/:code – validează un cod promoțional (public)
+//
+// Promoțiile sunt validate din tabela `promotions` (nu hardcodate).
+// Logica de promoții este unificată cu routes/promotions.js prin
+// utils/promo-validator.js.
 // ---------------------------------------------------------------------------
 
 const express = require('express');
+const crypto = require('crypto');
 const { getDb } = require('../config/db');
+const {
+  validatePromoCode,
+  calculateDiscount,
+  incrementPromoUsage,
+  getActivePromotions,
+} = require('../utils/promo-validator');
+const {
+  validate,
+  promoValidateSchema,
+} = require('../middleware/validate');
 
 const router = express.Router();
 
@@ -25,14 +41,66 @@ const PRODUCT_CATEGORIES = [
   'general', 'gloves', 'headgear', 'footwear', 'apparel', 'protection', 'accessories', 'equipment',
 ];
 
-/** Coduri promoționale predefinite (test mode) */
-const PROMO_CODES = {
-  'CHAMP35': { discountPercent: 35, description: 'Promoție de vară -35%', minOrder: 0 },
-  'GLOVES25': { discountPercent: 25, description: 'Reducere mănuși -25%', minOrder: 0, category: 'gloves' },
-  'KICKS20': { discountPercent: 20, description: 'Reducere încălțăminte -20%', minOrder: 0, category: 'footwear' },
-  'HEAD15': { discountPercent: 15, description: 'Reducere căști -15%', minOrder: 0, category: 'headgear' },
-  'ALL10': { discountPercent: 10, description: 'Reducere generală -10%', minOrder: 0 },
-  'BOXING20': { discountPercent: 20, description: 'Reducere campion -20%', minOrder: 200 },
+// ---------------------------------------------------------------------------
+// Schemă validare POST /api/checkout
+// ---------------------------------------------------------------------------
+
+const checkoutSchema = {
+  body: {
+    items: {
+      type: 'array',
+      required: true,
+      maxItems: 50,
+      validate(value) {
+        if (!Array.isArray(value)) return 'items must be an array.';
+        if (value.length === 0) return 'items must have at least one item.';
+        for (const item of value) {
+          if (!Number.isInteger(item.product_id) || item.product_id < 1) {
+            return 'each item must have a valid product_id (positive integer).';
+          }
+          if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99) {
+            return 'each item must have a quantity between 1 and 99.';
+          }
+          if (item.price !== undefined && (typeof item.price !== 'number' || item.price < 0)) {
+            return 'each item price must be a non-negative number.';
+          }
+        }
+        return true;
+      },
+    },
+    promo_code: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 50,
+      sanitize(value) {
+        return typeof value === 'string' ? value.trim().toUpperCase() : value;
+      },
+    },
+    billing_name: { type: 'name', minLength: 2, maxLength: 128 },
+    billing_email: { type: 'email' },
+    billing_phone: { type: 'phone' },
+    notes: { type: 'text', maxLength: 2048 },
+    success_url: {
+      type: 'string',
+      maxLength: 2048,
+      validate(value) {
+        if (value && !/^https?:\/\/.+/.test(value)) {
+          return 'must be a valid HTTP URL.';
+        }
+        return true;
+      },
+    },
+    cancel_url: {
+      type: 'string',
+      maxLength: 2048,
+      validate(value) {
+        if (value && !/^https?:\/\/.+/.test(value)) {
+          return 'must be a valid HTTP URL.';
+        }
+        return true;
+      },
+    },
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -70,19 +138,19 @@ function getStripe() {
 // POST /api/checkout
 // Creează o sesiune Stripe Checkout și returnează URL-ul de plată.
 //
-// Body:
-//   - items (required): array de { product_id, quantity, price }
+// Body (validat cu checkoutSchema):
+//   - items (required): array de { product_id, quantity, price? }
 //   - promo_code (optional): string cu codul promoțional
 //   - billing_name, billing_email, billing_phone, notes (opționale)
 //   - success_url, cancel_url (opționale – overrides)
 // ---------------------------------------------------------------------------
 
-router.post('/api/checkout', async (req, res) => {
+router.post('/api/checkout', validate(checkoutSchema), async (req, res) => {
   try {
     const db = getDb();
 
     // ------------------------------------------------------------------
-    // 1. Extragere date
+    // 1. Extragere date (deja validate și sanitizate)
     // ------------------------------------------------------------------
     const {
       items,
@@ -95,50 +163,19 @@ router.post('/api/checkout', async (req, res) => {
       cancel_url,
     } = req.body;
 
-    // ------------------------------------------------------------------
-    // 2. Validare items
-    // ------------------------------------------------------------------
-    let parsedItems;
-    try {
-      parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
-    } catch {
-      return res.status(400).json({
-        error: 'Items must be a valid JSON array.',
-        code: 'VALIDATION_ERROR',
-      });
-    }
-
-    if (!Array.isArray(parsedItems) || parsedItems.length === 0) {
-      return res.status(400).json({
-        error: 'Cart is empty.',
-        code: 'EMPTY_CART',
-      });
-    }
+    // items este deja array valid datorită schemei
+    const parsedItems = items;
 
     // ------------------------------------------------------------------
-    // 3. Verificare produse, stoc și calcul total
+    // 2. Verificare produse, stoc și calcul subtotal
     // ------------------------------------------------------------------
     let subtotal = 0;
     const lineItems = [];
     const validatedItems = [];
 
     for (const item of parsedItems) {
-      const productId = Number(item.product_id);
-      const quantity = Number(item.quantity);
-
-      if (!Number.isInteger(productId) || productId < 1) {
-        return res.status(400).json({
-          error: `Invalid product_id: ${item.product_id}.`,
-          code: 'VALIDATION_ERROR',
-        });
-      }
-
-      if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
-        return res.status(400).json({
-          error: `Invalid quantity: ${item.quantity}. Must be between 1 and 99.`,
-          code: 'VALIDATION_ERROR',
-        });
-      }
+      const productId = item.product_id;
+      const quantity = item.quantity;
 
       const product = db.prepare(
         'SELECT id, name, slug, price, image, stock, is_active, category FROM products WHERE id = ?'
@@ -146,26 +183,26 @@ router.post('/api/checkout', async (req, res) => {
 
       if (!product) {
         return res.status(400).json({
-          error: `Product with id ${productId} not found.`,
+          error: `Produsul cu id ${productId} nu a fost găsit.`,
           code: 'PRODUCT_NOT_FOUND',
         });
       }
 
       if (!product.is_active) {
         return res.status(400).json({
-          error: `Product "${product.name}" is no longer available.`,
+          error: `Produsul "${product.name}" nu mai este disponibil.`,
           code: 'PRODUCT_UNAVAILABLE',
         });
       }
 
       if (product.stock !== null && product.stock < quantity) {
         return res.status(400).json({
-          error: `Insufficient stock for "${product.name}". Available: ${product.stock}.`,
+          error: `Stoc insuficient pentru "${product.name}". Disponibil: ${product.stock}.`,
           code: 'INSUFFICIENT_STOCK',
         });
       }
 
-      const unitPrice = item.price !== undefined ? Number(item.price) : Number(product.price);
+      const unitPrice = item.price !== undefined ? item.price : Number(product.price);
       const lineTotal = Math.round(unitPrice * quantity * 100) / 100;
 
       validatedItems.push({
@@ -195,73 +232,69 @@ router.post('/api/checkout', async (req, res) => {
       subtotal += lineTotal;
     }
 
+    subtotal = Math.round(subtotal * 100) / 100;
+
     // ------------------------------------------------------------------
-    // 4. Aplicare promo code
+    // 3. Validare promo code din baza de date
     // ------------------------------------------------------------------
-    let discountPercent = 0;
     let appliedPromo = null;
+    let discountAmount = 0;
+    let totalAmount = subtotal;
+    let promoId = null;
 
-    if (promo_code && typeof promo_code === 'string' && promo_code.trim()) {
-      const code = promo_code.trim().toUpperCase();
-      const promoDef = PROMO_CODES[code];
+    if (promo_code) {
+      const validation = validatePromoCode(promo_code, { applies_to: 'products' });
 
-      if (promoDef) {
-        if (subtotal < promoDef.minOrder) {
-          return res.status(400).json({
-            error: `Codul "${code}" necesită o comandă minimă de ${promoDef.minOrder} RON.`,
-            code: 'MIN_ORDER_NOT_MET',
-          });
-        }
-
-        if (promoDef.category) {
-          const allMatch = validatedItems.every(item => {
-            const prod = db.prepare('SELECT category FROM products WHERE id = ?').get(item.product_id);
-            return prod && prod.category === promoDef.category;
-          });
-
-          if (!allMatch) {
-            return res.status(400).json({
-              error: `Codul "${code}" se aplică doar produselor din categoria "${promoDef.category}".`,
-              code: 'CATEGORY_MISMATCH',
-            });
-          }
-        }
-
-        discountPercent = promoDef.discountPercent;
-        appliedPromo = { code, ...promoDef };
-
-        if (discountPercent > 0) {
-          const discountFactor = 1 - discountPercent / 100;
-          for (const li of lineItems) {
-            li.price_data.unit_amount = Math.round(
-              li.price_data.unit_amount * discountFactor
-            );
-          }
-        }
-      } else {
+      if (!validation.valid) {
         return res.status(400).json({
-          error: `Codul promoțional "${code}" nu este valid.`,
-          code: 'INVALID_PROMO_CODE',
+          error: validation.error,
+          code: validation.code,
         });
       }
-    }
 
-    const discountAmount = Math.round(subtotal * (discountPercent / 100) * 100) / 100;
-    const totalAmount = Math.round((subtotal - discountAmount) * 100) / 100;
+      const promo = validation.promo;
+
+      // Calculează discount-ul
+      const discount = calculateDiscount(promo, subtotal);
+      discountAmount = discount.discountAmount;
+      totalAmount = discount.totalAfterDiscount;
+
+      appliedPromo = {
+        code: promo.code,
+        description: promo.description,
+        discount_type: promo.discount_type,
+        discount_value: promo.discount_value,
+        discount_amount: discountAmount,
+      };
+
+      promoId = promo.id;
+
+      // Ajustează line_items Stripe cu discount-ul (doar pentru percentage)
+      if (promo.discount_type === 'percentage' && promo.discount_value > 0) {
+        const discountFactor = 1 - promo.discount_value / 100;
+        for (const li of lineItems) {
+          li.price_data.unit_amount = Math.round(
+            li.price_data.unit_amount * discountFactor
+          );
+        }
+      }
+      // Pentru discount fix, adăugăm un line item negativ în loc de ajustare per item
+      // (opțional — Stripe nu permite unit_amount negativ, deci îl gestionăm doar
+      //  pe partea noastră de calcul)
+    }
 
     if (totalAmount < 0.50) {
       return res.status(400).json({
-        error: 'Order total is too low.',
+        error: 'Totalul comenzii este prea mic.',
         code: 'AMOUNT_TOO_LOW',
       });
     }
 
     // ------------------------------------------------------------------
-    // 5. Creează comanda în baza de date (pending)
+    // 4. Creează comanda în baza de date (pending)
     // ------------------------------------------------------------------
-    const crypto = require('crypto');
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
-    const orderNumber = `ORD-${now.slice(0, 10).replace(/-/g, '')}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+    const orderNumber = `ORD-${now.slice(0, 10).replace(/-/g, '')}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
     const orderResult = db.prepare(`
       INSERT INTO orders
@@ -284,7 +317,7 @@ router.post('/api/checkout', async (req, res) => {
     const orderId = orderResult.lastInsertRowid;
 
     // ------------------------------------------------------------------
-    // 6. Stripe Checkout Session
+    // 5. Stripe Checkout Session
     // ------------------------------------------------------------------
     const stripe = getStripe();
 
@@ -292,20 +325,25 @@ router.post('/api/checkout', async (req, res) => {
       // --- MOD SIMULARE (când Stripe nu e configurat) ---
       console.log(`[checkout] MOD SIMULARE – Comanda #${orderNumber} creată (${totalAmount} RON)`);
 
+      // Incrementează usage_count pentru promoție chiar și în mod simulare
+      if (promoId) {
+        incrementPromoUsage(promoId);
+      }
+
       return res.json({
         success: true,
         mode: 'simulation',
         order: {
           id: orderId,
           order_number: orderNumber,
+          subtotal,
           total_amount: totalAmount,
-          discount_percent: discountPercent,
           discount_amount: discountAmount,
           promo: appliedPromo,
           items: validatedItems,
         },
-        message: discountPercent > 0
-          ? `Comandă simulată cu reducere ${discountPercent}%. Total: ${totalAmount} RON.`
+        message: appliedPromo
+          ? `Comandă simulată cu reducere. Total: ${totalAmount} RON.`
           : `Comandă simulată. Total: ${totalAmount} RON.`,
         url: `/shop.html?order=${orderNumber}&simulated=true`,
       });
@@ -325,7 +363,7 @@ router.post('/api/checkout', async (req, res) => {
         order_id: String(orderId),
         order_number: orderNumber,
         promo_code: promo_code || '',
-        discount_percent: String(discountPercent),
+        discount_amount: String(discountAmount),
       },
       success_url: finalSuccessUrl,
       cancel_url: finalCancelUrl,
@@ -337,14 +375,19 @@ router.post('/api/checkout', async (req, res) => {
         .run(updatedNotes.trim(), now, orderId);
     }
 
+    // Incrementează usage_count pentru promoție
+    if (promoId) {
+      incrementPromoUsage(promoId);
+    }
+
     return res.json({
       success: true,
       mode: 'stripe',
       order: {
         id: orderId,
         order_number: orderNumber,
+        subtotal,
         total_amount: totalAmount,
-        discount_percent: discountPercent,
         discount_amount: discountAmount,
         promo: appliedPromo,
       },
@@ -356,13 +399,13 @@ router.post('/api/checkout', async (req, res) => {
 
     if (err.type && err.type.startsWith('Stripe')) {
       return res.status(402).json({
-        error: err.message || 'Payment processing error.',
+        error: err.message || 'Eroare procesare plată.',
         code: 'STRIPE_ERROR',
       });
     }
 
     return res.status(500).json({
-      error: 'Internal server error.',
+      error: 'Eroare internă de server.',
       code: 'INTERNAL_ERROR',
     });
   }
@@ -370,7 +413,7 @@ router.post('/api/checkout', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/config
-// Returnează configurări publice (cheia Stripe publică, etc.)
+// Returnează configurări publice (cheia Stripe publică, promoții active)
 // ---------------------------------------------------------------------------
 
 router.get('/api/config', (_req, res) => {
@@ -383,72 +426,63 @@ router.get('/api/config', (_req, res) => {
     stripePublishableKey = 'pk_live_placeholder';
   }
 
+  // Obține promoțiile active din DB în loc de cele hardcodate
+  let promoList = [];
+  try {
+    promoList = getActivePromotions();
+  } catch (err) {
+    console.error('[checkout] Eroare la obținerea promoțiilor active:', err.message);
+    promoList = [];
+  }
+
   res.json({
     stripe_publishable_key: stripePublishableKey,
     stripe_configured: stripeKey !== 'sk_test_placeholder' && stripeKey.length > 20,
-    promo_codes: Object.keys(PROMO_CODES).map(code => ({
-      code,
-      ...PROMO_CODES[code],
+    promo_codes: promoList.map(p => ({
+      code: p.code,
+      description: p.description,
+      discount_type: p.discount_type,
+      discount_value: p.discount_value,
+      applies_to: p.applies_to,
     })),
   });
 });
 
 // ---------------------------------------------------------------------------
 // GET /api/checkout/validate-promo/:code
-// Validează un cod promoțional și returnează discount-ul.
+// Validează un cod promoțional și returnează discount-ul (public).
 // ---------------------------------------------------------------------------
 
-router.get('/api/checkout/validate-promo/:code', (req, res) => {
+router.get('/api/checkout/validate-promo/:code', validate(promoValidateSchema), (req, res) => {
   const { code } = req.params;
-  const { cart_total, category } = req.query;
+  const { cart_total } = req.query;
 
-  if (!code || typeof code !== 'string') {
-    return res.status(400).json({
-      error: 'Cod promoțional lipsă.',
-      code: 'VALIDATION_ERROR',
-    });
-  }
+  const cartTotal = cart_total ? Number(cart_total) : 0;
 
-  const normalizedCode = code.trim().toUpperCase();
-  const promoDef = PROMO_CODES[normalizedCode];
+  const validation = validatePromoCode(code, { applies_to: 'products' });
 
-  if (!promoDef) {
+  if (!validation.valid) {
     return res.status(404).json({
-      error: `Codul "${normalizedCode}" nu este valid.`,
-      code: 'INVALID_PROMO_CODE',
       valid: false,
+      error: validation.error,
+      code: validation.code,
     });
   }
 
-  const total = cart_total ? Number(cart_total) : 0;
-  if (total < promoDef.minOrder) {
-    return res.json({
-      valid: false,
-      code: normalizedCode,
-      error: `Necesită comandă minimă de ${promoDef.minOrder} RON.`,
-      min_order: promoDef.minOrder,
-    });
-  }
+  const promo = validation.promo;
 
-  if (promoDef.category && category) {
-    const cat = category.toLowerCase();
-    if (cat !== promoDef.category) {
-      return res.json({
-        valid: false,
-        code: normalizedCode,
-        error: `Se aplică doar categoriei "${promoDef.category}".`,
-        required_category: promoDef.category,
-      });
-    }
-  }
+  // Calculează discount-ul pe baza totalului coșului (dacă e furnizat)
+  const discount = calculateDiscount(promo, cartTotal > 0 ? cartTotal : 0);
 
   return res.json({
     valid: true,
-    code: normalizedCode,
-    discount_percent: promoDef.discountPercent,
-    description: promoDef.description,
-    min_order: promoDef.minOrder,
-    category: promoDef.category || null,
+    code: promo.code,
+    description: promo.description,
+    discount_type: promo.discount_type,
+    discount_value: promo.discount_value,
+    discount_amount: cartTotal > 0 ? discount.discountAmount : null,
+    total_after_discount: cartTotal > 0 ? discount.totalAfterDiscount : null,
+    applies_to: promo.applies_to,
   });
 });
 

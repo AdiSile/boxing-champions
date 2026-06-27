@@ -435,6 +435,24 @@ h4 { font-size: clamp(1.1rem, 2vw, 1.6rem); }
   transform: translateY(-7.5px) rotate(-45deg);
 }
 
+/* Mobile nav overlay — defined globally, toggled via JS */
+.nav__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.35s, visibility 0.35s;
+  pointer-events: none;
+}
+
+.nav__overlay--visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
 /* ============================================================
    HERO
    ============================================================ */
@@ -1490,7 +1508,7 @@ h4 { font-size: clamp(1.1rem, 2vw, 1.6rem); }
   }
 }
 
-/* ---------- ≤ 1024px (Tablet Landscape) ---------- */
+/* ---------- ≤ 1024px (Tablet Landscape / Small Desktop) ---------- */
 @media (max-width: 1024px) {
   .grid--3,
   .grid--4 {
@@ -1503,12 +1521,36 @@ h4 { font-size: clamp(1.1rem, 2vw, 1.6rem); }
 
   .about__img::after { display: none; }
 
+  .footer__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .contact__grid {
+    gap: 2.5rem;
+  }
+
+  .pricing__grid {
+    gap: 1.5rem;
+  }
+}
+
+/* ---------- ≤ 768px (Tablet Portrait / Mobile Nav Breakpoint) ---------- */
+@media (max-width: 768px) {
+  .grid--2,
+  .grid--3,
+  .grid--4 {
+    grid-template-columns: 1fr;
+  }
+
+  /* ---- Mobile Navigation ---- */
   .nav__links {
     position: fixed;
     top: 0;
     right: 0;
     width: min(320px, 80vw);
     height: 100vh;
+    height: 100dvh;
     flex-direction: column;
     background: rgba(10,10,10,0.96);
     backdrop-filter: blur(24px);
@@ -1518,6 +1560,8 @@ h4 { font-size: clamp(1.1rem, 2vw, 1.6rem); }
     transform: translateX(100%);
     transition: transform 0.45s var(--ease-out-expo);
     border-left: 1px solid var(--glass-border);
+    z-index: 1000;
+    overflow-y: auto;
   }
 
   .nav__links--open {
@@ -1529,20 +1573,7 @@ h4 { font-size: clamp(1.1rem, 2vw, 1.6rem); }
     z-index: 1001;
   }
 
-  .footer__grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-  }
-}
-
-/* ---------- ≤ 768px (Tablet Portrait) ---------- */
-@media (max-width: 768px) {
-  .grid--2,
-  .grid--3,
-  .grid--4 {
-    grid-template-columns: 1fr;
-  }
-
+  /* ---- Hero ---- */
   .hero__title {
     font-size: clamp(2.4rem, 10vw, 4.5rem);
   }
@@ -1553,16 +1584,29 @@ h4 { font-size: clamp(1.1rem, 2vw, 1.6rem); }
     gap: 0.8rem;
   }
 
+  /* ---- Buttons & Forms: full-width ---- */
   .btn {
     width: 100%;
-    max-width: 280px;
+    justify-content: center;
   }
 
+  .hero__cta .btn {
+    max-width: 320px;
+  }
+
+  .form__input,
+  .form__textarea,
+  .form select {
+    width: 100%;
+  }
+
+  /* ---- About ---- */
   .about__stats {
     grid-template-columns: repeat(3, 1fr);
     gap: 0.6rem;
   }
 
+  /* ---- Pricing ---- */
   .pricing__grid {
     grid-template-columns: 1fr;
     max-width: 400px;
@@ -1576,10 +1620,12 @@ h4 { font-size: clamp(1.1rem, 2vw, 1.6rem); }
     transform: translateY(-6px);
   }
 
+  /* ---- Shop ---- */
   .shop__grid {
     grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
   }
 
+  /* ---- Footer ---- */
   .footer__grid {
     grid-template-columns: 1fr;
     text-align: center;
@@ -1589,8 +1635,25 @@ h4 { font-size: clamp(1.1rem, 2vw, 1.6rem); }
     max-width: 100%;
   }
 
+  /* ---- Contact ---- */
   .contact__grid {
     grid-template-columns: 1fr;
+  }
+
+  /* ---- Schedule Table: scroll + indicator ---- */
+  .schedule__table-wrap {
+    position: relative;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    background:
+      linear-gradient(to right, var(--black-card) 30%, transparent),
+      linear-gradient(to left, var(--black-card) 30%, transparent),
+      radial-gradient(ellipse at 0% 50%, rgba(0,0,0,0.55) 0%, transparent 60%),
+      radial-gradient(ellipse at 100% 50%, rgba(0,0,0,0.55) 0%, transparent 60%);
+    background-repeat: no-repeat;
+    background-position: left center, right center, left center, right center;
+    background-size: 40px 100%, 40px 100%, 18px 100%, 18px 100%;
+    background-attachment: local, local, scroll, scroll;
   }
 
   .schedule__table {
@@ -1600,22 +1663,6 @@ h4 { font-size: clamp(1.1rem, 2vw, 1.6rem); }
   .schedule__table th,
   .schedule__table td {
     padding: 0.6rem 0.8rem;
-  }
-
-  /* Mobile nav overlay */
-  .nav__overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.55);
-    z-index: 999;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.35s, visibility 0.35s;
-  }
-
-  .nav__overlay--visible {
-    opacity: 1;
-    visibility: visible;
   }
 }
 
@@ -1632,6 +1679,10 @@ h4 { font-size: clamp(1.1rem, 2vw, 1.6rem); }
   .hero__badge {
     font-size: 0.7rem;
     padding: 0.4em 1.2em;
+  }
+
+  .hero__cta .btn {
+    max-width: 100%;
   }
 
   .section__title::after {
@@ -1651,6 +1702,14 @@ h4 { font-size: clamp(1.1rem, 2vw, 1.6rem); }
   .promo-banner {
     font-size: 0.7rem;
     padding: 0.4rem 2rem 0.4rem 0.8rem;
+  }
+
+  .schedule__table-wrap {
+    background-size: 30px 100%, 30px 100%, 14px 100%, 14px 100%;
+  }
+
+  .schedule__table {
+    min-width: 480px;
   }
 }
 
@@ -1682,6 +1741,11 @@ h4 { font-size: clamp(1.1rem, 2vw, 1.6rem); }
   .stat__number {
     font-size: 1.5rem;
   }
+
+  .nav__links {
+    width: 85vw;
+    padding: 5rem 1.8rem;
+  }
 }
 
 /* ---------- ≤ 320px (Smallest) ---------- */
@@ -1709,11 +1773,27 @@ h4 { font-size: clamp(1.1rem, 2vw, 1.6rem); }
   .btn {
     padding: 0.7em 1.4em;
     font-size: 0.75rem;
+    width: 100%;
   }
 
   .container {
     padding-left: 0.7rem;
     padding-right: 0.7rem;
+  }
+
+  .form__input,
+  .form__textarea {
+    font-size: 0.85rem;
+    padding: 0.65em 0.8em;
+  }
+
+  .schedule__table {
+    min-width: 420px;
+    font-size: 0.7rem;
+  }
+
+  .schedule__table-wrap {
+    background-size: 24px 100%, 24px 100%, 10px 100%, 10px 100%;
   }
 }
 

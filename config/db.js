@@ -1,3 +1,9 @@
+// ---------------------------------------------------------------------------
+// config/db.js — Boxing Champions
+// Conexiune SQLite (better-sqlite3) cu validare, graceful shutdown,
+// WAL mode, foreign keys și seed automat.
+// ---------------------------------------------------------------------------
+
 const Database = require('better-sqlite3');
 const path = require('path');
 const bcrypt = require('bcrypt');
@@ -6,14 +12,98 @@ const DB_PATH = path.join(__dirname, '..', 'database.sqlite');
 
 let db;
 
+// ---------------------------------------------------------------------------
+// Conexiune lazy + validare
+// ---------------------------------------------------------------------------
+
+/**
+ * Obține instanța bazei de date (inițializare lazy).
+ * Aplică pragma-uri esențiale și validează conexiunea printr-un query simplu.
+ *
+ * @returns {import('better-sqlite3').Database}
+ */
 function getDb() {
   if (!db) {
-    db = new Database(DB_PATH);
-    db.pragma('journal_mode = WAL');
-    db.pragma('foreign_keys = ON');
+    try {
+      db = new Database(DB_PATH);
+
+      // Pragma-uri esențiale de securitate și performanță
+      db.pragma('journal_mode = WAL');
+      db.pragma('foreign_keys = ON');
+      db.pragma('busy_timeout = 5000');
+      db.pragma('synchronous = NORMAL');
+      db.pragma('cache_size = -20000'); // ~20 MB
+
+      // Validare conexiune: query simplu
+      const result = db.prepare('SELECT 1 AS ok').get();
+      if (!result || result.ok !== 1) {
+        throw new Error('Database connection validation failed.');
+      }
+
+      console.log('[DB] Conexiune la baza de date stabilită și validată.');
+    } catch (err) {
+      console.error('[DB] Eroare critică la conectarea la baza de date:', err.message);
+      throw err; // fail-fast: aplicația nu poate funcționa fără DB
+    }
   }
   return db;
 }
+
+// ---------------------------------------------------------------------------
+// Validare conexiune (health check)
+// ---------------------------------------------------------------------------
+
+/**
+ * Verifică dacă baza de date este accesibilă.
+ * Poate fi apelată periodic pentru health checks.
+ *
+ * @returns {{ ok: boolean, error?: string }}
+ */
+function checkDatabaseConnection() {
+  if (!db) {
+    // Dacă db nu a fost încă inițializată, încearcă să o inițializezi
+    try {
+      getDb();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  try {
+    const result = db.prepare('SELECT 1 AS ok').get();
+    return { ok: result && result.ok === 1 };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Graceful shutdown
+// ---------------------------------------------------------------------------
+
+/**
+ * Închide conexiunea la baza de date în mod controlat.
+ * Se apelează din handler-ul de graceful shutdown al serverului.
+ */
+function closeDatabase() {
+  if (db) {
+    try {
+      // Forțează un checkpoint WAL înainte de închidere
+      db.pragma('wal_checkpoint(TRUNCATE)');
+      db.close();
+      console.log('[DB] Conexiunea la baza de date a fost închisă.');
+    } catch (err) {
+      console.error('[DB] Eroare la închiderea bazei de date:', err.message);
+    } finally {
+      db = null;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Inițializare tabele + seed
+// ---------------------------------------------------------------------------
 
 function initializeDatabase() {
   const db = getDb();
@@ -229,4 +319,4 @@ function initializeDatabase() {
   return db;
 }
 
-module.exports = { getDb, initializeDatabase };
+module.exports = { getDb, initializeDatabase, closeDatabase, checkDatabaseConnection };

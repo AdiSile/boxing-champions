@@ -558,24 +558,144 @@
     }
 
     @media (max-width: 480px) {
+      /* ---- Single-column grid (explicit) ---- */
+      .events-grid {
+        grid-template-columns: 1fr;
+        gap: 1.4rem;
+      }
+
+      /* ---- Page header ---- */
       .events-page-header {
         min-height: 26vh;
       }
 
+      .events-page-header__content {
+        padding: 2rem 1.2rem 1.4rem;
+      }
+
+      .events-page-header__title {
+        font-size: clamp(1.8rem, 8vw, 2.6rem);
+      }
+
+      .events-page-header__subtitle {
+        font-size: 0.85rem;
+      }
+
+      /* ---- Filters Bar ---- */
+      .events-filters {
+        padding: 1rem 0;
+      }
+
+      .events-filters__inner {
+        gap: 0.6rem;
+      }
+
+      .events-filters__search {
+        min-width: 100%;
+      }
+
+      .events-filters__search input {
+        padding: 0.6em 1em 0.6em 2.4em;
+        font-size: 0.82rem;
+      }
+
       .events-filters__tabs {
         gap: 0.3rem;
+        width: 100%;
+        justify-content: flex-start;
       }
 
       .events-filters__tab {
-        font-size: 0.7rem;
-        padding: 0.45em 0.9em;
+        font-size: 0.68rem;
+        padding: 0.4em 0.7em;
+        letter-spacing: 0.04em;
       }
 
+      /* ---- Card gallery arrows always visible ---- */
       .event-detail-card__gallery-arrow {
         opacity: 1;
         width: 28px;
         height: 28px;
         font-size: 0.7rem;
+      }
+
+      .event-detail-card__gallery-arrow--prev {
+        left: 0.4rem;
+      }
+
+      .event-detail-card__gallery-arrow--next {
+        right: 0.4rem;
+      }
+
+      /* ---- Card meta & content ---- */
+      .event-detail-card__meta {
+        gap: 0.6rem;
+      }
+
+      .event-detail-card__date-badge {
+        min-width: 44px;
+        padding: 0.3em 0.6em;
+      }
+
+      .event-detail-card__date-day {
+        font-size: 1.25rem;
+      }
+
+      .event-detail-card__title {
+        font-size: 1.05rem;
+      }
+
+      .event-detail-card__desc {
+        font-size: 0.82rem;
+        margin-bottom: 0.6rem;
+      }
+
+      .event-detail-card__footer {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      /* ---- Empty state ---- */
+      .events-empty {
+        padding: 2.5rem 1rem;
+      }
+
+      .events-empty__icon {
+        font-size: 3rem;
+      }
+
+      .events-empty__title {
+        font-size: 1.2rem;
+      }
+
+      .events-empty__text {
+        font-size: 0.85rem;
+      }
+
+      /* ---- Pagination ---- */
+      .events-pagination {
+        gap: 0.3rem;
+        margin-top: 2rem;
+      }
+
+      .events-pagination__btn {
+        font-size: 0.7rem;
+        padding: 0.45em 0.8em;
+      }
+
+      .events-pagination__info {
+        font-size: 0.7rem;
+        margin: 0 0.2rem;
+      }
+
+      /* ---- Skeleton ---- */
+      .event-card-skeleton__img {
+        margin-bottom: 0.8rem;
+      }
+
+      .event-card-skeleton__line {
+        height: 12px;
+        margin-bottom: 0.5rem;
       }
     }
   </style>
