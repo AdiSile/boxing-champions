@@ -26,6 +26,7 @@ const {
   promotionUpdateSchema,
   promotionListSchema,
   promoValidateSchema,
+  requireJsonContentType,
 } = require('../middleware/validate');
 const {
   validatePromoCode,
@@ -35,6 +36,9 @@ const {
 } = require('../utils/promo-validator');
 
 const router = express.Router();
+
+// Verificare strictă Content-Type pentru rutele care așteaptă JSON
+router.use(requireJsonContentType({ strict: true }));
 
 const ALLOWED_SORT_COLUMNS = [
   'id', 'code', 'discount_type', 'discount_value',

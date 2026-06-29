@@ -191,16 +191,16 @@ function assertCreated(res) {
  * mai mult de 999 de parametri într-o singură instrucțiune.
  * @returns {{ ok: boolean, error?: string, tables?: number }}
  */
-function checkDatabaseHealth() {
+async function checkDatabaseHealth() {
   try {
-    const { initializeDatabase, checkDatabaseConnection } = require('../config/db');
-    initializeDatabase();
+    const { initDb, getDb, checkDatabaseConnection } = require('../config/db');
+    await initDb();
     const health = checkDatabaseConnection();
     if (!health.ok) {
       return { ok: false, error: health.error || 'Database connection validation failed' };
     }
     // Numără tabelele create
-    const db = require('../config/db').getDb();
+    const db = getDb();
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
     return { ok: true, tables: tables.length };
   } catch (err) {
@@ -227,7 +227,7 @@ async function runSuites() {
 
   // ── Pre-flight: Database health check ─────────────────────
   console.log(`${C.bold}${C.cyan}▶ Database Health Check${C.reset}`);
-  const dbHealth = checkDatabaseHealth();
+  const dbHealth = await checkDatabaseHealth();
   if (dbHealth.ok) {
     console.log(`${C.green}PASS${C.reset} Database initialized successfully — ${dbHealth.tables} tables created.`);
   } else {

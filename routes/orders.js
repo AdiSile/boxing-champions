@@ -24,6 +24,7 @@ const {
   paginationSchema,
   paramsIdSchema,
   combineSchemas,
+  requireJsonContentType,
 } = require('../middleware/validate');
 const {
   authenticate,
@@ -37,6 +38,9 @@ const {
 } = require('../utils/email');
 
 const router = express.Router();
+
+// Verificare strictă Content-Type pentru rutele care așteaptă JSON
+router.use(requireJsonContentType({ strict: true }));
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'completed', 'cancelled', 'refunded'];
 const ALLOWED_SORT_FIELDS = ['id', 'order_number', 'status', 'total_amount', 'billing_name', 'billing_email', 'paid_at', 'created_at', 'updated_at'];

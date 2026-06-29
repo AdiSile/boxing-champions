@@ -774,7 +774,7 @@ function refreshTokenHandler(req, res, next) {
     revokeToken(payload.jti, payload.exp);
 
     // Emitem noi token-uri (setAuthCookies setează și Authorization header)
-    const { csrfToken } = setAuthCookies(res, user);
+    const { accessToken, csrfToken } = setAuthCookies(res, user);
 
     return res.json({
       message: 'Token refreshed successfully.',
@@ -784,6 +784,7 @@ function refreshTokenHandler(req, res, next) {
         email: user.email,
         role: user.role,
       },
+      accessToken,
       csrfToken,
     });
   } catch (dbErr) {

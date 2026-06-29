@@ -107,6 +107,7 @@
     searchTimer: null,
     saving: false,        // protecție double-submit
     authRetries: 0,       // număr reîncercări auth
+    redirecting: false,   // previne redirect-uri multiple la login
   };
 
   /* ========================================================================
@@ -206,7 +207,8 @@
   }
 
   /* ========================================================================
-     FETCH  (îmbunătățit: extrage detalii din eroare, suport pentru text)
+     FETCH  (îmbunătățit: extrage detalii din eroare, suport pentru text,
+             gestionează automat 401 cu redirect la login)
      ======================================================================== */
 
   /**
@@ -324,6 +326,33 @@
     }
   }
 
+  /**
+   * Citește token-ul de acces din sessionStorage (dacă există).
+   * Token-ul poate fi stocat aici ca fallback când cookie-ul nu e disponibil.
+   */
+  function getAccessToken() {
+    try {
+      return sessionStorage.getItem('accessToken') || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /**
+   * Setează token-ul de acces în sessionStorage (fallback non-httpOnly).
+   */
+  function setAccessToken(token) {
+    try {
+      if (token) {
+        sessionStorage.setItem('accessToken', token);
+      } else {
+        sessionStorage.removeItem('accessToken');
+      }
+    } catch (e) {
+      // sessionStorage poate fi indisponibil
+    }
+  }
+
   async function apiFetch(url, options) {
     options = options || {};
     var isFormData = options.body instanceof FormData;
@@ -332,6 +361,14 @@
       'Accept': 'application/json, text/plain, */*',
       'X-Requested-With': 'XMLHttpRequest',
     };
+
+    // Trimite token-ul de acces ca Authorization header dacă există în sessionStorage
+    // (fallback pentru cazul când cookie-ul httpOnly nu este disponibil)
+    var accessToken = getAccessToken();
+    if (accessToken) {
+      headers['Authorization'] = 'Bearer ' + accessToken;
+    }
+
     // Adaugă CSRF token pentru metodele care modifică stare
     if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
       var csrf = getCsrfToken();
@@ -345,8 +382,8 @@
     var fetchOpts = {
       method: method,
       headers: headers,
+      // Trimite cookie-urile (inclusiv token-ul httpOnly) pentru autentificare
       credentials: 'same-origin',
-      mode: 'same-origin',
     };
     if (options.body) {
       fetchOpts.body = isFormData ? options.body : JSON.stringify(options.body);
@@ -365,6 +402,13 @@
     var newCsrf = res.headers.get('x-csrf-token') || res.headers.get('X-CSRF-Token');
     if (newCsrf) {
       setCsrfToken(newCsrf);
+    }
+
+    // Reînnoiește automat token-ul de acces din header-ul răspunsului
+    // (când serverul îl returnează explicit, ex: după refresh)
+    var newAccessToken = res.headers.get('x-access-token') || res.headers.get('X-Access-Token');
+    if (newAccessToken) {
+      setAccessToken(newAccessToken);
     }
 
     var data;
@@ -397,55 +441,121 @@
       setCsrfToken(data.csrfToken);
     }
 
+    // Reînnoiește automat token-ul de acces din corpul răspunsului JSON
+    if (data && typeof data.accessToken === 'string' && data.accessToken) {
+      setAccessToken(data.accessToken);
+    }
+
+    // === GESTIONARE AUTOMATĂ 401 (sesiune expirată) ===
+    // Pentru orice request care NU este auth/check, facem redirect la login.
+    // Auth check are propriul handler; nu vrem redirect dublu.
     if (!res.ok) {
       var errMsg = extractErrorMessage(data, res.status, res.statusText);
       var err = new Error(errMsg);
       err.status = res.status;
       err.statusText = res.statusText || '';
       err.data = data;
+
+      // 401 = token expirat sau lipsă → redirect la login
+      if (res.status === 401) {
+        if (url !== API.AUTH_CHECK) {
+          // Folosim setTimeout pentru a permite codului apelant să proceseze eroarea
+          // și pentru a evita race conditions cu redirect-ul
+          if (!state.redirecting) {
+            state.redirecting = true;
+            showToast('Sesiunea a expirat. Te redirecționăm la login.', 'warning', 2500);
+            setTimeout(function () {
+              state.authenticated = false;
+              state.user = null;
+              redirectToLogin();
+            }, 300);
+          }
+        }
+      }
+
       throw err;
     }
     return data;
   }
 
   /* ========================================================================
-     AUTH  (reparat: 401 nu e eroare; redirect robust; reîncercare)
+     AUTH  (reparat: suport pentru cookie-only + Authorization header;
+             reîncercare la erori de rețea; redirect robust)
      ======================================================================== */
   async function checkAuth() {
     try {
       var data = await apiFetch(API.AUTH_CHECK);
-      if (data.authenticated && data.user && data.user.role === 'admin') {
+
+      // Suportă ambele formate de răspuns:
+      //   { authenticated: true, user: {...} }
+      //   { data: { authenticated: true, user: {...} } }
+      var payload = data;
+      if (data.data && typeof data.data.authenticated !== 'undefined') {
+        payload = data.data;
+      }
+
+      if (payload.authenticated && payload.user && payload.user.role === 'admin') {
         state.authenticated = true;
-        state.user = data.user;
+        state.user = payload.user;
         state.authRetries = 0;
+        state.redirecting = false;
+
+        // Dacă serverul returnează un accessToken în răspuns, îl stocăm
+        // pentru a-l folosi ca fallback la cererile viitoare
+        if (payload.accessToken) {
+          setAccessToken(payload.accessToken);
+        }
+
         updateUserUI();
         return true;
       }
-      if (data.authenticated && data.user && data.user.role !== 'admin') {
+
+      if (payload.authenticated && payload.user && payload.user.role !== 'admin') {
         showToast('Acces restricționat: ai nevoie de rol de administrator.', 'error', 5000);
       }
+
+      // Răspuns OK dar fără autentificare validă (ex: { authenticated: false })
+      console.warn('[admin] Auth check: utilizator neautentificat (răspuns OK, dar authenticated=false)');
     } catch (e) {
+      // 401/403 — sesiune expirată sau acces interzis (flux normal)
       if (e.status === 401 || e.status === 403) {
-        // Flux normal - sesiune expirată
+        console.warn('[admin] Auth check: ' + (e.status === 401 ? 'sesiune expirată' : 'acces interzis') + ' (HTTP ' + e.status + ')');
       } else if (e.isNetworkError && state.authRetries < 2) {
+        // Eroare de rețea — reîncearcă de până la 2 ori
         state.authRetries++;
         console.warn('[admin] Auth network error, retry ' + state.authRetries + '/2');
         await new Promise(function (r) { setTimeout(r, 1500); });
         return checkAuth();
       } else {
+        // Alte erori
         console.error('[admin] Auth check failed:', e.message);
+        if (!e.isNetworkError) {
+          showToast('Eroare la verificarea autentificării: ' + e.message, 'error', 5000);
+        }
       }
     }
+
+    // Autentificare eșuată — curăță stare și redirect
     state.authenticated = false;
     state.user = null;
+    // Curăță token-ul de acces local (dacă există)
+    setAccessToken('');
     redirectToLogin();
     return false;
   }
 
   function redirectToLogin() {
+    // Previne redirect-uri multiple
+    if (state.redirecting) {
+      // Verificăm dacă redirect-ul a fost deja inițiat
+      // (window.location.href se va declanșa o singură dată)
+    }
+    state.redirecting = true;
+
     // Curăță sessionStorage la redirecționarea către login
     try {
       sessionStorage.removeItem('csrfToken');
+      sessionStorage.removeItem('accessToken');
       sessionStorage.removeItem('user');
     } catch (e) { /* ignore */ }
     var path = window.location.pathname.toLowerCase();
@@ -471,8 +581,11 @@
     // Curăță sessionStorage la logout
     try {
       sessionStorage.removeItem('csrfToken');
+      sessionStorage.removeItem('accessToken');
       sessionStorage.removeItem('user');
     } catch (e) { /* ignore */ }
+    state.authenticated = false;
+    state.user = null;
     showToast('Te-ai deconectat cu succes.', 'info', 2000);
     setTimeout(function () { redirectToLogin(); }, 800);
   }
@@ -646,8 +759,11 @@
         }
       }
     } catch (e) {
-      console.error('[admin] Dashboard load error:', e.message);
-      showToast('Eroare la încărcarea dashboard-ului: ' + formatDetailedError(e), 'error');
+      // Dacă e 401, apiFetch deja a inițiat redirect-ul; nu mai afișăm toast
+      if (e.status !== 401 && e.status !== 403) {
+        console.error('[admin] Dashboard load error:', e.message);
+        showToast('Eroare la încărcarea dashboard-ului: ' + formatDetailedError(e), 'error');
+      }
       // Fallback: încercăm API-urile individuale
       try {
         await loadDashboardFallback();
@@ -866,8 +982,10 @@
       renderCoachesTable();
       renderPagination('coaches', state.coaches.pagination, loadCoaches);
     } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="8" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
-      showToast('Eroare la încărcarea antrenorilor: ' + formatDetailedError(e), 'error');
+      if (e.status !== 401 && e.status !== 403) {
+        tbody.innerHTML = '<tr><td colspan="8" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
+        showToast('Eroare la încărcarea antrenorilor: ' + formatDetailedError(e), 'error');
+      }
     }
   }
 
@@ -1003,7 +1121,9 @@
       closeModal('modal-coach');
       loadCoaches();
     } catch (err) {
-      showToast(formatDetailedError(err), 'error');
+      if (err.status !== 401 && err.status !== 403) {
+        showToast(formatDetailedError(err), 'error');
+      }
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -1035,8 +1155,10 @@
       renderEventsTable();
       renderPagination('events', state.events.pagination, loadEvents);
     } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="9" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
-      showToast('Eroare la încărcarea evenimentelor: ' + formatDetailedError(e), 'error');
+      if (e.status !== 401 && e.status !== 403) {
+        tbody.innerHTML = '<tr><td colspan="9" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
+        showToast('Eroare la încărcarea evenimentelor: ' + formatDetailedError(e), 'error');
+      }
     }
   }
 
@@ -1172,7 +1294,9 @@
       closeModal('modal-event');
       loadEvents();
     } catch (err) {
-      showToast(formatDetailedError(err), 'error');
+      if (err.status !== 401 && err.status !== 403) {
+        showToast(formatDetailedError(err), 'error');
+      }
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -1204,8 +1328,10 @@
       renderProductsTable();
       renderPagination('products', state.products.pagination, loadProducts);
     } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="9" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
-      showToast('Eroare la încărcarea produselor: ' + formatDetailedError(e), 'error');
+      if (e.status !== 401 && e.status !== 403) {
+        tbody.innerHTML = '<tr><td colspan="9" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
+        showToast('Eroare la încărcarea produselor: ' + formatDetailedError(e), 'error');
+      }
     }
   }
 
@@ -1341,7 +1467,9 @@
       closeModal('modal-product');
       loadProducts();
     } catch (err) {
-      showToast(formatDetailedError(err), 'error');
+      if (err.status !== 401 && err.status !== 403) {
+        showToast(formatDetailedError(err), 'error');
+      }
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -1373,8 +1501,10 @@
       renderPlansTable();
       renderPagination('plans', state.plans.pagination, loadPlans);
     } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="8" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
-      showToast('Eroare la încărcarea abonamentelor: ' + formatDetailedError(e), 'error');
+      if (e.status !== 401 && e.status !== 403) {
+        tbody.innerHTML = '<tr><td colspan="8" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
+        showToast('Eroare la încărcarea abonamentelor: ' + formatDetailedError(e), 'error');
+      }
     }
   }
 
@@ -1506,7 +1636,9 @@
       closeModal('modal-plan');
       loadPlans();
     } catch (err) {
-      showToast(formatDetailedError(err), 'error');
+      if (err.status !== 401 && err.status !== 403) {
+        showToast(formatDetailedError(err), 'error');
+      }
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -1526,8 +1658,10 @@
       state.schedule.grouped = data.grouped || {};
       renderScheduleView();
     } catch (e) {
-      container.innerHTML = '<div class="empty-state"><div class="empty-state__icon"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="empty-state__title">Eroare la încărcare</div></div>';
-      showToast('Eroare la încărcarea programului: ' + formatDetailedError(e), 'error');
+      if (e.status !== 401 && e.status !== 403) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state__icon"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="empty-state__title">Eroare la încărcare</div></div>';
+        showToast('Eroare la încărcarea programului: ' + formatDetailedError(e), 'error');
+      }
     }
   }
 
@@ -1666,7 +1800,9 @@
       closeModal('modal-schedule');
       loadSchedule();
     } catch (err) {
-      showToast(formatDetailedError(err), 'error');
+      if (err.status !== 401 && err.status !== 403) {
+        showToast(formatDetailedError(err), 'error');
+      }
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -1690,8 +1826,10 @@
       renderOrdersTable();
       renderPagination('orders', state.orders.pagination, loadOrders);
     } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="8" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
-      showToast('Eroare la încărcarea comenzilor: ' + formatDetailedError(e), 'error');
+      if (e.status !== 401 && e.status !== 403) {
+        tbody.innerHTML = '<tr><td colspan="8" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
+        showToast('Eroare la încărcarea comenzilor: ' + formatDetailedError(e), 'error');
+      }
     }
   }
 
@@ -1809,7 +1947,9 @@
       closeModal('modal-order');
       loadOrders();
     } catch (err) {
-      showToast(formatDetailedError(err), 'error');
+      if (err.status !== 401 && err.status !== 403) {
+        showToast(formatDetailedError(err), 'error');
+      }
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -1833,8 +1973,10 @@
       renderContactTable();
       renderPagination('contact', state.contact.pagination, loadContact);
     } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="7" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
-      showToast('Eroare la încărcarea mesajelor: ' + formatDetailedError(e), 'error');
+      if (e.status !== 401 && e.status !== 403) {
+        tbody.innerHTML = '<tr><td colspan="7" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
+        showToast('Eroare la încărcarea mesajelor: ' + formatDetailedError(e), 'error');
+      }
     }
   }
 
@@ -1931,7 +2073,9 @@
       if (!silent) { showToast('Mesaj marcat ca citit.', 'success'); }
       loadContact();
     } catch (err) {
-      if (!silent) showToast(formatDetailedError(err), 'error');
+      if (err.status !== 401 && err.status !== 403 && !silent) {
+        showToast(formatDetailedError(err), 'error');
+      }
     }
   }
 
@@ -1952,8 +2096,10 @@
       renderPromotionsTable();
       renderPagination('promotions', state.promotions.pagination, loadPromotions);
     } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="10" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
-      showToast('Eroare la încărcarea promoțiilor: ' + formatDetailedError(e), 'error');
+      if (e.status !== 401 && e.status !== 403) {
+        tbody.innerHTML = '<tr><td colspan="10" class="table__empty"><i class="fa-solid fa-triangle-exclamation"></i>Eroare la încărcare.</td></tr>';
+        showToast('Eroare la încărcarea promoțiilor: ' + formatDetailedError(e), 'error');
+      }
     }
   }
 
@@ -2086,7 +2232,9 @@
       closeModal('modal-promotion');
       loadPromotions();
     } catch (err) {
-      showToast(formatDetailedError(err), 'error');
+      if (err.status !== 401 && err.status !== 403) {
+        showToast(formatDetailedError(err), 'error');
+      }
     } finally {
       state.saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -2105,8 +2253,10 @@
       state.settings = data || {};
       renderSettingsForm();
     } catch (e) {
-      container.innerHTML = '<div class="empty-state"><div class="empty-state__icon"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="empty-state__title">Eroare la încărcare</div></div>';
-      showToast('Eroare la încărcarea setărilor: ' + formatDetailedError(e), 'error');
+      if (e.status !== 401 && e.status !== 403) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state__icon"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="empty-state__title">Eroare la încărcare</div></div>';
+        showToast('Eroare la încărcarea setărilor: ' + formatDetailedError(e), 'error');
+      }
     }
   }
 
@@ -2174,7 +2324,9 @@
       await apiFetch(API.SETTINGS, { method: 'PUT', body: body });
       showToast('Setări salvate cu succes!', 'success');
     } catch (err) {
-      showToast(formatDetailedError(err), 'error');
+      if (err.status !== 401 && err.status !== 403) {
+        showToast(formatDetailedError(err), 'error');
+      }
     } finally {
       state.saving = false;
       if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origText; }
@@ -2223,7 +2375,9 @@
       showToast(label + ' cu succes!', 'success');
       if (reloadFn) reloadFn();
     } catch (err) {
-      showToast(formatDetailedError(err), 'error');
+      if (err.status !== 401 && err.status !== 403) {
+        showToast(formatDetailedError(err), 'error');
+      }
       if (btn) { btn.disabled = false; btn.textContent = 'Șterge'; }
     }
   }

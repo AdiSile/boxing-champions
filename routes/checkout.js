@@ -25,9 +25,13 @@ const {
 const {
   validate,
   promoValidateSchema,
+  requireJsonContentType,
 } = require('../middleware/validate');
 
 const router = express.Router();
+
+// Verificare strictă Content-Type pentru rutele care așteaptă JSON
+router.use(requireJsonContentType({ strict: true }));
 
 // ---------------------------------------------------------------------------
 // Constante

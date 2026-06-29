@@ -13,7 +13,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const { getDb } = require('../config/db');
-const { loginSchema, userCreateSchema, validate } = require('../middleware/validate');
+const { loginSchema, userCreateSchema, validate, requireJsonContentType } = require('../middleware/validate');
 const { authRateLimiter } = require('../middleware/security');
 const {
   authenticate,
@@ -26,6 +26,9 @@ const {
 } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Verificare strictă Content-Type pentru rutele care așteaptă JSON
+router.use(requireJsonContentType({ strict: true }));
 
 // ---------------------------------------------------------------------------
 // Constante
@@ -291,8 +294,6 @@ function ensureAdminOnStartup() {
   }
 }
 
-ensureAdminOnStartup();
-
 // ---------------------------------------------------------------------------
 // POST /api/auth/register
 // ---------------------------------------------------------------------------
@@ -324,11 +325,12 @@ router.post(
       }
 
       // Autentificare automată după înregistrare: setează cookie-urile
-      const { csrfToken } = setAuthCookies(res, result.user);
+      const { accessToken, csrfToken } = setAuthCookies(res, result.user);
 
       return res.status(201).json({
         message: 'Cont creat cu succes.',
         user: result.user,
+        accessToken,
         csrfToken,
       });
     } catch (err) {
@@ -452,12 +454,13 @@ router.post(
       }
 
       // 4. Setează cookie-urile de autentificare (access + refresh + CSRF)
-      const { csrfToken } = setAuthCookies(res, result.user);
+      const { accessToken, csrfToken } = setAuthCookies(res, result.user);
 
-      // 5. Răspuns – include CSRF token în body pentru client
+      // 5. Răspuns – include JWT access token + CSRF token în body
       return res.json({
         message: 'Login successful.',
         user: result.user,
+        accessToken,
         csrfToken,
       });
     } catch (err) {
@@ -545,3 +548,4 @@ router.post('/api/auth/logout', authenticate, csrfProtection, (req, res) => {
 router.post('/api/auth/refresh', refreshTokenHandler);
 
 module.exports = router;
+module.exports.ensureAdminOnStartup = ensureAdminOnStartup;

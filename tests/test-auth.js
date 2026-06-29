@@ -2,7 +2,7 @@
 // tests/test-auth.js — Teste pentru autentificare
 // ---------------------------------------------------------------------------
 
-module.exports = async function ({ describe, it, done, request, assert, assertStatus, assertOk, BASE_URL }) {
+module.exports = async function ({ describe, it, done, request, assert, assertEqual, assertStatus, assertOk, assertCreated, BASE_URL }) {
   describe('Autentificare');
 
   const ctx = { cookies: null };
@@ -58,6 +58,32 @@ module.exports = async function ({ describe, it, done, request, assert, assertSt
     assertOk(res);
     assert(typeof res.body.csrfToken === 'string', 'Trebuie să returneze csrfToken');
     assert(res.body.csrfToken.length > 0, 'csrfToken nu trebuie să fie gol');
+  });
+
+  await it('POST /api/auth/login — returnează accessToken în body și cookie', async () => {
+    const res = await request('POST', '/api/auth/login', {
+      body: { email: 'admin@boxingchampions.ro', password: 'boxing2026' },
+    });
+    assertOk(res);
+    // accessToken în body
+    assert(typeof res.body.accessToken === 'string', 'Trebuie să returneze accessToken în body');
+    assert(res.body.accessToken.length > 0, 'accessToken nu trebuie să fie gol');
+    // Verifică structura JWT (3 părți separate de punct)
+    const parts = res.body.accessToken.split('.');
+    assert(parts.length === 3, 'accessToken trebuie să fie un JWT valid (header.payload.signature)');
+    // Cookie-ul access_token trebuie setat
+    assert(res.setCookie && res.setCookie.includes('access_token'), 'Cookie-ul access_token trebuie setat');
+  });
+
+  await it('POST /api/auth/register — returnează accessToken în body', async () => {
+    const uniqueEmail = `test_${Date.now()}@example.com`;
+    const res = await request('POST', '/api/auth/register', {
+      body: { name: 'Test User', email: uniqueEmail, password: 'TestPass123!' },
+    });
+    assertCreated(res);
+    assert(typeof res.body.accessToken === 'string', 'Register trebuie să returneze accessToken în body');
+    assert(res.body.accessToken.length > 0, 'accessToken nu trebuie să fie gol');
+    assert(res.setCookie && res.setCookie.includes('access_token'), 'Cookie-ul access_token trebuie setat la register');
   });
 
   await it('POST /api/auth/logout — delogare', async () => {

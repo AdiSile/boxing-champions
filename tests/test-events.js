@@ -2,7 +2,7 @@
 // tests/test-events.js — Teste CRUD pentru evenimente
 // ---------------------------------------------------------------------------
 
-module.exports = async function ({ describe, it, done, request, assert, assertStatus, assertOk, assertCreated }) {
+module.exports = async function ({ describe, it, done, request, assert, assertEqual, assertStatus, assertOk, assertCreated }) {
   describe('CRUD Evenimente');
 
   let adminCookies = null;

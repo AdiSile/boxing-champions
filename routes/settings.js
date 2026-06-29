@@ -18,8 +18,12 @@ const {
   authorize,
   csrfProtection,
 } = require('../middleware/auth');
+const { requireJsonContentType } = require('../middleware/validate');
 
 const router = express.Router();
+
+// Verificare strictă Content-Type pentru rutele care așteaptă JSON
+router.use(requireJsonContentType({ strict: true }));
 
 // ---------------------------------------------------------------------------
 // GET /api/settings
@@ -28,7 +32,7 @@ const router = express.Router();
 
 router.get('/api/settings', (req, res) => {
   try {
-    const settings = settingsModel.getSettings();
+    const settings = settingsModel.getSettings() || {};
     return res.json(settings);
   } catch (err) {
     console.error('[settings] GET error:', err.message);

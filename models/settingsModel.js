@@ -37,6 +37,14 @@ const DEFAULT_SETTINGS = Object.freeze([
   { key: 'smtp_user', value: '', description: 'SMTP username' },
   { key: 'smtp_pass', value: '', description: 'SMTP password' },
   { key: 'maintenance_mode', value: '0', description: 'Site under maintenance' },
+  { key: 'social_facebook', value: 'https://facebook.com/boxingchampions', description: 'Facebook page URL' },
+  { key: 'social_instagram', value: 'https://instagram.com/boxingchampions', description: 'Instagram profile URL' },
+  { key: 'social_youtube', value: 'https://youtube.com/@boxingchampions', description: 'YouTube channel URL' },
+  { key: 'social_tiktok', value: '', description: 'TikTok profile URL' },
+  { key: 'social_twitter', value: '', description: 'Twitter/X profile URL' },
+  { key: 'contact_phone', value: '+40 722 123 456', description: 'Contact phone number' },
+  { key: 'contact_address', value: 'Str. Sportului nr. 10, București, Sector 1', description: 'Physical address' },
+  { key: 'contact_email', value: 'contact@boxingchampions.ro', description: 'Public contact email' },
 ]);
 
 // ---------------------------------------------------------------------------

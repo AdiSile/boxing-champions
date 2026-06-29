@@ -19,6 +19,7 @@ const {
   paginationSchema,
   paramsIdSchema,
   combineSchemas,
+  requireJsonContentType,
 } = require('../middleware/validate');
 const {
   authenticate,
@@ -27,6 +28,9 @@ const {
 } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Verificare strictă Content-Type pentru rutele care așteaptă JSON
+router.use(requireJsonContentType({ strict: true }));
 
 const ALLOWED_SORT_FIELDS = ['id', 'name', 'email', 'subject', 'is_read', 'created_at', 'replied_at'];
 const SEARCH_FIELDS = ['name', 'email', 'subject', 'message'];

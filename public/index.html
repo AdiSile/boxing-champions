@@ -185,13 +185,12 @@
       <p class="section__subtitle text-center">Echipa Noastră</p>
       <h2 class="section__title section__title--center reveal" id="coaches-title">Antrenori de Elită</h2>
 
-      <div class="coaches__grid reveal-stagger" id="coaches-grid">
-        <!-- Skeleton loading -->
-        <div class="coach-card glass glass--card" aria-hidden="true">
-          <div class="coach-card__img"><img src="/images/coach-placeholder.jpg" alt="" loading="lazy"></div>
-          <h3 class="coach-card__name">Se încarcă...</h3>
-          <p class="coach-card__role">Antrenor</p>
-        </div>
+      <div class="coaches__grid reveal-stagger" id="coaches-grid" aria-busy="true" aria-label="Se încarcă antrenorii">
+        <!-- 4 skeleton cards -->
+        <div class="skeleton-card" aria-hidden="true"><div class="skeleton skeleton--circle"></div><div class="skeleton skeleton--title"></div><div class="skeleton skeleton--text skeleton--text-short"></div></div>
+        <div class="skeleton-card" aria-hidden="true"><div class="skeleton skeleton--circle"></div><div class="skeleton skeleton--title"></div><div class="skeleton skeleton--text skeleton--text-short"></div></div>
+        <div class="skeleton-card" aria-hidden="true"><div class="skeleton skeleton--circle"></div><div class="skeleton skeleton--title"></div><div class="skeleton skeleton--text skeleton--text-short"></div></div>
+        <div class="skeleton-card" aria-hidden="true"><div class="skeleton skeleton--circle"></div><div class="skeleton skeleton--title"></div><div class="skeleton skeleton--text skeleton--text-short"></div></div>
       </div>
     </div>
   </section>
@@ -204,13 +203,11 @@
       <p class="section__subtitle text-center">Competiții &amp; Gala</p>
       <h2 class="section__title section__title--center reveal" id="events-title">Evenimente</h2>
 
-      <div class="events__grid reveal-stagger" id="events-grid">
-        <!-- Skeleton loading -->
-        <div class="event-card glass glass--card" aria-hidden="true">
-          <div class="event-card__date">--</div>
-          <div class="event-card__month">Se încarcă...</div>
-          <h3 class="event-card__title">Evenimente în curând</h3>
-        </div>
+      <div class="events__grid reveal-stagger" id="events-grid" aria-busy="true" aria-label="Se încarcă evenimentele">
+        <!-- 3 skeleton cards -->
+        <div class="skeleton-card" aria-hidden="true"><div class="skeleton skeleton--text-short" style="height:2rem;width:3rem;margin-bottom:0.4rem;"></div><div class="skeleton skeleton--text" style="width:30%;margin-bottom:0.8rem;"></div><div class="skeleton skeleton--title"></div><div class="skeleton skeleton--text" style="width:50%;"></div></div>
+        <div class="skeleton-card" aria-hidden="true"><div class="skeleton skeleton--text-short" style="height:2rem;width:3rem;margin-bottom:0.4rem;"></div><div class="skeleton skeleton--text" style="width:30%;margin-bottom:0.8rem;"></div><div class="skeleton skeleton--title"></div><div class="skeleton skeleton--text" style="width:50%;"></div></div>
+        <div class="skeleton-card" aria-hidden="true"><div class="skeleton skeleton--text-short" style="height:2rem;width:3rem;margin-bottom:0.4rem;"></div><div class="skeleton skeleton--text" style="width:30%;margin-bottom:0.8rem;"></div><div class="skeleton skeleton--title"></div><div class="skeleton skeleton--text" style="width:50%;"></div></div>
       </div>
 
       <div class="text-center" style="margin-top:2rem;">
@@ -239,10 +236,8 @@
               <th scope="col">Categorie</th>
             </tr>
           </thead>
-          <tbody id="schedule-tbody">
-            <tr>
-              <td colspan="6" style="text-align:center;padding:2rem;">Se încarcă programul...</td>
-            </tr>
+          <tbody id="schedule-tbody" aria-busy="true">
+            <tr class="skeleton-row" aria-hidden="true"><td colspan="6"><div class="skeleton skeleton--text skeleton--text-long"></div><div class="skeleton skeleton--text skeleton--text-long" style="margin-top:0.5rem;"></div><div class="skeleton skeleton--text skeleton--text-long" style="margin-top:0.5rem;"></div><div class="skeleton skeleton--text skeleton--text-long" style="margin-top:0.5rem;"></div><div class="skeleton skeleton--text skeleton--text-long" style="margin-top:0.5rem;"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -259,13 +254,12 @@
       <p class="section__subtitle text-center">Prețuri</p>
       <h2 class="section__title section__title--center reveal" id="pricing-title">Abonamente</h2>
 
-      <div class="pricing__grid reveal-stagger" id="plans-grid">
-        <!-- Skeleton loading -->
-        <div class="plan-card glass glass--card" aria-hidden="true">
-          <h3 class="plan-card__name">Se încarcă...</h3>
-          <div class="plan-card__price"><span class="currency">RON</span>--</div>
-          <div class="plan-card__period">/lună</div>
-        </div>
+      <div class="pricing__grid reveal-stagger" id="plans-grid" aria-busy="true" aria-label="Se încarcă abonamentele">
+        <!-- 4 skeleton cards -->
+        <div class="skeleton-card" aria-hidden="true"><div class="skeleton skeleton--title" style="width:40%;margin:0 auto 1rem;"></div><div class="skeleton skeleton--text-short" style="height:2.6rem;width:6rem;margin:0 auto 0.8rem;"></div><div class="skeleton skeleton--text" style="width:35%;margin:0 auto 1.2rem;"></div><div class="skeleton skeleton--text" style="width:100%;margin-bottom:0.35rem;"></div><div class="skeleton skeleton--text" style="width:90%;margin-bottom:0.35rem;"></div><div class="skeleton skeleton--text" style="width:75%;margin-bottom:0.35rem;"></div></div>
+        <div class="skeleton-card" aria-hidden="true"><div class="skeleton skeleton--title" style="width:40%;margin:0 auto 1rem;"></div><div class="skeleton skeleton--text-short" style="height:2.6rem;width:6rem;margin:0 auto 0.8rem;"></div><div class="skeleton skeleton--text" style="width:35%;margin:0 auto 1.2rem;"></div><div class="skeleton skeleton--text" style="width:100%;margin-bottom:0.35rem;"></div><div class="skeleton skeleton--text" style="width:90%;margin-bottom:0.35rem;"></div><div class="skeleton skeleton--text" style="width:75%;margin-bottom:0.35rem;"></div></div>
+        <div class="skeleton-card" aria-hidden="true"><div class="skeleton skeleton--title" style="width:40%;margin:0 auto 1rem;"></div><div class="skeleton skeleton--text-short" style="height:2.6rem;width:6rem;margin:0 auto 0.8rem;"></div><div class="skeleton skeleton--text" style="width:35%;margin:0 auto 1.2rem;"></div><div class="skeleton skeleton--text" style="width:100%;margin-bottom:0.35rem;"></div><div class="skeleton skeleton--text" style="width:90%;margin-bottom:0.35rem;"></div><div class="skeleton skeleton--text" style="width:75%;margin-bottom:0.35rem;"></div></div>
+        <div class="skeleton-card" aria-hidden="true"><div class="skeleton skeleton--title" style="width:40%;margin:0 auto 1rem;"></div><div class="skeleton skeleton--text-short" style="height:2.6rem;width:6rem;margin:0 auto 0.8rem;"></div><div class="skeleton skeleton--text" style="width:35%;margin:0 auto 1.2rem;"></div><div class="skeleton skeleton--text" style="width:100%;margin-bottom:0.35rem;"></div><div class="skeleton skeleton--text" style="width:90%;margin-bottom:0.35rem;"></div><div class="skeleton skeleton--text" style="width:75%;margin-bottom:0.35rem;"></div></div>
       </div>
     </div>
   </section>
@@ -458,7 +452,10 @@
     }
 
     /**
-     * apiGet  —  fetchJSON cu credentials + cache-busting, apoi extrage `.data`
+     * apiGet  —  fetchJSON cu credentials + cache-busting, extrage `.data` din `{ data: [...] }`
+     *
+     * Gestionează atât răspunsuri de forma `{ data: [...] }` cât și array-uri directe.
+     * Returnează întotdeauna un array (gol dacă datele lipsesc).
      */
     async function apiGet(url) {
       var sep = url.indexOf('?') === -1 ? '?' : '&';
@@ -466,7 +463,25 @@
         credentials: 'same-origin',
         cache: 'no-cache'
       });
-      return response && response.data ? response.data : [];
+
+      // Formatul așteptat: { data: [...] }
+      if (response && Array.isArray(response.data)) {
+        return response.data;
+      }
+
+      // Fallback: răspunsul însuși este un array
+      if (Array.isArray(response)) {
+        return response;
+      }
+
+      // Fallback: câmpuri alternative (items, results, records)
+      if (response && Array.isArray(response.items)) return response.items;
+      if (response && Array.isArray(response.results)) return response.results;
+      if (response && Array.isArray(response.records)) return response.records;
+
+      // Orice altceva — returnează array gol
+      console.warn('[apiGet] Unexpected response format, returning empty array:', response);
+      return [];
     }
 
     /**
@@ -480,6 +495,72 @@
         cache: 'no-cache',
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    /* ==================================================================
+       UTILS
+       ================================================================== */
+    function escapeHTML(str) {
+      if (!str) return '';
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+
+    function truncateText(text, maxLen) {
+      if (!text) return '';
+      return text.length > maxLen ? text.slice(0, maxLen).trim() + '...' : text;
+    }
+
+    /**
+     * Render-ează un fallback de eroare cu buton de reîncercare.
+     *
+     * @param {HTMLElement} container - elementul grid/tbody
+     * @param {string}      message   - mesajul de afișat
+     * @param {Function}    retryFn   - funcția de re-apelat la click pe "Reîncearcă"
+     * @param {boolean}     isTable   - true dacă e rând de tabel (tbody), false pentru grid
+     */
+    function renderErrorState(container, message, retryFn, isTable) {
+      container.removeAttribute('aria-busy');
+      container.setAttribute('aria-live', 'polite');
+
+      if (isTable) {
+        container.innerHTML =
+          '<tr>' +
+            '<td colspan="6">' +
+              '<div class="api-error">' +
+                '<div class="api-error__icon">⚠️</div>' +
+                '<p class="api-error__message">' + escapeHTML(message) + '</p>' +
+                '<button class="btn--retry" type="button">🔄 Reîncearcă</button>' +
+              '</div>' +
+            '</td>' +
+          '</tr>';
+      } else {
+        container.innerHTML =
+          '<div class="api-error">' +
+            '<div class="api-error__icon">⚠️</div>' +
+            '<p class="api-error__message">' + escapeHTML(message) + '</p>' +
+            '<button class="btn--retry" type="button">🔄 Reîncearcă</button>' +
+          '</div>';
+      }
+
+      var retryBtn = container.querySelector('.btn--retry');
+      if (retryBtn && typeof retryFn === 'function') {
+        retryBtn.addEventListener('click', function () {
+          retryFn();
+        });
+      }
+    }
+
+    /**
+     * Marchează sfârșitul încărcării cu succes — reîmprospătează observer-ele de scroll.
+     */
+    function markLoaded(container) {
+      container.removeAttribute('aria-busy');
+      if (typeof refreshScrollReveal === 'function') {
+        // Mic delay pentru a lăsa browser-ul să picteze noile elemente
+        setTimeout(refreshScrollReveal, 60);
+      }
     }
 
     /* ==================================================================
@@ -566,32 +647,43 @@
       var grid = document.getElementById('coaches-grid');
       if (!grid) return;
 
+      // Skeleton-ul este deja în HTML; nu facem nimic până nu primim date
+      grid.setAttribute('aria-busy', 'true');
+
       try {
         var coaches = await apiGet('/api/coaches?limit=8&sort=sort_order');
 
         if (!coaches || coaches.length === 0) {
-          grid.innerHTML = '<div class="text-center" style="grid-column:1/-1;padding:2rem;color:var(--gray-smoke);"><p>Informațiile despre antrenori vor fi disponibile în curând.</p></div>';
+          grid.innerHTML =
+            '<div class="text-center" style="grid-column:1/-1;padding:2rem;color:var(--gray-smoke);">' +
+              '<p>🥊 Informațiile despre antrenori vor fi disponibile în curând.</p>' +
+            '</div>';
+          grid.removeAttribute('aria-busy');
           return;
         }
 
         grid.innerHTML = coaches.map(function (coach) {
-          var photo = coach.photo || '/images/coach-placeholder.jpg';
-          var name = escapeHTML(coach.name);
+          var photo = (coach.photo || '/images/coach-placeholder.jpg');
+          var name = escapeHTML(coach.name || 'Antrenor');
           var title = escapeHTML(coach.title || 'Antrenor');
-          var bio = escapeHTML(truncateText(coach.bio || '', 120));
+          var bioHtml = coach.bio
+            ? '<p class="coach-card__bio">' + escapeHTML(truncateText(coach.bio, 120)) + '</p>'
+            : '';
 
           return '<div class="coach-card glass glass--card">' +
-            '<div class="coach-card__img"><img src="' + photo + '" alt="' + name + '" loading="lazy" width="200" height="200" onerror="this.src=\'/images/coach-placeholder.jpg\'"></div>' +
+            '<div class="coach-card__img">' +
+              '<img src="' + photo + '" alt="' + name + '" loading="lazy" width="200" height="200" onerror="this.src=\'/images/coach-placeholder.jpg\'">' +
+            '</div>' +
             '<h3 class="coach-card__name">' + name + '</h3>' +
             '<p class="coach-card__role">' + title + '</p>' +
-            (bio ? '<p class="coach-card__bio">' + bio + '</p>' : '') +
+            bioHtml +
           '</div>';
         }).join('');
 
-        if (typeof refreshScrollReveal === 'function') refreshScrollReveal();
+        markLoaded(grid);
       } catch (err) {
         console.error('[home] coaches error:', err);
-        grid.innerHTML = '<div class="text-center" style="grid-column:1/-1;padding:2rem;color:var(--gray-smoke);"><p>Nu am putut încărca antrenorii momentan. Încearcă din nou.</p></div>';
+        renderErrorState(grid, 'Nu am putut încărca antrenorii momentan. Verifică conexiunea și încearcă din nou.', loadCoaches, false);
       }
     }
 
@@ -602,22 +694,31 @@
       var grid = document.getElementById('events-grid');
       if (!grid) return;
 
+      grid.setAttribute('aria-busy', 'true');
+
       try {
         var events = await apiGet('/api/events?limit=3&sort=start_date&upcoming=true');
 
         if (!events || events.length === 0) {
-          grid.innerHTML = '<div class="text-center" style="grid-column:1/-1;padding:2rem;color:var(--gray-smoke);"><p>Niciun eveniment programat momentan. Revino curând!</p></div>';
+          grid.innerHTML =
+            '<div class="text-center" style="grid-column:1/-1;padding:2rem;color:var(--gray-smoke);">' +
+              '<p>📅 Niciun eveniment programat momentan. Revino curând!</p>' +
+            '</div>';
+          grid.removeAttribute('aria-busy');
           return;
         }
 
+        var monthNames = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Noi', 'Dec'];
+
         grid.innerHTML = events.map(function (ev) {
-          var date = new Date(ev.start_date);
+          var date = ev.start_date ? new Date(ev.start_date) : new Date();
           var day = String(date.getDate()).padStart(2, '0');
-          var monthNames = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Noi', 'Dec'];
-          var month = monthNames[date.getMonth()];
-          var title = escapeHTML(ev.title);
+          var month = monthNames[date.getMonth()] || '—';
+          var title = escapeHTML(ev.title || 'Eveniment');
           var location = escapeHTML(ev.location || 'Locație TBA');
-          var desc = escapeHTML(truncateText(ev.description || '', 140));
+          var descHtml = ev.description
+            ? '<p class="event-card__desc">' + escapeHTML(truncateText(ev.description, 140)) + '</p>'
+            : '';
           var type = escapeHTML(ev.type || 'general');
 
           return '<div class="event-card glass glass--card">' +
@@ -625,14 +726,14 @@
             '<div class="event-card__month">' + month + ' · ' + type + '</div>' +
             '<h3 class="event-card__title">' + title + '</h3>' +
             '<p class="event-card__location">📍 ' + location + '</p>' +
-            (desc ? '<p class="event-card__desc">' + desc + '</p>' : '') +
+            descHtml +
           '</div>';
         }).join('');
 
-        if (typeof refreshScrollReveal === 'function') refreshScrollReveal();
+        markLoaded(grid);
       } catch (err) {
         console.error('[home] events error:', err);
-        grid.innerHTML = '<div class="text-center" style="grid-column:1/-1;padding:2rem;color:var(--gray-smoke);"><p>Evenimentele nu sunt disponibile momentan.</p></div>';
+        renderErrorState(grid, 'Evenimentele nu sunt disponibile momentan. Încearcă din nou.', loadEvents, false);
       }
     }
 
@@ -644,41 +745,59 @@
       var legend = document.getElementById('schedule-legend');
       if (!tbody) return;
 
+      tbody.setAttribute('aria-busy', 'true');
+
       try {
         var schedule = await apiGet('/api/schedule?sort=day_of_week');
 
         if (!schedule || schedule.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray-smoke);">Programul va fi anunțat în curând.</td></tr>';
+          tbody.innerHTML =
+            '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray-smoke);">' +
+              '🕐 Programul va fi anunțat în curând.' +
+            '</td></tr>';
+          tbody.removeAttribute('aria-busy');
+          if (legend) legend.innerHTML = '';
           return;
         }
 
         var dayNames = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
         var categories = [];
 
+        /**
+         * Determină categoria pe baza titlului antrenamentului.
+         * @param {string} title
+         * @returns {{ cls: string, label: string }}
+         */
+        function getCategory(title) {
+          var t = (title || '').toLowerCase();
+
+          if (t.indexOf('copii') !== -1 || t.indexOf('kids') !== -1 || t.indexOf('junior') !== -1) {
+            return { cls: 'schedule__cat--kids', label: 'Copii' };
+          }
+          if (t.indexOf('pro') !== -1 || t.indexOf('profesional') !== -1 || t.indexOf('competiție') !== -1) {
+            return { cls: 'schedule__cat--pro', label: 'Pro' };
+          }
+          if (t.indexOf('avansat') !== -1 || t.indexOf('elite') !== -1) {
+            return { cls: 'schedule__cat--advanced', label: 'Avansați' };
+          }
+          if (t.indexOf('fitness') !== -1 || t.indexOf('cardio') !== -1 || t.indexOf('condiție') !== -1) {
+            return { cls: 'schedule__cat--fitness', label: 'Fitness' };
+          }
+          return { cls: 'schedule__cat--beginner', label: 'Începători' };
+        }
+
         tbody.innerHTML = schedule.map(function (entry) {
           var dayName = dayNames[entry.day_of_week] || '—';
-          var title = escapeHTML(entry.title);
+          var title = escapeHTML(entry.title || 'Antrenament');
           var start = entry.start_time || '—';
           var end = entry.end_time || '—';
           var coach = escapeHTML(entry.coach_name || 'TBA');
           var location = escapeHTML(entry.location || 'Sala Principală');
 
-          var catClass = 'schedule__cat--beginner';
-          var catLabel = 'Începători';
-          var t = title.toLowerCase();
+          var cat = getCategory(title);
 
-          if (t.indexOf('avansat') !== -1 || t.indexOf('pro') !== -1 || t.indexOf('elite') !== -1) {
-            catClass = 'schedule__cat--advanced'; catLabel = 'Avansați';
-          } else if (t.indexOf('copii') !== -1 || t.indexOf('kids') !== -1 || t.indexOf('junior') !== -1) {
-            catClass = 'schedule__cat--kids'; catLabel = 'Copii';
-          } else if (t.indexOf('fitness') !== -1 || t.indexOf('cardio') !== -1 || t.indexOf('condiție') !== -1) {
-            catClass = 'schedule__cat--fitness'; catLabel = 'Fitness';
-          } else if (t.indexOf('pro') !== -1 || t.indexOf('profesional') !== -1 || t.indexOf('competiție') !== -1) {
-            catClass = 'schedule__cat--pro'; catLabel = 'Pro';
-          }
-
-          if (!categories.some(function(c) { return c.cls === catClass; })) {
-            categories.push({ cls: catClass, label: catLabel });
+          if (!categories.some(function (c) { return c.cls === cat.cls; })) {
+            categories.push(cat);
           }
 
           return '<tr>' +
@@ -687,20 +806,25 @@
             '<td>' + start + ' – ' + end + '</td>' +
             '<td>' + coach + '</td>' +
             '<td>' + location + '</td>' +
-            '<td><span class="schedule__cat ' + catClass + '">' + catLabel + '</span></td>' +
+            '<td><span class="schedule__cat ' + cat.cls + '">' + cat.label + '</span></td>' +
           '</tr>';
         }).join('');
 
         if (legend) {
-          legend.innerHTML = categories.map(function (c) {
-            return '<div class="schedule__legend-item"><span class="schedule__cat ' + c.cls + '" style="font-size:0.65rem;padding:0.2em 0.7em;">' + c.label + '</span></div>';
-          }).join('');
+          legend.innerHTML = categories.length > 0
+            ? categories.map(function (c) {
+                return '<div class="schedule__legend-item">' +
+                  '<span class="schedule__cat ' + c.cls + '" style="font-size:0.65rem;padding:0.2em 0.7em;">' + c.label + '</span>' +
+                '</div>';
+              }).join('')
+            : '';
         }
 
-        if (typeof refreshScrollReveal === 'function') refreshScrollReveal();
+        tbody.removeAttribute('aria-busy');
+        if (typeof refreshScrollReveal === 'function') setTimeout(refreshScrollReveal, 60);
       } catch (err) {
         console.error('[home] schedule error:', err);
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray-smoke);">Programul nu este disponibil momentan.</td></tr>';
+        renderErrorState(tbody, 'Programul nu este disponibil momentan. Încearcă din nou.', loadSchedule, true);
       }
     }
 
@@ -711,22 +835,32 @@
       var grid = document.getElementById('plans-grid');
       if (!grid) return;
 
+      grid.setAttribute('aria-busy', 'true');
+
       try {
         var plans = await apiGet('/api/plans?sort=sort_order');
 
         if (!plans || plans.length === 0) {
-          grid.innerHTML = '<div class="text-center" style="grid-column:1/-1;padding:2rem;color:var(--gray-smoke);"><p>Abonamentele vor fi disponibile în curând.</p></div>';
+          grid.innerHTML =
+            '<div class="text-center" style="grid-column:1/-1;padding:2rem;color:var(--gray-smoke);">' +
+              '<p>💳 Abonamentele vor fi disponibile în curând.</p>' +
+            '</div>';
+          grid.removeAttribute('aria-busy');
           return;
         }
 
         grid.innerHTML = plans.map(function (plan) {
-          var name = escapeHTML(plan.name);
-          var price = Number(plan.price).toFixed(0);
+          var name = escapeHTML(plan.name || 'Abonament');
+          var price = plan.price != null ? Number(plan.price).toFixed(0) : '—';
           var features = Array.isArray(plan.features) ? plan.features : [];
-          var isPopular = plan.is_popular;
+          var isPopular = !!(plan.is_popular);
           var popularBadge = isPopular ? '<div class="plan-card__badge">Popular 🔥</div>' : '';
           var featuresHTML = features.length > 0
-            ? '<ul class="plan-card__features">' + features.map(function(f) { return '<li>✅ ' + escapeHTML(f) + '</li>'; }).join('') + '</ul>'
+            ? '<ul class="plan-card__features">' +
+                features.map(function (f) {
+                  return '<li>✅ ' + escapeHTML(String(f)) + '</li>';
+                }).join('') +
+              '</ul>'
             : '';
 
           return '<div class="plan-card glass glass--card' + (isPopular ? ' plan-card--popular' : '') + '">' +
@@ -739,10 +873,10 @@
           '</div>';
         }).join('');
 
-        if (typeof refreshScrollReveal === 'function') refreshScrollReveal();
+        markLoaded(grid);
       } catch (err) {
         console.error('[home] plans error:', err);
-        grid.innerHTML = '<div class="text-center" style="grid-column:1/-1;padding:2rem;color:var(--gray-smoke);"><p>Abonamentele nu sunt disponibile momentan.</p></div>';
+        renderErrorState(grid, 'Abonamentele nu sunt disponibile momentan. Încearcă din nou.', loadPlans, false);
       }
     }
 
@@ -781,7 +915,12 @@
         feedback.innerHTML = '';
 
         try {
-          await apiPost('/api/contact', JSON.stringify({ name: name, email: email, subject: subject || 'Mesaj din site', message: message }));
+          await apiPost('/api/contact', JSON.stringify({
+            name: name,
+            email: email,
+            subject: subject || 'Mesaj din site',
+            message: message
+          }));
 
           feedback.innerHTML = '<span style="color:#4caf50;">✅ Mesajul a fost trimis cu succes! Te vom contacta în scurt timp.</span>';
           form.reset();
@@ -795,22 +934,7 @@
     }
 
     /* ==================================================================
-       8. UTILS
-       ================================================================== */
-    function escapeHTML(str) {
-      if (!str) return '';
-      var div = document.createElement('div');
-      div.appendChild(document.createTextNode(str));
-      return div.innerHTML;
-    }
-
-    function truncateText(text, maxLen) {
-      if (!text) return '';
-      return text.length > maxLen ? text.slice(0, maxLen).trim() + '...' : text;
-    }
-
-    /* ==================================================================
-       9. ACTIVE NAV LINK ON SCROLL
+       8. ACTIVE NAV LINK ON SCROLL
        ================================================================== */
     function initActiveNavOnScroll() {
       var sections = document.querySelectorAll('section[id]');
@@ -852,7 +976,7 @@
     }
 
     /* ==================================================================
-       10. SET CURRENT YEAR
+       9. SET CURRENT YEAR
        ================================================================== */
     function setCurrentYear() {
       var el = document.getElementById('current-year');

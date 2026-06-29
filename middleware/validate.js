@@ -856,7 +856,7 @@ const coachCreateSchema = {
     certifications: { type: 'json', default: '[]' },
     email: { type: 'email' },
     phone: { type: 'phone' },
-    image: { type: 'string', maxLength: 2048 },
+    photo: { type: 'string', maxLength: 2048 },
     social_links: { type: 'json', default: '{}' },
     is_active: { type: 'boolean', default: true },
     sort_order: { type: 'integer', min: 0, default: 0 },
@@ -874,7 +874,7 @@ const coachUpdateSchema = {
     certifications: { type: 'json' },
     email: { type: 'email' },
     phone: { type: 'phone' },
-    image: { type: 'string', maxLength: 2048 },
+    photo: { type: 'string', maxLength: 2048 },
     social_links: { type: 'json' },
     is_active: { type: 'boolean' },
     sort_order: { type: 'integer', min: 0 },
@@ -1230,24 +1230,43 @@ function sanitizeObjectStrings(obj) {
 // ---------------------------------------------------------------------------
 
 /**
- * Middleware care impune Content-Type-ul cererilor cu corp (POST, PUT, PATCH).
- * Acceptă opțional o listă de tipuri permise (implicit: application/json).
+ * Middleware care verifică Content-Type-ul cererilor cu corp (POST, PUT, PATCH).
+ *
+ * Implicit, modul **lenient** (strict: false): dacă header-ul Content-Type lipsește,
+ * cererea trece mai departe (multe browsere/clienți nu trimit header-ul). Dacă însă
+ * header-ul este prezent și nu se potrivește cu niciun tip permis, se returnează 415.
+ *
+ * Modul **strict** (strict: true): header-ul Content-Type trebuie să fie prezent și
+ * să se potrivească cu unul dintre tipurile permise, altfel se returnează 415.
  *
  * @param {object} [options]
  * @param {string[]} [options.allowedTypes=['application/json']] - Content-Type-uri permise
+ * @param {boolean} [options.strict=false] - dacă true, respinge cererile fără Content-Type
  * @returns {import('express').RequestHandler}
  */
 function requireJsonContentType(options = {}) {
   const allowedTypes = options.allowedTypes || ['application/json'];
+  const strict = options.strict === true;
   return function requireJsonContentTypeMiddleware(req, res, next) {
     const methodsWithBody = ['POST', 'PUT', 'PATCH'];
     if (!methodsWithBody.includes(req.method)) return next();
-    const contentType = req.headers['content-type'] || '';
+
+    const contentType = (req.headers['content-type'] || '').trim();
+
+    // Mod lenient: Content-Type lipsă → permite (unele browsere/clienți nu îl trimit)
+    if (!strict && contentType === '') {
+      return next();
+    }
+
+    // Verifică dacă Content-Type-ul se potrivește cu unul dintre tipurile permise
     const isAllowed = allowedTypes.some(type => contentType.includes(type));
     if (!isAllowed) {
       const allowedList = allowedTypes.join(', ');
+      const hint = !strict && contentType === ''
+        ? `Missing Content-Type header. Use ${allowedList}.`
+        : `Unsupported Media Type. Use ${allowedList}.`;
       return res.status(415).json({
-        error: `Unsupported Media Type. Use ${allowedList}.`,
+        error: hint,
         code: 'UNSUPPORTED_MEDIA_TYPE',
       });
     }
