@@ -180,22 +180,26 @@ app.get('/api/health', (_req, res) => {
 // ---------------------------------------------------------------------------
 // Catch-all SPA fallback – returnează index.html pentru rutele frontend
 // Nu interferă cu rutele API sau admin
+// Folosește app.use fără path-to-regexp (fără '*') pentru a trata toate
+// rutele necunoscute rămase, indiferent de metoda HTTP.
 // ---------------------------------------------------------------------------
 
-app.get('*', (req, res, next) => {
+app.use((req, res) => {
   // Nu interfera cu rutele API sau admin
   if (req.path.startsWith('/api/') || req.path.startsWith('/admin/')) {
-    return next();
+    return;
   }
 
   // Nu servi index.html pentru cereri ce par a fi fișiere statice (au extensie)
   if (path.extname(req.path) !== '') {
-    return next();
+    return;
   }
 
   // Trimite index.html ca fallback pentru rutele SPA (ex: /about, /despre)
   res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
-    if (err) next();
+    if (err) {
+      res.status(404).end();
+    }
   });
 });
 
