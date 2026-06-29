@@ -182,7 +182,7 @@ app.get('/api/health', (_req, res) => {
 // Nu interferă cu rutele API sau admin
 // ---------------------------------------------------------------------------
 
-app.get('/*', (req, res, next) => {
+app.get('*', (req, res, next) => {
   // Nu interfera cu rutele API sau admin
   if (req.path.startsWith('/api/') || req.path.startsWith('/admin/')) {
     return next();
