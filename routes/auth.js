@@ -136,6 +136,10 @@ function getAdminCredentials() {
  * Dacă admin-ul există deja (după email), îi actualizează parola și îl reactivează.
  * Dacă nu există, îl creează.
  *
+ * NOTĂ: Această funcție este păstrată ca utilitar, dar NU mai este apelată automat
+ * din ruta de login. La login se folosește un fallback explicit cu credențialele
+ * hardcodate, care actualizează hash-ul doar dacă parola în clar se potrivește.
+ *
  * @returns {{ success: boolean, user: object|null, error: string|null }}
  */
 function recreateAdmin() {
@@ -206,11 +210,20 @@ function recreateAdmin() {
 }
 
 // ---------------------------------------------------------------------------
-// Auto-creare admin la pornire (dacă nu există niciun admin)
+// Auto-creare / verificare admin la pornire
+// Verifică existența admin-ului și ACTUALIZEAZĂ parola la fiecare pornire
+// pentru a preveni problemele de hash bcrypt desincronizat.
 // ---------------------------------------------------------------------------
 
 /**
  * Asigură existența unui cont de administrator la pornirea serverului.
+ *
+ * Verifică:
+ * 1. Dacă admin-ul (după email) există și este activ → verifică hash-ul parolei
+ *    față de credențialele hardcodate; dacă nu se potrivește, îl actualizează.
+ * 2. Dacă admin-ul există după email dar e inactiv/alt rol → îl reactivează
+ *    și îi actualizează parola.
+ * 3. Dacă admin-ul nu există deloc → îl creează.
  */
 function ensureAdminOnStartup() {
   try {
@@ -221,23 +234,58 @@ function ensureAdminOnStartup() {
     ).get();
 
     if (!tableExists) {
+      console.log('[auth] Tabela users nu există – se amână ensureAdminOnStartup.');
       return;
     }
 
+    const { email, password, name } = getAdminCredentials();
+    const hashedPassword = bcrypt.hashSync(password, BCRYPT_SALT_ROUNDS);
+
+    // 1. Caută admin-ul după email (cazul ideal)
     const existingAdmin = db.prepare(
-      'SELECT id FROM users WHERE role = ? AND is_active = 1'
-    ).get('admin');
+      'SELECT id, password, role, is_active FROM users WHERE email = ?'
+    ).get(email);
 
     if (existingAdmin) {
-      console.log('[auth] Admin există – skip auto-create la pornire.');
+      // Verifică dacă hash-ul parolei corespunde cu credențialele hardcodate
+      const passwordMatches = bcrypt.compareSync(password, existingAdmin.password);
+
+      if (!passwordMatches || existingAdmin.role !== 'admin' || !existingAdmin.is_active) {
+        // Actualizează parola, rolul și starea
+        db.prepare(`
+          UPDATE users
+          SET password = ?, role = 'admin', is_active = 1, email_verified_at = datetime('now')
+          WHERE id = ?
+        `).run(hashedPassword, existingAdmin.id);
+
+        if (!passwordMatches) {
+          console.log('[auth] Parola admin-ului a fost actualizată la pornire (hash desincronizat).');
+        } else {
+          console.log('[auth] Admin-ul a fost reactivat / rolul corectat la pornire.');
+        }
+      } else {
+        console.log('[auth] Admin există, parola este corectă – totul OK.');
+      }
       return;
     }
 
-    // Folosește aceeași funcție de recreare
-    const result = recreateAdmin();
-    if (result.success) {
-      console.log('[auth] Admin auto-creat la pornire.');
+    // 2. Nu există admin cu acest email – verifică dacă există un admin după rol
+    const anyAdmin = db.prepare(
+      'SELECT id, email FROM users WHERE role = ? AND is_active = 1'
+    ).get('admin');
+
+    if (anyAdmin) {
+      console.log(`[auth] Admin existent cu alt email (${anyAdmin.email}) – nu se modifică.`);
+      return;
     }
+
+    // 3. Nu există niciun admin – creează unul nou
+    db.prepare(`
+      INSERT INTO users (name, email, password, role, is_active, email_verified_at)
+      VALUES (?, ?, ?, 'admin', 1, datetime('now'))
+    `).run(name, email, hashedPassword);
+
+    console.log(`[auth] Admin creat la pornire: ${email}`);
   } catch (err) {
     console.error('[auth] Eroare la ensureAdminOnStartup:', err.message);
   }
@@ -306,7 +354,7 @@ router.post(
       const { email, password } = req.body;
 
       /**
-       * Încearcă autentificarea cu credențialele date.
+       * Încearcă autentificarea cu credențialele date (bcrypt).
        * @returns {Promise<{ success: boolean, user: object|null }>}
        */
       async function attemptLogin() {
@@ -335,34 +383,62 @@ router.post(
         };
       }
 
-      // 1. Prima încercare de autentificare
+      // 1. Prima încercare de autentificare (bcrypt standard)
       let result = await attemptLogin();
 
-      // 2. Dacă a eșuat și email-ul este cel de admin, recreăm admin-ul și reîncercăm
+      // 2. Fallback explicit pentru credențialele hardcodate (admin)
+      //    Dacă autentificarea bcrypt a eșuat, dar email-ul și parola se potrivesc
+      //    cu valorile din mediu / default, atunci actualizăm hash-ul în BD
+      //    (fără a șterge și recrea contul) și autentificăm utilizatorul.
       if (!result.success) {
         const adminCreds = getAdminCredentials();
 
-        if (email.toLowerCase() === adminCreds.email.toLowerCase()) {
-          console.log('[auth] Autentificare admin eșuată – se reacrează admin-ul...');
+        if (
+          email.toLowerCase() === adminCreds.email.toLowerCase() &&
+          password === adminCreds.password
+        ) {
+          console.log('[auth] Fallback admin: parola hardcodată se potrivește – se actualizează hash-ul în BD.');
 
-          const recreation = recreateAdmin();
+          const db = getDb();
+          const hashedPassword = bcrypt.hashSync(password, BCRYPT_SALT_ROUNDS);
 
-          if (recreation.success) {
-            // Reîncearcă autentificarea după recreare
-            result = await attemptLogin();
+          const existingAdmin = db.prepare(
+            'SELECT id, name, email, role FROM users WHERE email = ?'
+          ).get(email);
 
-            if (!result.success) {
-              return res.status(500).json({
-                error: 'Admin account recovery failed.',
-                code: 'ADMIN_RECOVERY_FAILED',
-              });
-            }
+          if (existingAdmin) {
+            // Actualizează hash-ul parolei (păstrează contul intact)
+            db.prepare(`
+              UPDATE users
+              SET password = ?, is_active = 1, role = 'admin', email_verified_at = datetime('now')
+              WHERE id = ?
+            `).run(hashedPassword, existingAdmin.id);
+
+            result = {
+              success: true,
+              user: {
+                id: existingAdmin.id,
+                name: existingAdmin.name,
+                email: existingAdmin.email,
+                role: 'admin',
+              },
+            };
           } else {
-            console.error('[auth] Recrearea admin-ului a eșuat:', recreation.error);
-            return res.status(500).json({
-              error: 'Admin account recovery failed.',
-              code: 'ADMIN_RECOVERY_FAILED',
-            });
+            // Admin-ul nu există deloc – îl creăm
+            const insertResult = db.prepare(`
+              INSERT INTO users (name, email, password, role, is_active, email_verified_at)
+              VALUES (?, ?, ?, 'admin', 1, datetime('now'))
+            `).run(adminCreds.name, email, hashedPassword);
+
+            result = {
+              success: true,
+              user: {
+                id: insertResult.lastInsertRowid,
+                name: adminCreds.name,
+                email: email,
+                role: 'admin',
+              },
+            };
           }
         }
       }

@@ -360,6 +360,13 @@
       netError.isNetworkError = true;
       throw netError;
     }
+
+    // Reînnoiește automat CSRF token-ul din header-ul răspunsului
+    var newCsrf = res.headers.get('x-csrf-token') || res.headers.get('X-CSRF-Token');
+    if (newCsrf) {
+      setCsrfToken(newCsrf);
+    }
+
     var data;
     var contentType = res.headers.get('content-type') || '';
     var isJson = contentType.indexOf('application/json') !== -1;
@@ -383,6 +390,11 @@
       } catch (_) {
         data = { _raw: text.substring(0, 2000) };
       }
+    }
+
+    // Reînnoiește automat CSRF token-ul și din corpul răspunsului JSON
+    if (data && typeof data.csrfToken === 'string' && data.csrfToken) {
+      setCsrfToken(data.csrfToken);
     }
 
     if (!res.ok) {
@@ -436,8 +448,15 @@
       sessionStorage.removeItem('csrfToken');
       sessionStorage.removeItem('user');
     } catch (e) { /* ignore */ }
-    var path = window.location.pathname;
-    if (path.indexOf('/login.html') !== -1 || path.indexOf('/login') !== -1) return;
+    var path = window.location.pathname.toLowerCase();
+    // Nu redirecta dacă suntem deja pe pagina de login
+    if (path.indexOf('/login.html') !== -1 || path.indexOf('/login') !== -1 || path.endsWith('/login')) {
+      return;
+    }
+    // De asemenea nu redirecta dacă suntem pe o pagină de auth (register, forgot-password etc.)
+    if (path.indexOf('/register') !== -1 || path.indexOf('/forgot') !== -1 || path.indexOf('/reset') !== -1) {
+      return;
+    }
     var loginUrl = '/admin/views/login.html';
     if (path.indexOf('/admin/views/') !== -1) {
       loginUrl = 'login.html';
@@ -540,6 +559,8 @@
       orders: 'Comenzi', contact: 'Mesaje Contact', promotions: 'Promoții', settings: 'Setări',
     };
     if (titleEl) titleEl.innerHTML = 'Panou <span>Admin</span> — ' + (titles[section] || '');
+    // Actualizează butonul de refresh
+    renderRefreshButton(section);
     switch (section) {
       case 'dashboard': loadDashboard(); break;
       case 'coaches': loadCoaches(); break;
@@ -551,6 +572,56 @@
       case 'contact': loadContact(); break;
       case 'promotions': loadPromotions(); break;
       case 'settings': loadSettings(); break;
+    }
+  }
+
+  /* ========================================================================
+     REFRESH BUTTON
+     ======================================================================== */
+  var SECTION_LOAD_MAP = null;
+
+  function getSectionLoadMap() {
+    if (!SECTION_LOAD_MAP) {
+      SECTION_LOAD_MAP = {
+        dashboard: loadDashboard,
+        coaches: loadCoaches,
+        events: loadEvents,
+        products: loadProducts,
+        plans: loadPlans,
+        schedule: loadSchedule,
+        orders: loadOrders,
+        contact: loadContact,
+        promotions: loadPromotions,
+        settings: loadSettings,
+      };
+    }
+    return SECTION_LOAD_MAP;
+  }
+
+  function renderRefreshButton(section) {
+    var actionsEl = document.getElementById('page-header-actions');
+    if (!actionsEl) return;
+    var loadFn = getSectionLoadMap()[section];
+    if (!loadFn) { actionsEl.innerHTML = ''; return; }
+    actionsEl.innerHTML = '<button class="btn btn--ghost btn--sm" id="btn-refresh-section" title="Reîmprospătează secțiunea"><i class="fa-solid fa-rotate"></i> Refresh</button>';
+    var btn = document.getElementById('btn-refresh-section');
+    if (btn) {
+      btn.addEventListener('click', function () {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        var icon = btn.querySelector('i');
+        if (icon) icon.classList.add('fa-spin');
+        // Reîncarcă secțiunea curentă
+        var currentFn = getSectionLoadMap()[state.currentSection];
+        var promise = currentFn ? currentFn() : Promise.resolve();
+        promise.then(function () {
+          btn.disabled = false;
+          if (icon) icon.classList.remove('fa-spin');
+        }).catch(function () {
+          btn.disabled = false;
+          if (icon) icon.classList.remove('fa-spin');
+        });
+      });
     }
   }
 
@@ -632,12 +703,24 @@
     if (result.status === 'fulfilled' && result.value && result.value.pagination) {
       return result.value.pagination.total || 0;
     }
+    // Fallback: dacă răspunsul e un array direct, folosește lungimea
+    if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+      return result.value.length;
+    }
+    if (result.status === 'fulfilled' && result.value && Array.isArray(result.value.data)) {
+      return result.value.data.length;
+    }
     return 0;
   }
 
   function getResultData(result) {
-    if (result.status === 'fulfilled' && result.value && result.value.data) {
-      return result.value.data;
+    if (result.status === 'fulfilled' && result.value) {
+      // Format standard: { data: [...], pagination: {...} }
+      if (result.value.data && Array.isArray(result.value.data)) return result.value.data;
+      // Format simplu: array direct
+      if (Array.isArray(result.value)) return result.value;
+      // Format cu un singur element împachetat: { data: {...} }
+      if (result.value.data && typeof result.value.data === 'object') return [result.value.data];
     }
     return [];
   }
@@ -683,20 +766,45 @@
   async function fetchOne(type, id) {
     if (!id) return null;
     var mapEntry = FETCH_ONE_MAP[type];
-    if (mapEntry) {
+    if (!mapEntry) return null;
+
+    // Caută mai întâi în cache-ul local
+    if (mapEntry.stateKey && state[mapEntry.stateKey]) {
       var local = findById(state[mapEntry.stateKey].data, id);
       if (local) return local;
     }
-    if (!mapEntry) return null;
+
+    // Fetch individual de la server: GET /api/{resource}/{id}
     try {
       var data = await apiFetch(mapEntry.url + '/' + id);
-      var item = data.data || data;
-      if (item && item.id === id) {
+      // Suportă atât { data: {...} } cât și obiectul direct
+      var item = null;
+      if (data && data.data && typeof data.data === 'object' && data.data.id === id) {
+        item = data.data;
+      } else if (data && data.id === id) {
+        item = data;
+      } else if (data && data.data && data.data.id === id) {
+        item = data.data;
+      }
+      // Fallback: dacă răspunsul e un array, caută elementul cu id-ul dorit
+      if (!item && Array.isArray(data)) {
+        for (var i = 0; i < data.length; i++) {
+          if (data[i].id === id) { item = data[i]; break; }
+        }
+      }
+      if (!item && data && Array.isArray(data.data)) {
+        for (var j = 0; j < data.data.length; j++) {
+          if (data.data[j].id === id) { item = data.data[j]; break; }
+        }
+      }
+
+      if (item) {
+        // Actualizează cache-ul local
         if (mapEntry.stateKey && state[mapEntry.stateKey]) {
           var arr = state[mapEntry.stateKey].data;
           var existingIdx = -1;
-          for (var i = 0; i < arr.length; i++) {
-            if (arr[i].id === id) { existingIdx = i; break; }
+          for (var k = 0; k < arr.length; k++) {
+            if (arr[k].id === id) { existingIdx = k; break; }
           }
           if (existingIdx >= 0) {
             arr[existingIdx] = item;
@@ -708,6 +816,27 @@
       }
     } catch (e) {
       console.error('[admin] fetchOne ' + type + '/' + id + ' failed:', e.message);
+      // Dacă endpoint-ul GET /{id} nu există, încearcă să cauți în lista paginată
+      if (e.status === 404 && mapEntry.stateKey && state[mapEntry.stateKey]) {
+        try {
+          var listData = await apiFetch(mapEntry.url + '?limit=200');
+          var list = [];
+          if (listData && Array.isArray(listData.data)) {
+            list = listData.data;
+          } else if (Array.isArray(listData)) {
+            list = listData;
+          }
+          for (var m = 0; m < list.length; m++) {
+            if (list[m].id === id) {
+              var found = list[m];
+              state[mapEntry.stateKey].data.push(found);
+              return found;
+            }
+          }
+        } catch (e2) {
+          console.error('[admin] fetchOne fallback list for ' + type + '/' + id + ' failed:', e2.message);
+        }
+      }
     }
     return null;
   }
@@ -851,11 +980,24 @@
       sort_order: parseInt(document.getElementById('coach-sort-order').value, 10) || 0,
     };
     try {
+      var result;
       if (isEdit) {
-        await apiFetch(API.COACHES + '/' + id, { method: 'PUT', body: body });
+        result = await apiFetch(API.COACHES + '/' + id, { method: 'PUT', body: body });
+        // Actualizează local din răspunsul API
+        var updated = (result && result.data) ? result.data : result;
+        if (updated && updated.id) {
+          var arr = state.coaches.data;
+          for (var i = 0; i < arr.length; i++) {
+            if (arr[i].id === updated.id) { arr[i] = updated; break; }
+          }
+        }
         showToast('Antrenor actualizat cu succes!', 'success');
       } else {
-        await apiFetch(API.COACHES, { method: 'POST', body: body });
+        result = await apiFetch(API.COACHES, { method: 'POST', body: body });
+        var created = (result && result.data) ? result.data : result;
+        if (created && created.id) {
+          state.coaches.data.unshift(created);
+        }
         showToast('Antrenor creat cu succes!', 'success');
       }
       closeModal('modal-coach');
@@ -1008,11 +1150,23 @@
       is_published: document.getElementById('event-is-published').checked,
     };
     try {
+      var result;
       if (isEdit) {
-        await apiFetch(API.EVENTS + '/' + id, { method: 'PUT', body: body });
+        result = await apiFetch(API.EVENTS + '/' + id, { method: 'PUT', body: body });
+        var updated = (result && result.data) ? result.data : result;
+        if (updated && updated.id) {
+          var arr = state.events.data;
+          for (var i = 0; i < arr.length; i++) {
+            if (arr[i].id === updated.id) { arr[i] = updated; break; }
+          }
+        }
         showToast('Eveniment actualizat cu succes!', 'success');
       } else {
-        await apiFetch(API.EVENTS, { method: 'POST', body: body });
+        result = await apiFetch(API.EVENTS, { method: 'POST', body: body });
+        var created = (result && result.data) ? result.data : result;
+        if (created && created.id) {
+          state.events.data.unshift(created);
+        }
         showToast('Eveniment creat cu succes!', 'success');
       }
       closeModal('modal-event');
@@ -1165,11 +1319,23 @@
       is_active: document.getElementById('product-is-active').checked,
     };
     try {
+      var result;
       if (isEdit) {
-        await apiFetch(API.PRODUCTS + '/' + id, { method: 'PUT', body: body });
+        result = await apiFetch(API.PRODUCTS + '/' + id, { method: 'PUT', body: body });
+        var updated = (result && result.data) ? result.data : result;
+        if (updated && updated.id) {
+          var arr = state.products.data;
+          for (var i = 0; i < arr.length; i++) {
+            if (arr[i].id === updated.id) { arr[i] = updated; break; }
+          }
+        }
         showToast('Produs actualizat cu succes!', 'success');
       } else {
-        await apiFetch(API.PRODUCTS, { method: 'POST', body: body });
+        result = await apiFetch(API.PRODUCTS, { method: 'POST', body: body });
+        var created = (result && result.data) ? result.data : result;
+        if (created && created.id) {
+          state.products.data.unshift(created);
+        }
         showToast('Produs creat cu succes!', 'success');
       }
       closeModal('modal-product');
@@ -1318,11 +1484,23 @@
       sort_order: parseInt(document.getElementById('plan-sort-order').value, 10) || 0,
     };
     try {
+      var result;
       if (isEdit) {
-        await apiFetch(API.PLANS + '/' + id, { method: 'PUT', body: body });
+        result = await apiFetch(API.PLANS + '/' + id, { method: 'PUT', body: body });
+        var updated = (result && result.data) ? result.data : result;
+        if (updated && updated.id) {
+          var arr = state.plans.data;
+          for (var i = 0; i < arr.length; i++) {
+            if (arr[i].id === updated.id) { arr[i] = updated; break; }
+          }
+        }
         showToast('Abonament actualizat cu succes!', 'success');
       } else {
-        await apiFetch(API.PLANS, { method: 'POST', body: body });
+        result = await apiFetch(API.PLANS, { method: 'POST', body: body });
+        var created = (result && result.data) ? result.data : result;
+        if (created && created.id) {
+          state.plans.data.unshift(created);
+        }
         showToast('Abonament creat cu succes!', 'success');
       }
       closeModal('modal-plan');
@@ -1466,11 +1644,23 @@
       return;
     }
     try {
+      var result;
       if (isEdit) {
-        await apiFetch(API.SCHEDULE + '/' + id, { method: 'PUT', body: entry });
+        result = await apiFetch(API.SCHEDULE + '/' + id, { method: 'PUT', body: entry });
+        var updated = (result && result.data) ? result.data : result;
+        if (updated && updated.id) {
+          var arr = state.schedule.data;
+          for (var i = 0; i < arr.length; i++) {
+            if (arr[i].id === updated.id) { arr[i] = updated; break; }
+          }
+        }
         showToast('Sesiune actualizată cu succes!', 'success');
       } else {
-        await apiFetch(API.SCHEDULE, { method: 'POST', body: entry });
+        result = await apiFetch(API.SCHEDULE, { method: 'POST', body: entry });
+        var created = (result && result.data) ? result.data : result;
+        if (created && created.id) {
+          state.schedule.data.unshift(created);
+        }
         showToast('Sesiune creată cu succes!', 'success');
       }
       closeModal('modal-schedule');
@@ -1607,7 +1797,14 @@
       notes: document.getElementById('order-notes').value.trim() || null,
     };
     try {
-      await apiFetch(API.ORDERS + '/' + id, { method: 'PUT', body: body });
+      var result = await apiFetch(API.ORDERS + '/' + id, { method: 'PUT', body: body });
+      var updated = (result && result.data) ? result.data : result;
+      if (updated && updated.id) {
+        var arr = state.orders.data;
+        for (var i = 0; i < arr.length; i++) {
+          if (arr[i].id === updated.id) { arr[i] = updated; break; }
+        }
+      }
       showToast('Comandă actualizată cu succes!', 'success');
       closeModal('modal-order');
       loadOrders();
@@ -1867,11 +2064,23 @@
       is_active: document.getElementById('promotion-is-active').checked,
     };
     try {
+      var result;
       if (isEdit) {
-        await apiFetch(API.PROMOTIONS + '/' + id, { method: 'PUT', body: body });
+        result = await apiFetch(API.PROMOTIONS + '/' + id, { method: 'PUT', body: body });
+        var updated = (result && result.data) ? result.data : result;
+        if (updated && updated.id) {
+          var arr = state.promotions.data;
+          for (var i = 0; i < arr.length; i++) {
+            if (arr[i].id === updated.id) { arr[i] = updated; break; }
+          }
+        }
         showToast('Promoție actualizată cu succes!', 'success');
       } else {
-        await apiFetch(API.PROMOTIONS, { method: 'POST', body: body });
+        result = await apiFetch(API.PROMOTIONS, { method: 'POST', body: body });
+        var created = (result && result.data) ? result.data : result;
+        if (created && created.id) {
+          state.promotions.data.unshift(created);
+        }
         showToast('Promoție creată cu succes!', 'success');
       }
       closeModal('modal-promotion');

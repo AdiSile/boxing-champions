@@ -2,7 +2,7 @@
 // routes/coaches.js
 // CRUD complet /api/coaches
 //
-// GET    /api/coaches       – public, listare cu paginare, sortare, căutare
+// GET    /api/coaches       – public, listare cu paginare, sortare, căutare. is_active=true|false|all (fără parametru = toți)
 // GET    /api/coaches/:id   – public, detalii antrenor
 // POST   /api/coaches       – admin, creare antrenor
 // PUT    /api/coaches/:id   – admin, actualizare antrenor
@@ -114,10 +114,9 @@ router.get('/api/coaches', validate(paginationSchema), (req, res) => {
     const search = req.query.search || null;
     const isActiveParam = req.query.is_active;
     const filters = {};
-    if (isActiveParam !== undefined) {
+    // Când is_active nu e specificat sau e 'all', nu filtrăm → toți antrenorii
+    if (isActiveParam !== undefined && isActiveParam !== 'all') {
       filters.is_active = isActiveParam === 'true' || isActiveParam === true;
-    } else {
-      filters.is_active = true;
     }
     if (search) filters.search = search;
     const { whereClause, params } = buildWhereClause(filters);

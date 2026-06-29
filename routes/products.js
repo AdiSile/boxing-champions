@@ -64,7 +64,7 @@ function parseProductRow(row) {
 function buildWhereClause(filters = {}) {
   const conditions = [];
   const params = [];
-  if (filters.is_active !== undefined) { conditions.push('p.is_active = ?'); params.push(filters.is_active ? 1 : 0); }
+  if (filters.is_active !== undefined && filters.is_active !== 'all') { conditions.push('p.is_active = ?'); params.push(filters.is_active ? 1 : 0); }
   if (filters.category && typeof filters.category === 'string' && filters.category.trim()) { conditions.push('p.category = ?'); params.push(filters.category.trim().toLowerCase()); }
   if (filters.min_price !== undefined && filters.min_price !== null) { conditions.push('p.price >= ?'); params.push(Number(filters.min_price)); }
   if (filters.max_price !== undefined && filters.max_price !== null) { conditions.push('p.price <= ?'); params.push(Number(filters.max_price)); }
@@ -105,8 +105,14 @@ router.get('/api/products', validate(paginationSchema), (req, res) => {
     const maxPriceParam = req.query.max_price;
     const inStockParam = req.query.in_stock;
     const filters = {};
-    if (isActiveParam !== undefined) filters.is_active = isActiveParam === 'true' || isActiveParam === true;
-    else filters.is_active = true;
+    if (isActiveParam === 'all') {
+      // Admin dashboard: fără filtru is_active, returnează toate produsele
+      // filters.is_active rămâne nedefinit → nu se aplică clauza WHERE
+    } else if (isActiveParam !== undefined) {
+      filters.is_active = isActiveParam === 'true' || isActiveParam === true;
+    } else {
+      filters.is_active = true; // implicit, public: doar produse active
+    }
     if (categoryParam && typeof categoryParam === 'string') filters.category = categoryParam;
     if (minPriceParam !== undefined && minPriceParam !== '') filters.min_price = Number(minPriceParam);
     if (maxPriceParam !== undefined && maxPriceParam !== '') filters.max_price = Number(maxPriceParam);

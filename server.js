@@ -75,9 +75,9 @@ app.use(globalSanitize);
 app.use(nonceMiddleware);
 app.use(cspMiddleware);
 
-// 8. Body size limit + Content-Type enforcement DOAR pentru rutele API
+// 8. Body size limit pentru TOATE rutele API
+// Content-Type enforcement este mutat după rutele auth și contact (vezi mai jos)
 app.use('/api/', bodySizeLimit());
-app.use('/api/', requireJsonContentType);
 
 // ---------------------------------------------------------------------------
 // Fișiere statice — public/
@@ -126,8 +126,29 @@ app.use(require('./routes/dashboard'));
 // ---------------------------------------------------------------------------
 
 // Contact: max 5 mesaje la 10 minute per IP
+// Parsare și pentru text/plain (pe lângă application/json)
+app.use('/api/contact', express.text({ type: 'text/plain', limit: '1mb' }));
+// Middleware care convertește body text în obiect JSON (dacă e JSON valid)
+app.use('/api/contact', (req, res, next) => {
+  if (typeof req.body === 'string' && req.body.trim().length > 0) {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch {
+      // Nu e JSON valid – se lasă ca string; validarea va returna eroare
+    }
+  }
+  next();
+});
 app.use('/api/contact', contactRateLimiter);
+// Content-Type permisiv: application/json și text/plain
+app.use('/api/contact', requireJsonContentType({ allowedTypes: ['application/json', 'text/plain'] }));
 app.use(require('./routes/contact'));
+
+// ---------------------------------------------------------------------------
+// După auth și contact: Content-Type enforcement strict (doar JSON)
+// pentru restul rutelor API (checkout, promotions, etc.)
+// ---------------------------------------------------------------------------
+app.use('/api/', requireJsonContentType);
 
 // Checkout + validare promoții: max 10 cereri la 5 minute per IP
 app.use('/api/checkout', checkoutRateLimiter);

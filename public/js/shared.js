@@ -8,7 +8,8 @@
  *    3. Animații Scroll (Intersection Observer)
  *    4. Navbar Responsive
  *    5. Preloader
- *    6. Funcții Fetch Generice cu Fallback
+ *    6. Modul Autentificare — Token Management & Refresh
+ *    7. Funcții Fetch Generice cu Fallback + 401 Auto-Refresh
  *  ===========================================================================
  */
 
@@ -54,6 +55,19 @@
       defaultTimeout: 12000,
       retries: 2,
       retryDelay: 800,
+    },
+    auth: {
+      tokenKey: 'auth_token',
+      refreshTokenKey: 'refresh_token',
+      refreshEndpoint: '/api/auth/refresh',
+      loginPath: '/login',
+      excludePaths: [
+        '/login',
+        '/register',
+        '/api/auth/login',
+        '/api/auth/register',
+        '/api/auth/refresh',
+      ],
     },
   };
 
@@ -584,20 +598,234 @@
   };
 
   /* ========================================================================
-     6. FUNCȚII FETCH GENERICE CU FALLBACK
+     6. MODUL AUTENTIFICARE — Token Management & Refresh
      ======================================================================== */
+
+  /**
+   * Auth — gestiunea token-urilor, refresh automat și reîmprospătare manuală.
+   *
+   * Token-urile sunt stocate atât în localStorage cât și în sessionStorage,
+   * astfel încât să persiste între tab-uri și sesiuni.
+   *
+   * refreshToken() previne apelurile concurente: dacă un refresh este deja
+   * în curs, apelurile ulterioare așteaptă aceeași promisiune.
+   */
+  const Auth = {
+    _refreshPromise: null,
+    _refreshSubscribers: [],
+
+    /**
+     * Returnează token-ul de acces curent.
+     * @returns {string|null}
+     */
+    getToken() {
+      return (
+        localStorage.getItem(CONFIG.auth.tokenKey) ||
+        sessionStorage.getItem(CONFIG.auth.tokenKey) ||
+        null
+      );
+    },
+
+    /**
+     * Salvează token-ul de acces.
+     * @param {string} token
+     */
+    setToken(token) {
+      if (!token) return;
+      localStorage.setItem(CONFIG.auth.tokenKey, token);
+      sessionStorage.setItem(CONFIG.auth.tokenKey, token);
+    },
+
+    /**
+     * Returnează refresh-token-ul curent.
+     * @returns {string|null}
+     */
+    getRefreshToken() {
+      return (
+        localStorage.getItem(CONFIG.auth.refreshTokenKey) ||
+        sessionStorage.getItem(CONFIG.auth.refreshTokenKey) ||
+        null
+      );
+    },
+
+    /**
+     * Salvează refresh-token-ul.
+     * @param {string} token
+     */
+    setRefreshToken(token) {
+      if (!token) return;
+      localStorage.setItem(CONFIG.auth.refreshTokenKey, token);
+      sessionStorage.setItem(CONFIG.auth.refreshTokenKey, token);
+    },
+
+    /**
+     * Șterge toate token-urile (logout).
+     */
+    clearTokens() {
+      localStorage.removeItem(CONFIG.auth.tokenKey);
+      sessionStorage.removeItem(CONFIG.auth.tokenKey);
+      localStorage.removeItem(CONFIG.auth.refreshTokenKey);
+      sessionStorage.removeItem(CONFIG.auth.refreshTokenKey);
+    },
+
+    /**
+     * Verifică dacă utilizatorul este autentificat (are token).
+     * @returns {boolean}
+     */
+    isAuthenticated() {
+      return !!this.getToken();
+    },
+
+    /**
+     * Încearcă reîmprospătarea token-ului de acces folosind refresh-token-ul.
+     *
+     * Această metodă previne apelurile concurente (race condition):
+     * dacă un refresh este deja în curs, returnează aceeași promisiune.
+     *
+     * @returns {Promise<string>} Noul token de acces.
+     * @throws {Error} Dacă refresh-ul eșuează.
+     */
+    async refreshToken() {
+      // Dacă un refresh este deja în curs, așteptăm același rezultat
+      if (this._refreshPromise) {
+        return this._refreshPromise;
+      }
+
+      const refreshTokenValue = this.getRefreshToken();
+      if (!refreshTokenValue) {
+        return Promise.reject(new Error('No refresh token available'));
+      }
+
+      this._refreshPromise = (async () => {
+        try {
+          const response = await fetch(CONFIG.auth.refreshEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ refreshToken: refreshTokenValue }),
+          });
+
+          if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            const error = new Error(
+              errorBody.error || errorBody.message || 'Token refresh failed'
+            );
+            error.status = response.status;
+            throw error;
+          }
+
+          const data = await response.json();
+          const newToken = data.token || data.accessToken || data.access_token;
+
+          if (!newToken) {
+            throw new Error('Refresh response missing token');
+          }
+
+          this.setToken(newToken);
+
+          if (data.refreshToken || data.refresh_token) {
+            this.setRefreshToken(data.refreshToken || data.refresh_token);
+          }
+
+          // Notifică abonații (cereri în așteptare)
+          this._notifySubscribers(newToken);
+
+          return newToken;
+        } catch (err) {
+          // Refresh eșuat → curățăm token-urile și notificăm abonații cu eroare
+          this.clearTokens();
+          this._notifySubscribers(null, err);
+          throw err;
+        } finally {
+          this._refreshPromise = null;
+        }
+      })();
+
+      return this._refreshPromise;
+    },
+
+    /**
+     * Înregistrează un subscriber care așteaptă un token nou.
+     * @param {Function} onResolve - apelat cu noul token
+     * @param {Function} onReject  - apelat cu eroarea
+     */
+    subscribeToRefresh(onResolve, onReject) {
+      this._refreshSubscribers.push({ resolve: onResolve, reject: onReject });
+    },
+
+    /**
+     * Notifică toți abonații despre rezultatul refresh-ului.
+     * @param {string|null} newToken
+     * @param {Error|null}  error
+     */
+    _notifySubscribers(newToken, error) {
+      const subs = this._refreshSubscribers.splice(0);
+      subs.forEach((sub) => {
+        if (error) {
+          sub.reject(error);
+        } else {
+          sub.resolve(newToken);
+        }
+      });
+    },
+
+    /**
+     * Redirecționează utilizatorul la pagina de login,
+     * păstrând calea curentă pentru redirect după autentificare.
+     */
+    redirectToLogin() {
+      this.clearTokens();
+      const currentPath = window.location.pathname + window.location.search;
+      const loginPath = CONFIG.auth.loginPath;
+
+      // Evităm redirect loop dacă suntem deja pe login
+      if (currentPath.startsWith(loginPath)) {
+        return;
+      }
+
+      window.location.href =
+        loginPath + '?redirect=' + encodeURIComponent(currentPath);
+    },
+  };
+
+  /* ========================================================================
+     7. FUNCȚII FETCH GENERICE CU FALLBACK
+     ======================================================================== */
+
+  /**
+   * Determină dacă un URL este exceptat de la atașarea automată a token-ului.
+   * @param {string} url
+   * @returns {boolean}
+   */
+  function isAuthExcludedPath(url) {
+    return CONFIG.auth.excludePaths.some(function (path) {
+      return url.indexOf(path) !== -1;
+    });
+  }
 
   /**
    * fetchJSON — wrapper generic pentru cereri JSON
    *
-   * @param {string}  url                   - URL-ul endpoint-ului
-   * @param {object}  [options={}]          - Opțiuni fetch suplimentare
-   * @param {string}  [options.method='GET'] - Metoda HTTP
-   * @param {object}  [options.body=null]   - Body (va fi serializat JSON)
-   * @param {object}  [options.headers={}]  - Headere adiționale
-   * @param {number}  [options.timeout]     - Timeout în ms
-   * @param {number}  [options.retries]     - Număr de reîncercări
-   * @param {boolean} [options.rawResponse] - Returnează răspunsul brut
+   * Atașează automat token-ul de autentificare (dacă există) și
+   * reîncearcă automat cu un token reîmprospătat când serverul
+   * răspunde cu 401 Unauthorized.
+   *
+   * Gestionează erorile de rețea (TypeError, AbortError) distinct
+   * față de erorile HTTP, oferind mesaje clare pentru depanare.
+   *
+   * @param {string}  url                     - URL-ul endpoint-ului
+   * @param {object}  [options={}]            - Opțiuni fetch suplimentare
+   * @param {string}  [options.method='GET']  - Metoda HTTP
+   * @param {object}  [options.body=null]     - Body (va fi serializat JSON)
+   * @param {object}  [options.headers={}]    - Headere adiționale
+   * @param {number}  [options.timeout]       - Timeout în ms
+   * @param {number}  [options.retries]       - Număr de reîncercări (fără refresh)
+   * @param {boolean} [options.rawResponse]   - Returnează răspunsul brut
+   * @param {boolean} [options.skipAuth]      - Nu atașa token-ul de auth
+   * @param {boolean} [options.skipRefresh]   - Nu încerca refresh pe 401
    * @returns {Promise<any>}
    */
   async function fetchJSON(url, options = {}) {
@@ -608,31 +836,118 @@
       timeout = CONFIG.fetch.defaultTimeout,
       retries = CONFIG.fetch.retries,
       rawResponse = false,
+      skipAuth = false,
+      skipRefresh = false,
       ...restOptions
     } = options;
 
-    const fetchHeaders = {
-      'Accept': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest',
-      ...headers,
-    };
+    /**
+     * Construiește headerele, atașând token-ul dacă este disponibil.
+     * @param {string|null} overrideToken - token forțat (după refresh)
+     * @returns {object}
+     */
+    function buildHeaders(overrideToken) {
+      const fetchHeaders = {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        ...headers,
+      };
 
-    if (body && typeof body === 'object' && !(body instanceof FormData)) {
-      fetchHeaders['Content-Type'] = 'application/json';
+      if (body && typeof body === 'object' && !(body instanceof FormData)) {
+        fetchHeaders['Content-Type'] = 'application/json';
+      }
+
+      // Atașează token-ul de autentificare
+      if (!skipAuth && !isAuthExcludedPath(url)) {
+        const token = overrideToken || Auth.getToken();
+        if (token) {
+          fetchHeaders['Authorization'] = 'Bearer ' + token;
+        }
+      }
+
+      return fetchHeaders;
     }
 
-    const fetchOptions = {
-      method,
-      headers: fetchHeaders,
-      ...restOptions,
-    };
+    /**
+     * Construiește obiectul de opțiuni pentru fetch.
+     * @param {string|null} overrideToken
+     * @returns {object}
+     */
+    function buildFetchOptions(overrideToken) {
+      const fetchOpts = {
+        method: method,
+        headers: buildHeaders(overrideToken),
+        ...restOptions,
+      };
 
-    if (body) {
-      fetchOptions.body =
-        body instanceof FormData ? body : JSON.stringify(body);
+      if (body) {
+        fetchOpts.body =
+          body instanceof FormData ? body : JSON.stringify(body);
+      }
+
+      return fetchOpts;
+    }
+
+    /**
+     * Parsează corpul răspunsului.
+     * @param {Response} response
+     * @returns {Promise<any>}
+     */
+    async function parseResponse(response) {
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        return response.json();
+      }
+
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch (_) {
+        return { _raw: text };
+      }
+    }
+
+    /**
+     * Efectuează o singură încercare de request.
+     * @param {string|null} overrideToken
+     * @returns {Promise<{response: Response, data: any}>}
+     */
+    async function performRequest(overrideToken) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(function () {
+        controller.abort();
+      }, timeout);
+
+      try {
+        const fetchOpts = buildFetchOptions(overrideToken);
+        const response = await fetch(url, {
+          ...fetchOpts,
+          signal: controller.signal,
+        });
+
+        if (rawResponse) {
+          return { response: response, data: null };
+        }
+
+        const data = await parseResponse(response);
+
+        if (!response.ok) {
+          const error = new Error(
+            data?.error || data?.message || 'HTTP ' + response.status + ': ' + response.statusText
+          );
+          error.status = response.status;
+          error.data = data;
+          throw error;
+        }
+
+        return { response: response, data: data };
+      } finally {
+        clearTimeout(timeoutId);
+      }
     }
 
     let lastError = null;
+    let tokenRefreshed = false;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       if (attempt > 0) {
@@ -640,66 +955,124 @@
       }
 
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-        const response = await fetch(url, {
-          ...fetchOptions,
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
+        const result = await performRequest(null);
 
         if (rawResponse) {
-          return response;
+          return result.response;
         }
 
-        let data;
-        const contentType = response.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          data = await response.json();
-        } else {
-          const text = await response.text();
-          try {
-            data = JSON.parse(text);
-          } catch (_) {
-            data = { _raw: text };
-          }
-        }
-
-        if (!response.ok) {
-          const error = new Error(
-            data?.error || data?.message || `HTTP ${response.status}: ${response.statusText}`
-          );
-          error.status = response.status;
-          error.data = data;
-          throw error;
-        }
-
-        return data;
+        return result.data;
       } catch (err) {
         lastError = err;
 
-        if (err.status && err.status >= 400 && err.status < 500) {
-          if (err.status !== 408 && err.status !== 429) {
-            break;
+        // ── Tratare 401 Unauthorized ──────────────────────────────
+        if (
+          !skipRefresh &&
+          err.status === 401 &&
+          Auth.getRefreshToken()
+        ) {
+          // Dacă deja am făcut refresh în această buclă și tot 401 primim,
+          // înseamnă că refresh-ul nu a rezolvat problema → redirect login
+          if (tokenRefreshed) {
+            Auth.redirectToLogin();
+            throw new Error('Session expired. Redirecting to login.');
+          }
+
+          try {
+            // Dacă un refresh este deja în curs (alt request l-a declanșat),
+            // așteptăm rezultatul în loc să inițiem unul nou.
+            let newToken;
+            if (Auth._refreshPromise) {
+              newToken = await new Promise(function (resolve, reject) {
+                Auth.subscribeToRefresh(resolve, reject);
+              });
+            } else {
+              newToken = await Auth.refreshToken();
+            }
+
+            tokenRefreshed = true;
+            // Reîncearcă request-ul original cu noul token,
+            // fără a consuma o încercare din bucla de retries.
+            const retryResult = await performRequest(newToken);
+
+            if (rawResponse) {
+              return retryResult.response;
+            }
+
+            return retryResult.data;
+          } catch (refreshErr) {
+            // Refresh-ul a eșuat → redirect login
+            lastError = refreshErr;
+            Auth.redirectToLogin();
+            throw new Error(
+              'Session expired. Please log in again. (' +
+                (refreshErr.message || 'refresh failed') +
+                ')'
+            );
           }
         }
 
-        if (err.name === 'AbortError' && attempt >= retries) {
-          lastError = new Error('Request timeout after ' + (retries + 1) + ' attempts');
+        // ── Clasificare erori de rețea ───────────────────────────
+        // TypeError: fetch aruncă TypeError când rețeaua este inexistentă
+        // (ex: navigator.onLine === false, DNS failure, CORS blocat)
+        if (err.name === 'TypeError' || err.message === 'Failed to fetch') {
+          lastError = new Error(
+            'Network error: unable to reach the server. ' +
+            'Please check your internet connection.'
+          );
+          lastError.isNetworkError = true;
+          lastError.originalError = err;
+          // Reîncercăm pentru erori de rețea (pot fi temporare)
+          continue;
+        }
+
+        // AbortError: timeout sau abort manual
+        if (err.name === 'AbortError') {
+          if (attempt >= retries) {
+            lastError = new Error(
+              'Request timeout after ' + (retries + 1) + ' attempt(s)'
+            );
+            lastError.isTimeout = true;
+            lastError.originalError = err;
+            break;
+          }
+          // Mai încercăm o dată pentru timeout
+          lastError = new Error('Request timed out, retrying...');
+          lastError.isTimeout = true;
+          continue;
+        }
+
+        // ── Erori HTTP client (4xx, exclus 401 tratat mai sus) ──
+        if (err.status && err.status >= 400 && err.status < 500) {
+          // 408 (Request Timeout) și 429 (Too Many Requests) → reîncercăm
+          if (err.status === 408 || err.status === 429) {
+            continue;
+          }
+          // Celelalte erori client (400, 403, 404, 422 etc.) nu se reîncearcă
           break;
+        }
+
+        // ── Erori HTTP server (5xx) ──────────────────────────────
+        if (err.status && err.status >= 500) {
+          // Reîncercăm pentru erori de server (pot fi tranzitorii)
+          continue;
+        }
+
+        // Pentru orice altă eroare necunoscută, reîncercăm
+        if (attempt < retries) {
+          continue;
         }
       }
     }
 
+    // Dacă ajungem aici, toate încercările au eșuat
     throw lastError || new Error('fetchJSON failed');
   }
 
   /**
    * fetchWithFallback — încearcă mai multe URL-uri în ordine
    *
-   * @param {string[]} urls   - Listă de URL-uri de încercat
+   * @param {string[]} urls    - Listă de URL-uri de încercat
    * @param {object}   options - Opțiuni (aceleași ca fetchJSON)
    * @returns {Promise<any>}
    */
@@ -710,19 +1083,45 @@
 
     const errors = [];
 
-    for (const url of urls) {
+    for (var i = 0; i < urls.length; i++) {
+      var url = urls[i];
       try {
-        const result = await fetchJSON(url, options);
+        var result = await fetchJSON(url, options);
         return result;
       } catch (err) {
-        errors.push({ url, error: err.message });
+        errors.push({ url: url, error: err.message });
       }
     }
 
     throw new Error(
       'All fallback URLs failed:\n' +
-      errors.map((e) => `  ${e.url}: ${e.error}`).join('\n')
+        errors
+          .map(function (e) {
+            return '  ' + e.url + ': ' + e.error;
+          })
+          .join('\n')
     );
+  }
+
+  /**
+   * refreshAuth — reîmprospătează manual token-ul de autentificare.
+   *
+   * Poate fi apelată din paginile publice pentru a prelungi sesiunea
+   * înainte de o operațiune sensibilă sau după o perioadă de inactivitate.
+   *
+   * @returns {Promise<{success: boolean, token?: string, error?: string}>}
+   */
+  async function refreshAuth() {
+    try {
+      if (!Auth.getRefreshToken()) {
+        return { success: false, error: 'No refresh token available' };
+      }
+
+      const newToken = await Auth.refreshToken();
+      return { success: true, token: newToken };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
   }
 
   /**
@@ -732,7 +1131,9 @@
    * @returns {Promise<void>}
    */
   function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(function (resolve) {
+      setTimeout(resolve, ms);
+    });
   }
 
   /**
@@ -742,11 +1143,16 @@
    * @param {number}   delay
    * @returns {Function}
    */
-  function debounce(fn, delay = 250) {
-    let timer;
-    return function (...args) {
+  function debounce(fn, delay) {
+    if (delay === undefined) { delay = 250; }
+    var timer;
+    return function () {
+      var context = this;
+      var args = arguments;
       clearTimeout(timer);
-      timer = setTimeout(() => fn.apply(this, args), delay);
+      timer = setTimeout(function () {
+        fn.apply(context, args);
+      }, delay);
     };
   }
 
@@ -757,13 +1163,18 @@
    * @param {number}   limit
    * @returns {Function}
    */
-  function throttle(fn, limit = 250) {
-    let inThrottle = false;
-    return function (...args) {
+  function throttle(fn, limit) {
+    if (limit === undefined) { limit = 250; }
+    var inThrottle = false;
+    return function () {
+      var context = this;
+      var args = arguments;
       if (!inThrottle) {
-        fn.apply(this, args);
+        fn.apply(context, args);
         inThrottle = true;
-        setTimeout(() => { inThrottle = false; }, limit);
+        setTimeout(function () {
+          inThrottle = false;
+        }, limit);
       }
     };
   }
@@ -775,25 +1186,28 @@
    * @param {'success'|'error'|'info'} [type='info']
    * @param {number} [duration=3500]
    */
-  function showToast(message, type = 'info', duration = 3500) {
-    const existing = document.querySelector('.toast');
+  function showToast(message, type, duration) {
+    if (type === undefined) { type = 'info'; }
+    if (duration === undefined) { duration = 3500; }
+
+    var existing = document.querySelector('.toast');
     if (existing) existing.remove();
 
-    const toast = document.createElement('div');
-    toast.className = `toast toast--${type}`;
+    var toast = document.createElement('div');
+    toast.className = 'toast toast--' + type;
     toast.setAttribute('role', 'status');
     toast.setAttribute('aria-live', 'polite');
     toast.textContent = message;
     document.body.appendChild(toast);
 
-    setTimeout(() => {
+    setTimeout(function () {
       toast.style.opacity = '0';
       toast.style.transform = 'translateY(16px)';
       toast.style.transition = 'opacity 0.3s, transform 0.3s';
-      toast.addEventListener('transitionend', () => {
+      toast.addEventListener('transitionend', function () {
         if (toast.parentNode) toast.parentNode.removeChild(toast);
       });
-      setTimeout(() => {
+      setTimeout(function () {
         if (toast.parentNode) toast.parentNode.removeChild(toast);
       }, 350);
     }, duration);
@@ -823,18 +1237,22 @@
 
   // Expune utilitarele global
   window.BoxingChampions = {
-    fetchJSON,
-    fetchWithFallback,
-    sleep,
-    debounce,
-    throttle,
-    showToast,
-    Particles,
-    CustomCursor,
-    ScrollReveal,
-    Navbar,
-    Preloader,
-    refreshScrollReveal: () => ScrollReveal.refresh(),
+    fetchJSON: fetchJSON,
+    fetchWithFallback: fetchWithFallback,
+    sleep: sleep,
+    debounce: debounce,
+    throttle: throttle,
+    showToast: showToast,
+    refreshAuth: refreshAuth,
+    Auth: Auth,
+    Particles: Particles,
+    CustomCursor: CustomCursor,
+    ScrollReveal: ScrollReveal,
+    Navbar: Navbar,
+    Preloader: Preloader,
+    refreshScrollReveal: function () {
+      ScrollReveal.refresh();
+    },
   };
 
   // Pornește totul când DOM-ul e gata

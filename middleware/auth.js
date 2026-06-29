@@ -2,9 +2,13 @@
 // middleware/auth.js
 // JWT Authentication & Authorization Middleware
 //
-// Token-ul JWT este stocat într-un cookie HttpOnly, Secure, SameSite=Strict.
+// Token-ul JWT este stocat într-un cookie HttpOnly, Secure, SameSite=Lax.
 // Verificarea include validare payload, blacklist, CSRF defense-in-depth
 // și Role-Based Access Control (RBAC).
+//
+// Fallback: header-ul Authorization (Bearer) este acceptat ca metodă
+// alternativă de trimitere a token-ului, pentru clienții care nu pot
+// utiliza cookie-uri HttpOnly (mobile apps, server-to-server).
 // ---------------------------------------------------------------------------
 
 const crypto = require('crypto');
@@ -139,7 +143,9 @@ function hashCsrfToken(token) {
 
 /**
  * Returnează opțiunile standard pentru cookie-ul de acces.
- * HttpOnly, Secure, SameSite=Strict.
+ * HttpOnly, Secure, SameSite=Lax (permite trimiterea cookie-ului
+ * la navigarea top-level, dar îl blochează în contexte cross-site
+ * precum iframe-uri sau cereri AJAX cross-origin).
  *
  * @returns {object} Opțiuni cookie
  */
@@ -147,7 +153,7 @@ function getAccessCookieOptions() {
   return {
     httpOnly: true,            // Inaccesibil din JavaScript (XSS protecție)
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    sameSite: 'lax',           // Lax explicit atât în dev cât și în producție
     path: '/',                 // Disponibil pe toate rutele
     maxAge: parseTtlToMs(ACCESS_TOKEN_TTL), // Expirare sincronizată cu JWT
   };
@@ -162,7 +168,7 @@ function getRefreshCookieOptions() {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    sameSite: 'lax',           // Lax explicit atât în dev cât și în producție
     path: '/api/auth/refresh', // Restricționat la ruta de refresh
     maxAge: parseTtlToMs(REFRESH_TOKEN_TTL),
   };
@@ -330,23 +336,55 @@ function isValidPayload(payload) {
 }
 
 // ---------------------------------------------------------------------------
+// Extragere token (cookie + fallback Authorization header)
+// ---------------------------------------------------------------------------
+
+/**
+ * Extrage access token-ul din cookie sau, ca fallback, din header-ul
+ * Authorization (Bearer). Cookie-ul HttpOnly este metoda preferată;
+ * header-ul Authorization este un fallback pentru clienții care
+ * nu pot folosi cookie-uri (ex: mobile apps, server-to-server).
+ *
+ * @param {import('express').Request} req
+ * @returns {string|null}
+ */
+function extractAccessToken(req) {
+  // 1. Încercăm cookie-ul HttpOnly (metoda preferată)
+  const cookieToken = req.cookies?.[ACCESS_TOKEN_COOKIE];
+  if (cookieToken) {
+    return cookieToken;
+  }
+
+  // 2. Fallback: header-ul Authorization (Bearer)
+  const authHeader = req.headers?.authorization;
+  if (authHeader && typeof authHeader === 'string') {
+    const match = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (match) {
+      return match[1].trim();
+    }
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Middleware-uri Express
 // ---------------------------------------------------------------------------
 
 /**
  * Middleware principal de autentificare.
  *
- * Extrage JWT-ul din cookie-ul HttpOnly, îl verifică,
- * validează payload-ul, verifică blacklist-ul,
- * și atașează `req.user` la cerere.
+ * Extrage JWT-ul din cookie-ul HttpOnly (sau, ca fallback, din header-ul
+ * Authorization: Bearer), îl verifică, validează payload-ul,
+ * verifică blacklist-ul, și atașează `req.user` la cerere.
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
 function authenticate(req, res, next) {
-  // 1. Extragere token din cookie
-  const token = req.cookies?.[ACCESS_TOKEN_COOKIE];
+  // 1. Extragere token (cookie + fallback Authorization header)
+  const token = extractAccessToken(req);
 
   if (!token) {
     return res.status(401).json({
@@ -359,7 +397,7 @@ function authenticate(req, res, next) {
   const { payload, error } = verifyToken(token);
 
   if (error) {
-    // Ștergem cookie-ul invalid
+    // Ștergem cookie-ul invalid (dacă există)
     res.clearCookie(ACCESS_TOKEN_COOKIE, getAccessCookieOptions());
 
     return res.status(401).json({
@@ -456,13 +494,15 @@ function authorize(...allowedRoles) {
  * Middleware opțional de autentificare.
  * Similar cu `authenticate`, dar nu respinge cererile neautentificate.
  * Atașează `req.user` doar dacă token-ul este valid.
+ * Folosește extractAccessToken pentru a încerca și header-ul Authorization
+ * ca fallback.
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
 function optionalAuth(req, res, next) {
-  const token = req.cookies?.[ACCESS_TOKEN_COOKIE];
+  const token = extractAccessToken(req);
 
   if (!token) {
     req.user = null;
@@ -507,7 +547,7 @@ function optionalAuth(req, res, next) {
 // ---------------------------------------------------------------------------
 
 /**
- * Middleware pentru verificarea CSRF (defense-in-depth, pe lângă SameSite=Strict).
+ * Middleware pentru verificarea CSRF (defense-in-depth, pe lângă SameSite=Lax).
  *
  * Generează un token CSRF la autentificare și îl trimite în răspunsul de login.
  * Clientul trebuie să trimită token-ul în header-ul `x-csrf-token` la fiecare
@@ -574,7 +614,7 @@ function setCsrfCookie(res) {
   res.cookie('csrf_token', hashed, {
     httpOnly: false,          // Trebuie citit de JS pentru a-l pune în header
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    sameSite: 'lax',          // Lax explicit atât în dev cât și în producție
     path: '/',
     maxAge: parseTtlToMs(ACCESS_TOKEN_TTL),
   });
@@ -591,7 +631,7 @@ function clearCsrfCookie(res) {
   res.clearCookie('csrf_token', {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    sameSite: 'lax',          // Lax explicit atât în dev cât și în producție
     path: '/',
   });
 }
@@ -603,6 +643,10 @@ function clearCsrfCookie(res) {
 /**
  * Setează cookie-urile de autentificare pe răspuns.
  * Se apelează după validarea credențialelor.
+ *
+ * Adițional, setează header-ul Authorization ca fallback pentru
+ * clienții care nu pot utiliza cookie-uri HttpOnly (ex: mobile apps,
+ * server-to-server). Cookie-ul rămâne metoda primară.
  *
  * @param {import('express').Response} res
  * @param {object} user - { id, email, role }
@@ -621,9 +665,12 @@ function setAuthCookies(res, user) {
     role: user.role,
   });
 
-  // Setăm cookie-urile
+  // Setăm cookie-urile (metoda primară)
   res.cookie(ACCESS_TOKEN_COOKIE, accessToken, getAccessCookieOptions());
   res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, getRefreshCookieOptions());
+
+  // Fallback: header Authorization pentru clienți care nu pot folosi cookie-uri
+  res.setHeader('Authorization', `Bearer ${accessToken}`);
 
   // Generăm și setăm CSRF token
   const csrfToken = setCsrfCookie(res);
@@ -638,8 +685,8 @@ function setAuthCookies(res, user) {
  * @param {import('express').Response} res
  */
 function clearAuthCookies(req, res) {
-  // Revocăm access token-ul dacă există
-  const accessToken = req.cookies?.[ACCESS_TOKEN_COOKIE];
+  // Revocăm access token-ul dacă există (cookie sau Authorization header)
+  const accessToken = extractAccessToken(req);
   if (accessToken) {
     const { payload } = verifyToken(accessToken, { ignoreExpiration: true });
     if (payload?.jti && payload?.exp) {
@@ -726,7 +773,7 @@ function refreshTokenHandler(req, res, next) {
     // Revocăm token-ul vechi (token rotation)
     revokeToken(payload.jti, payload.exp);
 
-    // Emitem noi token-uri
+    // Emitem noi token-uri (setAuthCookies setează și Authorization header)
     const { csrfToken } = setAuthCookies(res, user);
 
     return res.json({
@@ -765,6 +812,9 @@ module.exports = {
   clearAuthCookies,
   setCsrfCookie,
   clearCsrfCookie,
+
+  // Extragere token (cookie + fallback Authorization)
+  extractAccessToken,
 
   // Semnare / verificare token-uri (expuse pentru teste și rute custom)
   signAccessToken,

@@ -1095,10 +1095,16 @@
           }
         }
 
-        // Redirect to dashboard after a short delay (asigură că cookie-urile sunt procesate)
+        // Verifică că utilizatorul are rol de admin
+        if (!data || !data.user || data.user.role !== 'admin') {
+          throw new Error('Acces interzis. Doar administratorii au acces la panoul de administrare.');
+        }
+
+        // Redirect to dashboard after delay (asigură că cookie-urile sunt procesate)
+        // Folosim window.location.replace pentru a evita reîncărcarea paginii de login la back
         setTimeout(function () {
-          window.location.href = '/admin/views/dashboard.html';
-        }, 800);
+          window.location.replace('/admin/views/dashboard.html');
+        }, 1000);
 
       } catch (err) {
         console.error('[login] Error:', err.message);

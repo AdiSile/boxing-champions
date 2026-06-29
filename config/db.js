@@ -77,10 +77,10 @@ function closeDatabase() {
 // ---------------------------------------------------------------------------
 
 function initializeDatabase() {
-  const db = getDb();
+  const dbl = getDb();
 
   // ── settings ──────────────────────────────────────────────
-  db.exec(`
+  dbl.exec(`
     CREATE TABLE IF NOT EXISTS settings (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       key         TEXT    NOT NULL UNIQUE,
@@ -91,7 +91,7 @@ function initializeDatabase() {
   `);
 
   // ── users ─────────────────────────────────────────────────
-  db.exec(`
+  dbl.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       name          TEXT    NOT NULL,
@@ -109,7 +109,7 @@ function initializeDatabase() {
   `);
 
   // ── coaches ───────────────────────────────────────────────
-  db.exec(`
+  dbl.exec(`
     CREATE TABLE IF NOT EXISTS coaches (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id       INTEGER DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
@@ -131,7 +131,7 @@ function initializeDatabase() {
   `);
 
   // ── events ────────────────────────────────────────────────
-  db.exec(`
+  dbl.exec(`
     CREATE TABLE IF NOT EXISTS events (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       title         TEXT    NOT NULL,
@@ -152,7 +152,7 @@ function initializeDatabase() {
   `);
 
   // ── schedule ──────────────────────────────────────────────
-  db.exec(`
+  dbl.exec(`
     CREATE TABLE IF NOT EXISTS schedule (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       coach_id      INTEGER DEFAULT NULL REFERENCES coaches(id) ON DELETE SET NULL,
@@ -169,7 +169,7 @@ function initializeDatabase() {
   `);
 
   // ── plans ─────────────────────────────────────────────────
-  db.exec(`
+  dbl.exec(`
     CREATE TABLE IF NOT EXISTS plans (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       name          TEXT    NOT NULL,
@@ -187,7 +187,7 @@ function initializeDatabase() {
   `);
 
   // ── products ──────────────────────────────────────────────
-  db.exec(`
+  dbl.exec(`
     CREATE TABLE IF NOT EXISTS products (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       name          TEXT    NOT NULL,
@@ -204,7 +204,7 @@ function initializeDatabase() {
   `);
 
   // ── orders ────────────────────────────────────────────────
-  db.exec(`
+  dbl.exec(`
     CREATE TABLE IF NOT EXISTS orders (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id       INTEGER DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
@@ -224,15 +224,15 @@ function initializeDatabase() {
   `);
 
   // ── Migration: billing_address (safe add if not exists) ──
-  const ordersColumns = db.prepare('PRAGMA table_info(orders)').all();
+  const ordersColumns = dbl.prepare('PRAGMA table_info(orders)').all();
   const hasBillingAddress = ordersColumns.some(col => col.name === 'billing_address');
   if (!hasBillingAddress) {
-    db.exec('ALTER TABLE orders ADD COLUMN billing_address TEXT DEFAULT NULL');
+    dbl.exec('ALTER TABLE orders ADD COLUMN billing_address TEXT DEFAULT NULL');
     console.log('[DB] Migration: added billing_address column to orders.');
   }
 
   // ── contact_messages ─────────────────────────────────────
-  db.exec(`
+  dbl.exec(`
     CREATE TABLE IF NOT EXISTS contact_messages (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       name          TEXT    NOT NULL,
@@ -246,7 +246,7 @@ function initializeDatabase() {
   `);
 
   // ── promotions ────────────────────────────────────────────
-  db.exec(`
+  dbl.exec(`
     CREATE TABLE IF NOT EXISTS promotions (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       code          TEXT    NOT NULL UNIQUE,
@@ -265,7 +265,7 @@ function initializeDatabase() {
   `);
 
   // ── Seed: default settings ────────────────────────────────
-  const seedSettings = db.prepare(`
+  const seedSettings = dbl.prepare(`
     INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)
   `);
 
@@ -282,21 +282,37 @@ function initializeDatabase() {
   seedSettings.run('maintenance_mode', '0', 'Site under maintenance');
 
   // ── Seed: admin user ─────────────────────────────────────
-  const existingAdmin = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@boxingchampions.ro');
-  if (!existingAdmin) {
-    const saltRounds = 10;
-    const hashedPassword = bcrypt.hashSync('boxing2026', saltRounds);
+  const SALT_ROUNDS = 12; // consistență cu auth.js
 
-    db.prepare(`
+  const existingAdmin = dbl.prepare('SELECT id, password FROM users WHERE email = ?').get('admin@boxingchampions.ro');
+  if (!existingAdmin) {
+    // Adminul nu există — îl creăm cu salt rounds = 12
+    const hashedPassword = bcrypt.hashSync('boxing2026', SALT_ROUNDS);
+
+    dbl.prepare(`
       INSERT INTO users (name, email, password, role, is_active, email_verified_at)
       VALUES (?, ?, ?, 'admin', 1, datetime('now'))
     `).run('Boxing Champions Admin', 'admin@boxingchampions.ro', hashedPassword);
 
-    console.log('[DB] Admin user seeded: admin@boxingchampions.ro / boxing2026');
+    console.log('[DB] Admin user seeded: admin@boxingchampions.ro / boxing2026 (salt rounds: 12)');
+  } else {
+    // ── Migration: actualizează hash-ul parolei adminului dacă nu folosește SALT_ROUNDS = 12 ──
+    // bcrypt hash începe cu $2b$XX$ sau $2a$XX$ unde XX = numărul de salt rounds
+    const targetPrefix2b = `$2b$${String(SALT_ROUNDS).padStart(2, '0')}$`;
+    const targetPrefix2a = `$2a$${String(SALT_ROUNDS).padStart(2, '0')}$`;
+    const isCorrectRounds = existingAdmin.password &&
+      (existingAdmin.password.startsWith(targetPrefix2b) || existingAdmin.password.startsWith(targetPrefix2a));
+
+    if (!isCorrectRounds) {
+      const rehashedPassword = bcrypt.hashSync('boxing2026', SALT_ROUNDS);
+      dbl.prepare('UPDATE users SET password = ?, updated_at = datetime(\'now\') WHERE id = ?')
+        .run(rehashedPassword, existingAdmin.id);
+      console.log('[DB] Migration: Admin password re-hashed to salt rounds 12.');
+    }
   }
 
   // ── Seed: coaches ─────────────────────────────────────────
-  const seedCoaches = db.prepare(`
+  const seedCoaches = dbl.prepare(`
     INSERT OR IGNORE INTO coaches (name, slug, title, bio, specialties, certifications, photo, email, phone, social_links, is_active, sort_order)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
   `);
@@ -313,7 +329,7 @@ function initializeDatabase() {
   }
 
   // ── Seed: plans (abonamente) ──────────────────────────────
-  const seedPlans = db.prepare(`
+  const seedPlans = dbl.prepare(`
     INSERT OR IGNORE INTO plans (name, slug, description, price, duration_days, features, is_popular, is_active, sort_order)
     VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
   `);
@@ -330,7 +346,7 @@ function initializeDatabase() {
   }
 
   // ── Seed: products ────────────────────────────────────────
-  const seedProducts = db.prepare(`
+  const seedProducts = dbl.prepare(`
     INSERT OR IGNORE INTO products (name, slug, description, price, category, image, stock, is_active)
     VALUES (?, ?, ?, ?, ?, ?, ?, 1)
   `);
@@ -351,7 +367,7 @@ function initializeDatabase() {
   }
 
   // ── Seed: events ──────────────────────────────────────────
-  const seedEvents = db.prepare(`
+  const seedEvents = dbl.prepare(`
     INSERT OR IGNORE INTO events (title, slug, description, type, location, start_date, end_date, time, price, capacity, image, is_published)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
   `);
@@ -368,10 +384,10 @@ function initializeDatabase() {
   }
 
   // ── Seed: schedule ────────────────────────────────────────
-  const existingSchedule = db.prepare('SELECT COUNT(*) as cnt FROM schedule').get();
+  const existingSchedule = dbl.prepare('SELECT COUNT(*) as cnt FROM schedule').get();
   if (!existingSchedule || existingSchedule.cnt === 0) {
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
-    const seedSchedule = db.prepare(`
+    const seedSchedule = dbl.prepare(`
       INSERT INTO schedule (coach_id, title, day_of_week, start_time, end_time, location, max_participants, is_active, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
     `);
@@ -409,7 +425,7 @@ function initializeDatabase() {
   }
 
   // ── Seed: promotions ──────────────────────────────────────
-  const seedPromotions = db.prepare(`
+  const seedPromotions = dbl.prepare(`
     INSERT OR IGNORE INTO promotions (code, description, discount_type, discount_value, applies_to, start_date, end_date, usage_limit, is_active)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
   `);
@@ -425,9 +441,9 @@ function initializeDatabase() {
   }
 
   // ── Seed: contact_messages ────────────────────────────────
-  const existingMessages = db.prepare('SELECT COUNT(*) as cnt FROM contact_messages').get();
+  const existingMessages = dbl.prepare('SELECT COUNT(*) as cnt FROM contact_messages').get();
   if (!existingMessages || existingMessages.cnt === 0) {
-    const seedMessages = db.prepare(`
+    const seedMessages = dbl.prepare(`
       INSERT INTO contact_messages (name, email, subject, message, is_read, created_at)
       VALUES (?, ?, ?, ?, 0, ?)
     `);
@@ -444,7 +460,7 @@ function initializeDatabase() {
   }
 
   console.log('[DB] Database initialized successfully.');
-  return db;
+  return dbl;
 }
 
 module.exports = { getDb, initializeDatabase, closeDatabase, checkDatabaseConnection };

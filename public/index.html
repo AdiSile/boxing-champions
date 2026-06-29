@@ -441,14 +441,45 @@
     var showToast = BC.showToast;
     var refreshScrollReveal = BC.refreshScrollReveal;
 
-    // Fallback fetchJSON dacă shared.js nu e disponibil
-    async function safeFetch(url, opts) {
-      if (typeof fetchJSON === 'function') {
-        return fetchJSON(url, opts);
-      }
-      var res = await fetch(url, opts || {});
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
+    // Cache-busting timestamp — garantează date proaspete după modificări în admin
+    var CACHE_BUST = '_=' + Date.now();
+
+    // Fallback fetchJSON dacă shared.js nu s-a încărcat
+    if (typeof fetchJSON !== 'function') {
+      fetchJSON = async function (url, opts) {
+        var res = await fetch(url, opts || {});
+        if (!res.ok) {
+          var err = new Error('HTTP ' + res.status);
+          err.status = res.status;
+          throw err;
+        }
+        return res.json();
+      };
+    }
+
+    /**
+     * apiGet  —  fetchJSON cu credentials + cache-busting, apoi extrage `.data`
+     */
+    async function apiGet(url) {
+      var sep = url.indexOf('?') === -1 ? '?' : '&';
+      var response = await fetchJSON(url + sep + CACHE_BUST, {
+        credentials: 'same-origin',
+        cache: 'no-cache'
+      });
+      return response && response.data ? response.data : [];
+    }
+
+    /**
+     * apiPost  —  fetchJSON cu credentials + no-cache
+     */
+    async function apiPost(url, body) {
+      return fetchJSON(url, {
+        method: 'POST',
+        body: body,
+        credentials: 'same-origin',
+        cache: 'no-cache',
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     /* ==================================================================
@@ -536,10 +567,9 @@
       if (!grid) return;
 
       try {
-        var response = await safeFetch('/api/coaches?limit=8&sort=sort_order');
-        var coaches = response.data || [];
+        var coaches = await apiGet('/api/coaches?limit=8&sort=sort_order');
 
-        if (coaches.length === 0) {
+        if (!coaches || coaches.length === 0) {
           grid.innerHTML = '<div class="text-center" style="grid-column:1/-1;padding:2rem;color:var(--gray-smoke);"><p>Informațiile despre antrenori vor fi disponibile în curând.</p></div>';
           return;
         }
@@ -573,10 +603,9 @@
       if (!grid) return;
 
       try {
-        var response = await safeFetch('/api/events?limit=3&sort=start_date&upcoming=true');
-        var events = response.data || [];
+        var events = await apiGet('/api/events?limit=3&sort=start_date&upcoming=true');
 
-        if (events.length === 0) {
+        if (!events || events.length === 0) {
           grid.innerHTML = '<div class="text-center" style="grid-column:1/-1;padding:2rem;color:var(--gray-smoke);"><p>Niciun eveniment programat momentan. Revino curând!</p></div>';
           return;
         }
@@ -616,10 +645,9 @@
       if (!tbody) return;
 
       try {
-        var response = await safeFetch('/api/schedule?sort=day_of_week');
-        var schedule = response.data || [];
+        var schedule = await apiGet('/api/schedule?sort=day_of_week');
 
-        if (schedule.length === 0) {
+        if (!schedule || schedule.length === 0) {
           tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray-smoke);">Programul va fi anunțat în curând.</td></tr>';
           return;
         }
@@ -684,10 +712,9 @@
       if (!grid) return;
 
       try {
-        var response = await safeFetch('/api/plans?sort=sort_order');
-        var plans = response.data || [];
+        var plans = await apiGet('/api/plans?sort=sort_order');
 
-        if (plans.length === 0) {
+        if (!plans || plans.length === 0) {
           grid.innerHTML = '<div class="text-center" style="grid-column:1/-1;padding:2rem;color:var(--gray-smoke);"><p>Abonamentele vor fi disponibile în curând.</p></div>';
           return;
         }
@@ -754,11 +781,7 @@
         feedback.innerHTML = '';
 
         try {
-          await safeFetch('/api/contact', {
-            method: 'POST',
-            body: JSON.stringify({ name: name, email: email, subject: subject || 'Mesaj din site', message: message }),
-            headers: { 'Content-Type': 'application/json' },
-          });
+          await apiPost('/api/contact', JSON.stringify({ name: name, email: email, subject: subject || 'Mesaj din site', message: message }));
 
           feedback.innerHTML = '<span style="color:#4caf50;">✅ Mesajul a fost trimis cu succes! Te vom contacta în scurt timp.</span>';
           form.reset();

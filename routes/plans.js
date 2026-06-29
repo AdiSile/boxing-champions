@@ -3,6 +3,7 @@
 // CRUD complet /api/plans
 //
 // GET    /api/plans       – public, listare cu paginare, sortare, căutare
+//                              is_active=true (default), false, all (admin)
 // GET    /api/plans/:id   – public, detalii plan
 // POST   /api/plans       – admin, creare plan
 // PUT    /api/plans/:id   – admin, actualizare plan
@@ -115,8 +116,16 @@ router.get('/api/plans', validate(paginationSchema), (req, res) => {
     const minPriceParam = req.query.min_price;
     const maxPriceParam = req.query.max_price;
     const filters = {};
-    if (isActiveParam !== undefined) filters.is_active = isActiveParam === 'true' || isActiveParam === true;
-    else filters.is_active = true;
+    if (isActiveParam !== undefined) {
+      if (isActiveParam === 'all') {
+        // admin – nu filtra după is_active (returnează toate)
+        // filters.is_active rămâne undefined
+      } else {
+        filters.is_active = isActiveParam === 'true' || isActiveParam === true;
+      }
+    } else {
+      filters.is_active = true; // public – doar active
+    }
     if (isPopularParam !== undefined) filters.is_popular = isPopularParam === 'true' || isPopularParam === true;
     if (minPriceParam !== undefined && minPriceParam !== '') filters.min_price = Number(minPriceParam);
     if (maxPriceParam !== undefined && maxPriceParam !== '') filters.max_price = Number(maxPriceParam);

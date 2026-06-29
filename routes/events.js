@@ -2,7 +2,7 @@
 // routes/events.js
 // CRUD complet /api/events
 //
-// GET    /api/events       – public, listare cu paginare, sortare, căutare
+// GET    /api/events       – public, listare cu paginare, sortare, căutare. is_published=true|false|all (fără parametru = true)
 // GET    /api/events/:id   – public, detalii eveniment
 // POST   /api/events       – admin, creare eveniment
 // PUT    /api/events/:id   – admin, actualizare eveniment
@@ -105,8 +105,14 @@ router.get('/api/events', validate(paginationSchema), (req, res) => {
     const upcomingParam = req.query.upcoming;
     const pastParam = req.query.past;
     const filters = {};
-    if (isPublishedParam !== undefined) filters.is_published = isPublishedParam === 'true' || isPublishedParam === true;
-    else filters.is_published = true;
+    // Dacă is_published nu e specificat → default true (doar publicate)
+    // Dacă is_published=all → fără filtru (admin dashboard)
+    if (isPublishedParam !== undefined && isPublishedParam !== 'all') {
+      filters.is_published = isPublishedParam === 'true' || isPublishedParam === true;
+    } else if (isPublishedParam === undefined) {
+      filters.is_published = true;
+    }
+    // isPublishedParam === 'all' → nu setăm filters.is_published → toate evenimentele
     if (typeParam) filters.type = typeParam;
     if (upcomingParam === 'true' || upcomingParam === true) filters.upcoming = true;
     if (pastParam === 'true' || pastParam === true) filters.past = true;

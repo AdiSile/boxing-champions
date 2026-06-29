@@ -1,30 +1,28 @@
 // ---------------------------------------------------------------------------
-// routes/schedule.js
-// CRUD complet /api/schedule
+// routes/auth.js
+// Autentificare centralizată: folosește middleware-ul și helper-ele din
+// middleware/auth.js pentru signare, verificare, cookie-uri și CSRF.
 //
-// GET    /api/schedule       – public, listare program cu opțiuni de filtrare
-// POST   /api/schedule       – admin, creare sesiune individuală
-// PUT    /api/schedule       – admin, înlocuire completă program (batch)
-// PUT    /api/schedule/:id   – admin, actualizare sesiune individuală
-// DELETE /api/schedule/:id   – admin, ștergere sesiune individuală
-//
-// Autentificare & autorizare: middleware centralizat din middleware/auth.js
+// POST /api/auth/register – creare cont nou (bcrypt + createUserAccount)
+// POST /api/auth/login    – autentificare (bcrypt + setAuthCookies)
+// GET  /api/auth/check    – verificare token (optionalAuth)
+// POST /api/auth/logout   – ștergere cookie-uri + revocare (clearAuthCookies)
+// POST /api/auth/refresh  – refresh token rotation (refreshTokenHandler)
 // ---------------------------------------------------------------------------
 
 const express = require('express');
+const bcrypt = require('bcrypt');
 const { getDb } = require('../config/db');
-const {
-  validate,
-  scheduleCreateSchema,
-  scheduleUpdateSchema,
-  scheduleBatchUpdateSchema,
-  paginationSchema,
-  paramsIdSchema,
-} = require('../middleware/validate');
+const { loginSchema, userCreateSchema, validate } = require('../middleware/validate');
+const { authRateLimiter } = require('../middleware/security');
 const {
   authenticate,
-  authorize,
+  optionalAuth,
   csrfProtection,
+  refreshTokenHandler,
+  setAuthCookies,
+  clearAuthCookies,
+  ACCESS_TOKEN_COOKIE,
 } = require('../middleware/auth');
 
 const router = express.Router();
@@ -33,327 +31,517 @@ const router = express.Router();
 // Constante
 // ---------------------------------------------------------------------------
 
-const DAY_NAMES = [
-  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
-];
-const ALLOWED_SORT_FIELDS = [
-  'id', 'day_of_week', 'start_time', 'end_time', 'title', 'location',
-  'max_participants', 'is_active', 'created_at', 'updated_at',
-];
-const SEARCH_FIELDS = ['s.title', 's.location', 'c.name'];
+/** Costul bcrypt pentru hash-ul parolei */
+const BCRYPT_SALT_ROUNDS = 12;
 
 // ---------------------------------------------------------------------------
-// Helpers – Parsare
+// Helpers – creare cont utilizator
 // ---------------------------------------------------------------------------
 
-function parseScheduleRow(row) {
-  if (!row) return null;
+/**
+ * Creează un cont de utilizator în baza de date.
+ *
+ * Validează unicitatea email-ului, hash-uiește parola și inserează
+ * înregistrarea. Returnează utilizatorul creat (fără parolă).
+ *
+ * @param {object} params
+ * @param {string} params.name - Numele utilizatorului
+ * @param {string} params.email - Adresa de email
+ * @param {string} params.password - Parola în clar (va fi hash-uită)
+ * @param {string} [params.role='user'] - Rolul utilizatorului ('user' sau 'coach')
+ * @param {string|null} [params.phone=null] - Numărul de telefon
+ * @returns {{ success: boolean, user: object|null, error: string|null }}
+ */
+function createUserAccount({ name, email, password, role = 'user', phone = null }) {
+  try {
+    const db = getDb();
+
+    // Verifică dacă tabela users există
+    const tableExists = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+    ).get();
+
+    if (!tableExists) {
+      return { success: false, user: null, error: 'Tabela users nu există.' };
+    }
+
+    // Verifică dacă email-ul este deja utilizat
+    const existingUser = db.prepare(
+      'SELECT id FROM users WHERE email = ?'
+    ).get(email);
+
+    if (existingUser) {
+      return {
+        success: false,
+        user: null,
+        error: 'Un cont cu această adresă de email există deja.',
+      };
+    }
+
+    // Hash-uiește parola
+    const hashedPassword = bcrypt.hashSync(password, BCRYPT_SALT_ROUNDS);
+
+    // Inserează utilizatorul
+    const result = db.prepare(`
+      INSERT INTO users (name, email, password, role, phone, is_active, email_verified_at)
+      VALUES (?, ?, ?, ?, ?, 1, NULL)
+    `).run(name, email, hashedPassword, role, phone);
+
+    console.log(`[auth] Cont creat: ${email} (rol: ${role})`);
+
+    return {
+      success: true,
+      user: {
+        id: result.lastInsertRowid,
+        name,
+        email,
+        role,
+      },
+      error: null,
+    };
+  } catch (err) {
+    console.error('[auth] Eroare la crearea contului:', err.message);
+
+    // Detectează eroarea de constrângere UNIQUE pentru email (fallback)
+    if (err.message && err.message.includes('UNIQUE constraint')) {
+      return {
+        success: false,
+        user: null,
+        error: 'Un cont cu această adresă de email există deja.',
+      };
+    }
+
+    return { success: false, user: null, error: 'Eroare internă la crearea contului.' };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers – admin
+// ---------------------------------------------------------------------------
+
+/**
+ * Returnează credențialele admin-ului din mediu sau default-uri.
+ * @returns {{ email: string, password: string, name: string }}
+ */
+function getAdminCredentials() {
   return {
-    id: row.id,
-    coach_id: row.coach_id !== null ? Number(row.coach_id) : null,
-    title: row.title,
-    day_of_week: Number(row.day_of_week),
-    day_name: DAY_NAMES[Number(row.day_of_week)] || 'Unknown',
-    start_time: row.start_time,
-    end_time: row.end_time,
-    location: row.location || null,
-    max_participants: row.max_participants !== null ? Number(row.max_participants) : null,
-    is_active: Boolean(row.is_active),
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-    coach_name: row.coach_name || null,
-    coach_title: row.coach_title || null,
+    email: process.env.ADMIN_EMAIL || 'admin@boxingchampions.ro',
+    password: process.env.ADMIN_PASSWORD || 'boxing2026',
+    name: process.env.ADMIN_NAME || 'Boxing Champions Admin',
   };
 }
 
-// ---------------------------------------------------------------------------
-// Helpers – Construire query
-// ---------------------------------------------------------------------------
-
-function buildWhereClause(filters = {}) {
-  const conditions = [];
-  const params = [];
-  if (filters.is_active !== undefined) { conditions.push('s.is_active = ?'); params.push(filters.is_active ? 1 : 0); }
-  if (filters.day_of_week !== undefined && filters.day_of_week !== null) { conditions.push('s.day_of_week = ?'); params.push(Number(filters.day_of_week)); }
-  if (filters.coach_id !== undefined && filters.coach_id !== null) { conditions.push('s.coach_id = ?'); params.push(Number(filters.coach_id)); }
-  if (filters.search && typeof filters.search === 'string' && filters.search.trim()) {
-    const searchTerm = `%${filters.search.trim()}%`;
-    const searchConditions = SEARCH_FIELDS.map(field => `${field} LIKE ?`);
-    conditions.push(`(${searchConditions.join(' OR ')})`);
-    for (let i = 0; i < SEARCH_FIELDS.length; i++) params.push(searchTerm);
-  }
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-  return { whereClause, params };
-}
-
-function buildOrderClause(sort) {
-  if (!sort || typeof sort !== 'string') return 'ORDER BY s.day_of_week ASC, s.start_time ASC';
-  const isDesc = sort.startsWith('-');
-  const field = isDesc ? sort.slice(1) : sort;
-  if (!ALLOWED_SORT_FIELDS.includes(field)) return 'ORDER BY s.day_of_week ASC, s.start_time ASC';
-  const direction = isDesc ? 'DESC' : 'ASC';
-  return `ORDER BY s.${field} ${direction}`;
-}
-
-// ---------------------------------------------------------------------------
-// GET /api/schedule
-// ---------------------------------------------------------------------------
-
-router.get('/api/schedule', validate(paginationSchema), (req, res) => {
+/**
+ * Creează sau reactivează contul de admin.
+ * Dacă admin-ul există deja (după email), îi actualizează parola și îl reactivează.
+ * Dacă nu există, îl creează.
+ *
+ * NOTĂ: Această funcție este păstrată ca utilitar, dar NU mai este apelată automat
+ * din ruta de login. La login se folosește un fallback explicit cu credențialele
+ * hardcodate, care actualizează hash-ul doar dacă parola în clar se potrivește.
+ *
+ * @returns {{ success: boolean, user: object|null, error: string|null }}
+ */
+function recreateAdmin() {
   try {
     const db = getDb();
-    const sort = req.query.sort || null;
-    const search = req.query.search || null;
-    const isActiveParam = req.query.is_active;
-    const dayOfWeekParam = req.query.day_of_week;
-    const coachIdParam = req.query.coach_id;
-    const filters = {};
-    if (isActiveParam !== undefined) filters.is_active = isActiveParam === 'true' || isActiveParam === true;
-    else filters.is_active = true;
-    if (dayOfWeekParam !== undefined && dayOfWeekParam !== '') {
-      const day = parseInt(dayOfWeekParam, 10);
-      if (!Number.isNaN(day) && day >= 0 && day <= 6) filters.day_of_week = day;
+    const { email, password, name } = getAdminCredentials();
+
+    // Verifică dacă tabela users există
+    const tableExists = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+    ).get();
+
+    if (!tableExists) {
+      return { success: false, user: null, error: 'Tabela users nu există.' };
     }
-    if (coachIdParam !== undefined && coachIdParam !== '') {
-      const coachId = parseInt(coachIdParam, 10);
-      if (!Number.isNaN(coachId) && coachId > 0) filters.coach_id = coachId;
+
+    const hashedPassword = bcrypt.hashSync(password, BCRYPT_SALT_ROUNDS);
+
+    // Verifică dacă admin-ul există deja după email
+    const existing = db.prepare(
+      'SELECT id, name, email, role, is_active FROM users WHERE email = ?'
+    ).get(email);
+
+    if (existing) {
+      // Actualizează parola și reactivează
+      db.prepare(`
+        UPDATE users
+        SET password = ?, is_active = 1, role = 'admin', email_verified_at = datetime('now')
+        WHERE id = ?
+      `).run(hashedPassword, existing.id);
+
+      console.log(`[auth] Admin recreat (actualizat): ${email}`);
+
+      return {
+        success: true,
+        user: {
+          id: existing.id,
+          name: existing.name,
+          email: existing.email,
+          role: 'admin',
+        },
+        error: null,
+      };
     }
-    if (search) filters.search = search;
-    const { whereClause, params } = buildWhereClause(filters);
-    const orderClause = buildOrderClause(sort);
-    const countSql = `SELECT COUNT(*) as total FROM schedule s LEFT JOIN coaches c ON s.coach_id = c.id ${whereClause}`;
-    const countResult = db.prepare(countSql).get(...params);
-    const total = countResult ? countResult.total : 0;
-    const dataSql = `
-      SELECT s.id, s.coach_id, s.title, s.day_of_week, s.start_time, s.end_time,
-             s.location, s.max_participants, s.is_active, s.created_at, s.updated_at,
-             c.name AS coach_name, c.title AS coach_title
-      FROM schedule s LEFT JOIN coaches c ON s.coach_id = c.id
-      ${whereClause} ${orderClause}
-    `;
-    const rows = db.prepare(dataSql).all(...params);
-    const schedule = rows.map(parseScheduleRow);
-    const groupedByDay = {};
-    for (const dayIndex of [0, 1, 2, 3, 4, 5, 6]) {
-      groupedByDay[dayIndex] = schedule.filter(entry => entry.day_of_week === dayIndex);
-    }
-    return res.json({ data: schedule, grouped: groupedByDay, total });
+
+    // Creează admin nou
+    const result = db.prepare(`
+      INSERT INTO users (name, email, password, role, is_active, email_verified_at)
+      VALUES (?, ?, ?, 'admin', 1, datetime('now'))
+    `).run(name, email, hashedPassword);
+
+    console.log(`[auth] Admin recreat (nou): ${email}`);
+
+    return {
+      success: true,
+      user: {
+        id: result.lastInsertRowid,
+        name,
+        email,
+        role: 'admin',
+      },
+      error: null,
+    };
   } catch (err) {
-    console.error('[schedule] GET error:', err.message);
-    return res.status(500).json({ error: 'Internal server error.', code: 'INTERNAL_ERROR' });
+    console.error('[auth] Eroare la recrearea admin-ului:', err.message);
+    return { success: false, user: null, error: err.message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Auto-creare / verificare admin la pornire
+// Verifică existența admin-ului și ACTUALIZEAZĂ parola la fiecare pornire
+// pentru a preveni problemele de hash bcrypt desincronizat.
+// ---------------------------------------------------------------------------
+
+/**
+ * Asigură existența unui cont de administrator la pornirea serverului.
+ *
+ * Verifică:
+ * 1. Dacă admin-ul (după email) există și este activ → verifică hash-ul parolei
+ *    față de credențialele hardcodate; dacă nu se potrivește, îl actualizează.
+ * 2. Dacă admin-ul există după email dar e inactiv/alt rol → îl reactivează
+ *    și îi actualizează parola.
+ * 3. Dacă admin-ul nu există deloc → îl creează.
+ */
+function ensureAdminOnStartup() {
+  try {
+    const db = getDb();
+
+    const tableExists = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+    ).get();
+
+    if (!tableExists) {
+      console.log('[auth] Tabela users nu există – se amână ensureAdminOnStartup.');
+      return;
+    }
+
+    const { email, password, name } = getAdminCredentials();
+    const hashedPassword = bcrypt.hashSync(password, BCRYPT_SALT_ROUNDS);
+
+    // 1. Caută admin-ul după email (cazul ideal)
+    const existingAdmin = db.prepare(
+      'SELECT id, password, role, is_active FROM users WHERE email = ?'
+    ).get(email);
+
+    if (existingAdmin) {
+      // Verifică dacă hash-ul parolei corespunde cu credențialele hardcodate
+      const passwordMatches = bcrypt.compareSync(password, existingAdmin.password);
+
+      if (!passwordMatches || existingAdmin.role !== 'admin' || !existingAdmin.is_active) {
+        // Actualizează parola, rolul și starea
+        db.prepare(`
+          UPDATE users
+          SET password = ?, role = 'admin', is_active = 1, email_verified_at = datetime('now')
+          WHERE id = ?
+        `).run(hashedPassword, existingAdmin.id);
+
+        if (!passwordMatches) {
+          console.log('[auth] Parola admin-ului a fost actualizată la pornire (hash desincronizat).');
+        } else {
+          console.log('[auth] Admin-ul a fost reactivat / rolul corectat la pornire.');
+        }
+      } else {
+        console.log('[auth] Admin există, parola este corectă – totul OK.');
+      }
+      return;
+    }
+
+    // 2. Nu există admin cu acest email – verifică dacă există un admin după rol
+    const anyAdmin = db.prepare(
+      'SELECT id, email FROM users WHERE role = ? AND is_active = 1'
+    ).get('admin');
+
+    if (anyAdmin) {
+      console.log(`[auth] Admin existent cu alt email (${anyAdmin.email}) – nu se modifică.`);
+      return;
+    }
+
+    // 3. Nu există niciun admin – creează unul nou
+    db.prepare(`
+      INSERT INTO users (name, email, password, role, is_active, email_verified_at)
+      VALUES (?, ?, ?, 'admin', 1, datetime('now'))
+    `).run(name, email, hashedPassword);
+
+    console.log(`[auth] Admin creat la pornire: ${email}`);
+  } catch (err) {
+    console.error('[auth] Eroare la ensureAdminOnStartup:', err.message);
+  }
+}
+
+ensureAdminOnStartup();
+
+// ---------------------------------------------------------------------------
+// POST /api/auth/register
+// ---------------------------------------------------------------------------
+
+router.post(
+  '/api/auth/register',
+  authRateLimiter,
+  validate(userCreateSchema),
+  (req, res) => {
+    try {
+      const { name, email, password, role = 'user', phone } = req.body;
+
+      // Creează contul utilizatorului
+      const result = createUserAccount({ name, email, password, role, phone });
+
+      if (!result.success) {
+        // Dacă eroarea e legată de email duplicat, returnăm 409 Conflict
+        if (result.error && result.error.includes('există deja')) {
+          return res.status(409).json({
+            error: result.error,
+            code: 'EMAIL_ALREADY_EXISTS',
+          });
+        }
+
+        return res.status(500).json({
+          error: result.error || 'Eroare la crearea contului.',
+          code: 'ACCOUNT_CREATION_FAILED',
+        });
+      }
+
+      // Autentificare automată după înregistrare: setează cookie-urile
+      const { csrfToken } = setAuthCookies(res, result.user);
+
+      return res.status(201).json({
+        message: 'Cont creat cu succes.',
+        user: result.user,
+        csrfToken,
+      });
+    } catch (err) {
+      console.error('[auth] Register error:', err.message);
+      return res.status(500).json({
+        error: 'Internal server error.',
+        code: 'INTERNAL_ERROR',
+      });
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// POST /api/auth/login
+// ---------------------------------------------------------------------------
+
+router.post(
+  '/api/auth/login',
+  authRateLimiter,
+  validate(loginSchema),
+  async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      /**
+       * Încearcă autentificarea cu credențialele date (bcrypt).
+       * @returns {Promise<{ success: boolean, user: object|null }>}
+       */
+      async function attemptLogin() {
+        const db = getDb();
+        const user = db.prepare(
+          'SELECT id, name, email, password, role, is_active FROM users WHERE email = ?'
+        ).get(email);
+
+        if (!user || !user.is_active) {
+          return { success: false, user: null };
+        }
+
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (!passwordMatch) {
+          return { success: false, user: null };
+        }
+
+        return {
+          success: true,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+          },
+        };
+      }
+
+      // 1. Prima încercare de autentificare (bcrypt standard)
+      let result = await attemptLogin();
+
+      // 2. Fallback explicit pentru credențialele hardcodate (admin)
+      //    Dacă autentificarea bcrypt a eșuat, dar email-ul și parola se potrivesc
+      //    cu valorile din mediu / default, atunci actualizăm hash-ul în BD
+      //    (fără a șterge și recrea contul) și autentificăm utilizatorul.
+      if (!result.success) {
+        const adminCreds = getAdminCredentials();
+
+        if (
+          email.toLowerCase() === adminCreds.email.toLowerCase() &&
+          password === adminCreds.password
+        ) {
+          console.log('[auth] Fallback admin: parola hardcodată se potrivește – se actualizează hash-ul în BD.');
+
+          const db = getDb();
+          const hashedPassword = bcrypt.hashSync(password, BCRYPT_SALT_ROUNDS);
+
+          const existingAdmin = db.prepare(
+            'SELECT id, name, email, role FROM users WHERE email = ?'
+          ).get(email);
+
+          if (existingAdmin) {
+            // Actualizează hash-ul parolei (păstrează contul intact)
+            db.prepare(`
+              UPDATE users
+              SET password = ?, is_active = 1, role = 'admin', email_verified_at = datetime('now')
+              WHERE id = ?
+            `).run(hashedPassword, existingAdmin.id);
+
+            result = {
+              success: true,
+              user: {
+                id: existingAdmin.id,
+                name: existingAdmin.name,
+                email: existingAdmin.email,
+                role: 'admin',
+              },
+            };
+          } else {
+            // Admin-ul nu există deloc – îl creăm
+            const insertResult = db.prepare(`
+              INSERT INTO users (name, email, password, role, is_active, email_verified_at)
+              VALUES (?, ?, ?, 'admin', 1, datetime('now'))
+            `).run(adminCreds.name, email, hashedPassword);
+
+            result = {
+              success: true,
+              user: {
+                id: insertResult.lastInsertRowid,
+                name: adminCreds.name,
+                email: email,
+                role: 'admin',
+              },
+            };
+          }
+        }
+      }
+
+      // 3. Dacă tot nu s-a autentificat, returnează eroare generică
+      if (!result.success) {
+        return res.status(401).json({
+          error: 'Invalid email or password.',
+          code: 'INVALID_CREDENTIALS',
+        });
+      }
+
+      // 4. Setează cookie-urile de autentificare (access + refresh + CSRF)
+      const { csrfToken } = setAuthCookies(res, result.user);
+
+      // 5. Răspuns – include CSRF token în body pentru client
+      return res.json({
+        message: 'Login successful.',
+        user: result.user,
+        csrfToken,
+      });
+    } catch (err) {
+      console.error('[auth] Login error:', err.message);
+      return res.status(500).json({
+        error: 'Internal server error.',
+        code: 'INTERNAL_ERROR',
+      });
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// GET /api/auth/check
+// ---------------------------------------------------------------------------
+
+router.get('/api/auth/check', optionalAuth, (req, res) => {
+  try {
+    // Dacă req.user este setat de optionalAuth, utilizatorul este autentificat
+    if (req.user) {
+      // Obține datele complete din baza de date
+      try {
+        const db = getDb();
+        const user = db.prepare(
+          'SELECT id, name, email, role, is_active FROM users WHERE id = ?'
+        ).get(req.user.userId);
+
+        if (user && user.is_active) {
+          return res.json({
+            authenticated: true,
+            user: {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+            },
+          });
+        }
+      } catch {
+        // Fallback: folosim datele din token
+        return res.json({
+          authenticated: true,
+          user: {
+            id: req.user.userId,
+            email: req.user.email,
+            role: req.user.role,
+          },
+        });
+      }
+    }
+
+    // Neautentificat
+    return res.json({
+      authenticated: false,
+      user: null,
+    });
+  } catch (err) {
+    console.error('[auth] Check error:', err.message);
+    return res.status(500).json({
+      error: 'Internal server error.',
+      code: 'INTERNAL_ERROR',
+    });
   }
 });
 
 // ---------------------------------------------------------------------------
-// PUT /api/schedule
-// Middleware: authenticate → csrfProtection → authorize('admin')
+// POST /api/auth/logout
 // ---------------------------------------------------------------------------
 
-router.put(
-  '/api/schedule',
-  authenticate,
-  csrfProtection,
-  authorize('admin'),
-  validate(scheduleBatchUpdateSchema),
-  (req, res) => {
-    try {
-      const { entries } = req.body;
+router.post('/api/auth/logout', authenticate, csrfProtection, (req, res) => {
+  // Revocă token-urile și șterge cookie-urile
+  clearAuthCookies(req, res);
 
-      // entries este deja validat de scheduleBatchUpdateSchema
-      const db = getDb();
-      const coachIds = entries.filter(e => e.coach_id !== undefined && e.coach_id !== null).map(e => Number(e.coach_id));
-      if (coachIds.length > 0) {
-        const uniqueCoachIds = [...new Set(coachIds)];
-        const placeholders = uniqueCoachIds.map(() => '?').join(',');
-        const existingCoaches = db.prepare(`SELECT id FROM coaches WHERE id IN (${placeholders})`).all(...uniqueCoachIds);
-        const existingIds = new Set(existingCoaches.map(c => c.id));
-        for (const coachId of uniqueCoachIds) {
-          if (!existingIds.has(coachId))
-            return res.status(400).json({ error: `Coach with id ${coachId} does not exist.`, code: 'INVALID_COACH' });
-        }
-      }
-      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
-      const replaceAll = db.transaction(() => {
-        db.prepare('DELETE FROM schedule').run();
-        const insertStmt = db.prepare(`
-          INSERT INTO schedule (coach_id, title, day_of_week, start_time, end_time, location, max_participants, is_active, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        for (const entry of entries) {
-          insertStmt.run(
-            entry.coach_id !== undefined && entry.coach_id !== null ? Number(entry.coach_id) : null,
-            entry.title.trim(), Number(entry.day_of_week), entry.start_time, entry.end_time,
-            entry.location || null,
-            entry.max_participants !== undefined && entry.max_participants !== null ? Number(entry.max_participants) : null,
-            entry.is_active !== undefined ? (entry.is_active ? 1 : 0) : 1, now, now
-          );
-        }
-      });
-      replaceAll();
-      const updatedRows = db.prepare(`
-        SELECT s.id, s.coach_id, s.title, s.day_of_week, s.start_time, s.end_time,
-               s.location, s.max_participants, s.is_active, s.created_at, s.updated_at,
-               c.name AS coach_name, c.title AS coach_title
-        FROM schedule s LEFT JOIN coaches c ON s.coach_id = c.id
-        ORDER BY s.day_of_week ASC, s.start_time ASC
-      `).all();
-      const schedule = updatedRows.map(parseScheduleRow);
-      const groupedByDay = {};
-      for (const dayIndex of [0, 1, 2, 3, 4, 5, 6]) {
-        groupedByDay[dayIndex] = schedule.filter(entry => entry.day_of_week === dayIndex);
-      }
-      return res.json({ message: 'Schedule updated successfully.', data: schedule, grouped: groupedByDay, total: schedule.length });
-    } catch (err) {
-      console.error('[schedule] PUT error:', err.message);
-      if (err.message && err.message.includes('FOREIGN KEY'))
-        return res.status(400).json({ error: 'One or more coach references are invalid.', code: 'INVALID_COACH' });
-      return res.status(500).json({ error: 'Internal server error.', code: 'INTERNAL_ERROR' });
-    }
-  }
-);
+  return res.json({
+    message: 'Logged out successfully.',
+  });
+});
 
 // ---------------------------------------------------------------------------
-// POST /api/schedule
-// Middleware: authenticate → csrfProtection → authorize('admin')
-// Creează o singură sesiune în program.
+// POST /api/auth/refresh
+// Refresh token rotation – emite o nouă pereche de token-uri și o revocă pe
+// cea veche. Handler-ul este importat direct din middleware/auth.js.
 // ---------------------------------------------------------------------------
 
-router.post(
-  '/api/schedule',
-  authenticate,
-  csrfProtection,
-  authorize('admin'),
-  validate(scheduleCreateSchema),
-  (req, res) => {
-    try {
-      const db = getDb();
-      const { coach_id, title, day_of_week, start_time, end_time, location, max_participants, is_active } = req.body;
-
-      // Validare coach_id dacă e furnizat
-      if (coach_id !== undefined && coach_id !== null) {
-        const coach = db.prepare('SELECT id FROM coaches WHERE id = ?').get(coach_id);
-        if (!coach) return res.status(400).json({ error: `Coach with id ${coach_id} does not exist.`, code: 'INVALID_COACH' });
-      }
-
-      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
-      const result = db.prepare(`
-        INSERT INTO schedule (coach_id, title, day_of_week, start_time, end_time, location, max_participants, is_active, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        coach_id !== undefined && coach_id !== null ? Number(coach_id) : null,
-        title.trim(), Number(day_of_week), start_time, end_time,
-        location || null,
-        max_participants !== undefined && max_participants !== null ? Number(max_participants) : null,
-        is_active !== undefined ? (is_active ? 1 : 0) : 1,
-        now, now
-      );
-
-      const created = db.prepare(`
-        SELECT s.*, c.name AS coach_name, c.title AS coach_title
-        FROM schedule s LEFT JOIN coaches c ON s.coach_id = c.id
-        WHERE s.id = ?
-      `).get(result.lastInsertRowid);
-
-      const entry = parseScheduleRow(created);
-      return res.status(201).json({ message: 'Schedule entry created successfully.', data: entry });
-    } catch (err) {
-      console.error('[schedule] POST error:', err.message);
-      if (err.message && err.message.includes('FOREIGN KEY'))
-        return res.status(400).json({ error: 'Coach reference is invalid.', code: 'INVALID_COACH' });
-      return res.status(500).json({ error: 'Internal server error.', code: 'INTERNAL_ERROR' });
-    }
-  }
-);
-
-// ---------------------------------------------------------------------------
-// PUT /api/schedule/:id
-// Middleware: authenticate → csrfProtection → authorize('admin')
-// Actualizează o singură sesiune din program.
-// ---------------------------------------------------------------------------
-
-router.put(
-  '/api/schedule/:id',
-  authenticate,
-  csrfProtection,
-  authorize('admin'),
-  validate(scheduleUpdateSchema),
-  (req, res) => {
-    try {
-      const db = getDb();
-      const { id } = req.params;
-      const existing = db.prepare('SELECT * FROM schedule WHERE id = ?').get(id);
-      if (!existing) return res.status(404).json({ error: 'Schedule entry not found.', code: 'NOT_FOUND' });
-
-      // Validare coach_id dacă e furnizat
-      if (req.body.coach_id !== undefined && req.body.coach_id !== null) {
-        const coach = db.prepare('SELECT id FROM coaches WHERE id = ?').get(req.body.coach_id);
-        if (!coach) return res.status(400).json({ error: `Coach with id ${req.body.coach_id} does not exist.`, code: 'INVALID_COACH' });
-      }
-
-      const updates = {};
-      const setClauses = [];
-      const directFields = ['title', 'start_time', 'end_time', 'location'];
-      for (const field of directFields) {
-        if (req.body[field] !== undefined) { updates[field] = req.body[field]; setClauses.push(`${field} = ?`); }
-      }
-      if (req.body.coach_id !== undefined) { updates.coach_id = req.body.coach_id; setClauses.push('coach_id = ?'); }
-      if (req.body.day_of_week !== undefined) { updates.day_of_week = Number(req.body.day_of_week); setClauses.push('day_of_week = ?'); }
-      if (req.body.max_participants !== undefined) { updates.max_participants = req.body.max_participants; setClauses.push('max_participants = ?'); }
-      if (req.body.is_active !== undefined) { updates.is_active = req.body.is_active ? 1 : 0; setClauses.push('is_active = ?'); }
-
-      if (setClauses.length === 0) {
-        const entry = parseScheduleRow(existing);
-        return res.json({ message: 'No changes provided.', data: entry });
-      }
-
-      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
-      setClauses.push('updated_at = ?');
-      const setValues = Object.values(updates);
-      const sql = `UPDATE schedule SET ${setClauses.join(', ')} WHERE id = ?`;
-      const params = [...setValues, now, id];
-      db.prepare(sql).run(...params);
-
-      const updated = db.prepare(`
-        SELECT s.*, c.name AS coach_name, c.title AS coach_title
-        FROM schedule s LEFT JOIN coaches c ON s.coach_id = c.id
-        WHERE s.id = ?
-      `).get(id);
-      const entry = parseScheduleRow(updated);
-      return res.json({ message: 'Schedule entry updated successfully.', data: entry });
-    } catch (err) {
-      console.error('[schedule] PUT single error:', err.message);
-      if (err.message && err.message.includes('FOREIGN KEY'))
-        return res.status(400).json({ error: 'Coach reference is invalid.', code: 'INVALID_COACH' });
-      return res.status(500).json({ error: 'Internal server error.', code: 'INTERNAL_ERROR' });
-    }
-  }
-);
-
-// ---------------------------------------------------------------------------
-// DELETE /api/schedule/:id
-// Middleware: authenticate → csrfProtection → authorize('admin')
-// Șterge o singură sesiune din program.
-// ---------------------------------------------------------------------------
-
-router.delete(
-  '/api/schedule/:id',
-  authenticate,
-  csrfProtection,
-  authorize('admin'),
-  validate(paramsIdSchema),
-  (req, res) => {
-    try {
-      const db = getDb();
-      const { id } = req.params;
-      const existing = db.prepare('SELECT id, title FROM schedule WHERE id = ?').get(id);
-      if (!existing) return res.status(404).json({ error: 'Schedule entry not found.', code: 'NOT_FOUND' });
-      db.prepare('DELETE FROM schedule WHERE id = ?').run(id);
-      return res.json({ message: 'Schedule entry deleted successfully.', deleted: { id: existing.id, title: existing.title } });
-    } catch (err) {
-      console.error('[schedule] DELETE error:', err.message);
-      return res.status(500).json({ error: 'Internal server error.', code: 'INTERNAL_ERROR' });
-    }
-  }
-);
+router.post('/api/auth/refresh', refreshTokenHandler);
 
 module.exports = router;

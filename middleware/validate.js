@@ -1229,14 +1229,30 @@ function sanitizeObjectStrings(obj) {
 // Content-Type validation
 // ---------------------------------------------------------------------------
 
-function requireJsonContentType(req, res, next) {
-  const methodsWithBody = ['POST', 'PUT', 'PATCH'];
-  if (!methodsWithBody.includes(req.method)) return next();
-  const contentType = req.headers['content-type'] || '';
-  if (!contentType.includes('application/json')) {
-    return res.status(415).json({ error: 'Unsupported Media Type. Use application/json.', code: 'UNSUPPORTED_MEDIA_TYPE' });
-  }
-  next();
+/**
+ * Middleware care impune Content-Type-ul cererilor cu corp (POST, PUT, PATCH).
+ * Acceptă opțional o listă de tipuri permise (implicit: application/json).
+ *
+ * @param {object} [options]
+ * @param {string[]} [options.allowedTypes=['application/json']] - Content-Type-uri permise
+ * @returns {import('express').RequestHandler}
+ */
+function requireJsonContentType(options = {}) {
+  const allowedTypes = options.allowedTypes || ['application/json'];
+  return function requireJsonContentTypeMiddleware(req, res, next) {
+    const methodsWithBody = ['POST', 'PUT', 'PATCH'];
+    if (!methodsWithBody.includes(req.method)) return next();
+    const contentType = req.headers['content-type'] || '';
+    const isAllowed = allowedTypes.some(type => contentType.includes(type));
+    if (!isAllowed) {
+      const allowedList = allowedTypes.join(', ');
+      return res.status(415).json({
+        error: `Unsupported Media Type. Use ${allowedList}.`,
+        code: 'UNSUPPORTED_MEDIA_TYPE',
+      });
+    }
+    next();
+  };
 }
 
 // ---------------------------------------------------------------------------
