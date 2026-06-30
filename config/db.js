@@ -1,209 +1,36 @@
 // ---------------------------------------------------------------------------
 // config/db.js
-// Bază de date SQLite via sql.js (WASM) – inițializare asincronă, persistentă
-// pe disc în fișierul database.sqlite.
+// Bază de date SQLite via better-sqlite3 – inițializare sincronă, fără
+// wrapper-e, fără persistență manuală. API-ul nativ better-sqlite3 este
+// expus direct: db.prepare(sql).get/all/run(...), db.transaction(fn),
+// db.exec(sql), db.pragma(...).
+//
+// Fișierul bazei de date: ./boxing.db (în directorul de lucru al
+// procesului Node – rădăcina proiectului).
 //
 // Oferă:
-//   - initDb()          – funcție async care încarcă/crează baza de date
-//   - getDb()           – returnează instanța DB sincron sau null dacă nu e inițializată
-//   - saveDb()          – persistă baza de date pe disc
-//   - closeDb()         – salvează și închide curat
-//   - dbReady           – Promise care se rezolvă când DB este gata
-//
-// Wrapper-ează API-ul sql.js pentru a fi compatibil cu pattern-urile
-// existente în proiect (stmt.get(), stmt.all(), stmt.run() cu spread params,
-// db.transaction()).
+//   - initDb()                  – funcție sincronă care deschide/crează BD
+//   - getDb()                   – returnează instanța Database sau null
+//   - closeDb()                 – închide baza de date
+//   - checkDatabaseConnection() – verifică rapid conexiunea
 // ---------------------------------------------------------------------------
 
-const path = require('path');
-const fs = require('fs');
+const Database = require('better-sqlite3');
 
 // ---------------------------------------------------------------------------
 // Stare internă
 // ---------------------------------------------------------------------------
 
-/** Instanța bazei de date sql.js (wrapper-uită) */
+/** Instanța bazei de date better-sqlite3 */
 let _db = null;
 
-/** Modulul SQL inițializat (referință pentru new SQL.Database) */
-let _SQL = null;
-
-/** Calea către fișierul de date SQLite */
-const DB_PATH = path.join(__dirname, '..', 'database.sqlite');
-
-/** Promise care se rezolvă când DB este complet inițializată */
-let _readyPromise = null;
-
-/** Flag pentru a preveni salvări concurente */
-let _saving = false;
-
-/** Interval de auto-salvare (30 secunde) */
-const AUTO_SAVE_INTERVAL = 30_000;
-
-/** Referință către timer-ul de auto-salvare */
-let _autoSaveTimer = null;
-
-// ---------------------------------------------------------------------------
-// Wrapper sql.js → compatibilitate cu API-ul better-sqlite3
-// ---------------------------------------------------------------------------
-
-/**
- * Wrapper pentru Statement (prepared statement).
- * Transformă API-ul sql.js (params ca array) în API-ul așteptat de
- * restul proiectului (params ca argumente variadice, ca better-sqlite3).
- */
-class StatementWrapper {
-  constructor(stmt) {
-    this._stmt = stmt;
-  }
-
-  /**
-   * Normalizează parametrii: acceptă spread params și îi convertește
-   * într-un array pentru sql.js.
-   */
-  _normalizeParams(args) {
-    if (args.length === 0) return [];
-    // Dacă primul argument este deja un array, îl folosim direct
-    if (args.length === 1 && Array.isArray(args[0])) return args[0];
-    // Altfel, colectăm toate argumentele într-un array
-    return args;
-  }
-
-  get(...args) {
-    const params = this._normalizeParams(args);
-    const result = this._stmt.get(params);
-    this._stmt.free();
-    return result || undefined;
-  }
-
-  all(...args) {
-    const params = this._normalizeParams(args);
-    const result = this._stmt.all(params);
-    this._stmt.free();
-    return result || [];
-  }
-
-  run(...args) {
-    const params = this._normalizeParams(args);
-    const result = this._stmt.run(params);
-    this._stmt.free();
-    // Asigurăm compatibilitate: better-sqlite3 returnează { changes, lastInsertRowid }
-    return {
-      changes: result.changes || 0,
-      lastInsertRowid: result.lastInsertRowid || 0,
-    };
-  }
-}
-
-/**
- * Wrapper pentru Database.
- * Înfășoară db.prepare() și oferă db.transaction().
- */
-class DatabaseWrapper {
-  constructor(sqlDb) {
-    this._sqlDb = sqlDb;
-  }
-
-  prepare(sql) {
-    const stmt = this._sqlDb.prepare(sql);
-    return new StatementWrapper(stmt);
-  }
-
-  exec(sql) {
-    return this._sqlDb.run(sql);
-  }
-
-  /**
-   * Transaction wrapper.
-   * În sql.js, tranzacțiile se fac manual cu BEGIN/COMMIT/ROLLBACK.
-   * Acest wrapper oferă un API similar cu better-sqlite3:
-   *   const fn = db.transaction((...args) => { ... });
-   *   fn(...args);
-   */
-  transaction(fn) {
-    const self = this;
-    return function (...args) {
-      self._sqlDb.run('BEGIN TRANSACTION');
-      try {
-        const result = fn(...args);
-        self._sqlDb.run('COMMIT');
-        return result;
-      } catch (err) {
-        self._sqlDb.run('ROLLBACK');
-        throw err;
-      }
-    };
-  }
-
-  /** Obține instanța nativă sql.js (pentru operații avansate) */
-  getNative() {
-    return this._sqlDb;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Persistență
-// ---------------------------------------------------------------------------
-
-/**
- * Salvează baza de date pe disc (sincron).
- * Folosește fs.writeFileSync pentru a bloca până la finalizare.
- */
-function saveDbSync() {
-  if (!_db) return;
-  try {
-    const data = _db.getNative().export();
-    const buffer = Buffer.from(data);
-    const dir = path.dirname(DB_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(DB_PATH, buffer);
-  } catch (err) {
-    console.error('[db] Eroare la salvarea bazei de date:', err.message);
-  }
-}
-
-/**
- * Salvează baza de date pe disc (asincron, non-blocking).
- * Folosește un flag pentru a preveni salvări concurente.
- */
-function saveDb() {
-  if (!_db || _saving) return;
-  _saving = true;
-  // Folosim setImmediate pentru a nu bloca event loop-ul
-  setImmediate(() => {
-    try {
-      saveDbSync();
-    } finally {
-      _saving = false;
-    }
-  });
-}
-
-/**
- * Închide baza de date și oprește auto-salvarea.
- */
-function closeDb() {
-  if (_autoSaveTimer) {
-    clearInterval(_autoSaveTimer);
-    _autoSaveTimer = null;
-  }
-  if (_db) {
-    saveDbSync();
-    _db.getNative().close();
-    _db = null;
-  }
-  console.log('[db] Baza de date a fost închisă.');
-}
+/** Calea către fișierul SQLite */
+const DB_PATH = './boxing.db';
 
 // ---------------------------------------------------------------------------
 // Creare tabele
 // ---------------------------------------------------------------------------
 
-/**
- * Creează toate tabelele necesare (dacă nu există deja).
- */
 function _createTables() {
   const db = _db;
 
@@ -357,9 +184,6 @@ function _createTables() {
 // Seed date implicite
 // ---------------------------------------------------------------------------
 
-/**
- * Inserează setările implicite (dacă nu există deja).
- */
 function _seedSettings() {
   const db = _db;
 
@@ -397,92 +221,43 @@ function _seedSettings() {
 }
 
 // ---------------------------------------------------------------------------
-// Inițializare principală
+// Inițializare principală (sincronă)
 // ---------------------------------------------------------------------------
 
 /**
- * Inițializează baza de date sql.js.
+ * Inițializează baza de date better-sqlite3.
  *
- * Încarcă fișierul database.sqlite dacă există, altfel creează o bază nouă.
- * Creează tabelele și seed-uiește datele implicite.
+ * Deschide/crează fișierul boxing.db, activează WAL mode și foreign keys,
+ * creează tabelele și seed-uiește datele implicite.
  *
- * @returns {Promise<void>}
+ * @returns {import('better-sqlite3').Database} Instanța bazei de date
  */
-async function initDb() {
-  // Dacă deja avem o inițializare în curs, returnează promisiunea existentă
-  if (_readyPromise) return _readyPromise;
+function initDb() {
+  if (_db) return _db;
 
-  _readyPromise = (async () => {
-    try {
-      console.log('[db] Se încarcă sql.js (WASM)...');
+  console.log('[db] Se deschide/crează baza de date better-sqlite3...');
 
-      // Încărcare sql.js
-      const initSqlJs = require('sql.js');
-      _SQL = await initSqlJs({
-        // sql.js va încărca automat fișierul WASM din node_modules/sql.js/dist/
-      });
+  _db = new Database(DB_PATH);
 
-      console.log('[db] sql.js încărcat cu succes.');
+  // Optimizări și setări
+  _db.pragma('journal_mode = WAL');
+  _db.pragma('foreign_keys = ON');
 
-      // Încărcare sau creare bază de date
-      let sqlDb;
-      if (fs.existsSync(DB_PATH)) {
-        console.log(`[db] Se încarcă baza de date existentă: ${DB_PATH}`);
-        const fileBuffer = fs.readFileSync(DB_PATH);
-        sqlDb = new _SQL.Database(fileBuffer);
-        console.log('[db] Baza de date existentă a fost încărcată.');
-      } else {
-        console.log('[db] Se creează o bază de date nouă.');
-        sqlDb = new _SQL.Database();
-      }
+  _createTables();
+  _seedSettings();
 
-      // Wrapper-ează instanța sql.js
-      _db = new DatabaseWrapper(sqlDb);
+  console.log('[db] Baza de date este gata.');
 
-      // Creează tabelele (IF NOT EXISTS)
-      _createTables();
-
-      // Seed-uiește setările implicite
-      _seedSettings();
-
-      // Salvează inițial
-      saveDbSync();
-
-      // Configurează auto-salvarea periodică
-      _autoSaveTimer = setInterval(() => {
-        saveDb();
-      }, AUTO_SAVE_INTERVAL);
-      if (_autoSaveTimer.unref) _autoSaveTimer.unref();
-
-      // Salvează la terminarea procesului
-      process.on('exit', () => saveDbSync());
-      process.on('SIGINT', () => { saveDbSync(); process.exit(0); });
-      process.on('SIGTERM', () => { saveDbSync(); process.exit(0); });
-      process.on('uncaughtException', (err) => {
-        console.error('[db] Uncaught exception:', err);
-        saveDbSync();
-        process.exit(1);
-      });
-
-      console.log('[db] Baza de date este gata.');
-    } catch (err) {
-      console.error('[db] Eroare la inițializarea bazei de date:', err);
-      _readyPromise = null;
-      throw err;
-    }
-  })();
-
-  return _readyPromise;
+  return _db;
 }
 
 /**
- * Returnează instanța bazei de date (wrapper-uită).
+ * Returnează instanța bazei de date better-sqlite3.
  *
- * Dacă baza de date nu a fost încă inițializată (initDb() nu s-a rezolvat
- * sau a eșuat), returnează null. Rutele trebuie să verifice valoarea
- * returnată și să răspundă cu 503 Service Unavailable dacă este null.
+ * Dacă initDb() nu a fost încă apelată, returnează null. Rutele
+ * trebuie să verifice și să răspundă cu 503 dacă este null.
  *
- * @returns {DatabaseWrapper|null} Instanța wrapper-uită sau null
+ * @returns {import('better-sqlite3').Database|null}
  */
 function getDb() {
   if (!_db) {
@@ -490,6 +265,17 @@ function getDb() {
     return null;
   }
   return _db;
+}
+
+/**
+ * Închide baza de date.
+ */
+function closeDb() {
+  if (_db) {
+    _db.close();
+    _db = null;
+    console.log('[db] Baza de date a fost închisă.');
+  }
 }
 
 /**
@@ -516,7 +302,6 @@ function checkDatabaseConnection() {
 module.exports = {
   initDb,
   getDb,
-  saveDb,
   closeDb,
   checkDatabaseConnection,
   get _db() { return _db; },

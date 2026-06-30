@@ -2,7 +2,7 @@
 // server.js
 // Boxing Champions — Punct principal de intrare Express
 //
-// Încarcă dotenv, inițializează baza de date sql.js (async), configurează
+// Încarcă dotenv, inițializează baza de date sql.js (sincron), configurează
 // middleware-urile de securitate și autentificare, montează rutele API,
 // servește fișierele statice și oferă fallback SPA.
 // ---------------------------------------------------------------------------
@@ -230,11 +230,11 @@ app.use((err, req, res, _next) => {
 // Pornire server (după inițializarea bazei de date)
 // ---------------------------------------------------------------------------
 
-async function startServer() {
+function startServer() {
   try {
-    // Inițializează baza de date (async – sql.js WASM)
+    // Inițializează baza de date (sincron)
     console.log('[server] Se inițializează baza de date...');
-    await initDb();
+    initDb();
     console.log('[server] Baza de date este pregătită.');
 
     // Asigură existența contului de admin
@@ -249,10 +249,10 @@ async function startServer() {
 
     // Pornește serverul
     app.listen(PORT, () => {
-      console.log(`[server] Boxing Champions rulează pe http://localhost:${PORT}`);
-      console.log(`[server] Mod: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`[server] API: http://localhost:${PORT}/api/health`);
-      console.log(`[server] Admin: http://localhost:${PORT}/admin/views/login.html`);
+      console.log('[server] Boxing Champions rulează pe http://localhost:' + PORT);
+      console.log('[server] Mod: ' + (process.env.NODE_ENV || 'development'));
+      console.log('[server] API: http://localhost:' + PORT + '/api/health');
+      console.log('[server] Admin: http://localhost:' + PORT + '/admin/views/login.html');
     });
   } catch (err) {
     console.error('[server] Eroare fatală la pornire:', err);

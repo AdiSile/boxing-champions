@@ -269,6 +269,21 @@
       "role": "assistant",
       "content": "✅ Pas 1 (harmonyos-app-resolver): 1 fișiere salvate.",
       "timestamp": 1782776036.8579757
+    },
+    {
+      "role": "user",
+      "content": "Înlocuiește sql.js cu better-sqlite3 în proiectul Boxing Champions. Schimbă inițializarea bazei de date în `config/db.js` și `server.js` pentru a folosi `require('better-sqlite3')` și `new Database('./boxing.db')`. Rulează `npm uninstall sql.js && npm install better-sqlite3` și actualizează `package.json`. Nu modifica altceva.",
+      "timestamp": 1782776280.265435
+    },
+    {
+      "role": "system",
+      "content": "🚀 Proiect pornit: Proiect: boxing-champions",
+      "timestamp": 1782776280.2863297
+    },
+    {
+      "role": "assistant",
+      "content": "✅ Pas 1 (chief-of-staff): 1 fișiere salvate.\n✅ Pas 2 (build-error-resolver): 1 fișiere salvate.\n✅ Pas 3 (database-reviewer): 1 fișiere salvate.\n✅ Pas 4 (architect): 1 fișiere salvate.\n✅ Pas 5 (architect): 0 fișiere salvate.",
+      "timestamp": 1782776867.2557
     }
   ],
   "cerinta": "Creează proiectul complet „Boxing Champions\" de la zero, o aplicație web full‑stack de lux, cu prezentare club de box, magazin integrat și panou de administrare 100% funcțional. Tot conținutul public este dinamic, încărcat din API, iar modificările din dashboard se reflectă instant pe site. Design imersiv premium: temă de box cu negru profund, auriu și roșu închis, glassmorphism, particule canvas aurii, cursor personalizat, fără emoji‑uri, iconițe Font Awesome. Securitate modernă, performanță maximă, responsive perfect.  1. **Backend (Node.js + Express + SQLite):**    - `config/db.js`: inițializează curat baza de date cu `better‑sqlite3`. Creează tabelele: `settings` (cu o coloană `data TEXT` pentru JSON‑ul complet al setărilor), `users` (email, password, role), `coaches`, `events`, `schedule`, `plans`, `products`, `orders`, `contact_messages`. La prima pornire, populează `settings` cu datele implicite (nume club, slogan, contact, rețele sociale, promoție globală inactivă etc.). Dacă `users` e goală, seed‑ează adminul `admin@boxingchampions.ro` / `boxing2026` (hash bcrypt). Celelalte tabele pot rămâne goale.    - `models/settingsModel.js`: `getSettings()` returnează JSON‑ul din `data`; `updateSettings(newData)` face merge și salvează.    - Rute API (toate returnează JSON valid, array gol dacă nu există date):      * `GET /api/settings` – returnează obiectul complet de setări. `PUT /api/settings` – actualizează setările (face merge).      * `GET /api/coaches`, `POST /api/coaches`, `PUT /api/coaches/:id`, `DELETE /api/coaches/:id`      * `GET /api/events`, `POST /api/events`, `PUT /api/events/:id`, `DELETE /api/events/:id`      * `GET /api/schedule`, `PUT /api/schedule` – gestionează programul săptămânal.      * `GET /api/plans`, `POST /api/plans`, `PUT /api/plans/:id`, `DELETE /api/plans/:id` – pentru abonamente.      * `GET /api/products`, `POST /api/products`, `PUT /api/products/:id`, `DELETE /api/products/:id` – produse din magazin.      * `GET /api/contact` (admin), `POST /api/contact` (public) – mesaje de contact.      * `GET /api/orders`, `PUT /api/orders/:id` – vizualizare comenzi (pentru admin).    - `routes/auth.js`: `POST /api/auth/login` verifică email‑ul și parola (bcrypt), setează cookie `token` JWT (HttpOnly, Secure, SameSite=Strict). Fără CSRF. `GET /api/auth/check` verifică token‑ul și returnează `{authenticated: true/false}`.    - Securitate modernă: CSP cu nonces, Helmet, X‑Content‑Type‑Options, X‑Frame‑Options, rate limiting pe auth, prepared statements peste tot, validare strictă input, erori generice fără detalii.  2. **Sistem de promoții (global și per‑produs):**    - În setări există `globalPromo` cu câmpurile: `active`, `discountPercent`, `label`, `startDate`, `endDate`.    - Produsele pot avea propriul `discountPercent` și etichetă promo. Când promoția globală este activă, **se aplică doar promoția globală** pe toate produsele, ignorând reducerile individuale. Dacă globalPromo este inactiv, se aplică reducerile per‑produs (dacă există).    - Pe cardul de produs se afișează prețul vechi tăiat, prețul redus și eticheta reducerii (globală sau individuală).    - Panoul de administrare include secțiunea **Promoții** pentru a gestiona promoția globală.  3. **Paginile publice (toate dinamice, cu fallback hardcodat):**    - **`public/index.html`** (Home): Hero video/fallback imagine, nume club „BOXING CHAMPIONS\", slogan, badge „New Season 2026 – Join the Legacy\", butoane CTA. Secțiuni: Antrenori (din `/api/coaches`), Realizări (numărători animate), Program rapid (din `/api/schedule`), CTA finală. Footer cu date de contact și link‑uri sociale (din `/api/settings`).    - **`public/events.html`**: Listă evenimente trecute (din `/api/events`). Fiecare eveniment: titlu, dată, locație, descriere, galerie foto. Dacă nu există, mesaj prietenos.    - **`public/schedule.html`**: Tabel săptămânal (din `/api/schedule`), culori pe categorii (Copii, Feminin, Masculin, Mixt), legendă.    - **`public/pricing.html`**: Planuri de abonament (din `/api/plans`), toggle lunar/anual, cel mai popular evidențiat.    - **`public/shop.html`**: Grid de produse (din `/api/products`), filtre pe categorii, coș de cumpărături (localStorage), checkout Stripe (mod test, cheie setată în `.env`).    - **`public/contact.html`**: Formular (trimite la `POST /api/contact`), date de contact din `/api/settings`, hartă Google Maps, buton WhatsApp.    - Toate paginile păstrează designul premium existent. La încărcare fac `fetch` către API‑ul corespunzător. Dacă API‑ul nu răspunde, folosesc datele hardcodate curente.  4. **Panoul de administrare (complet funcțional):**    - `admin/views/login.html`: design imersiv, formular email+parolă, trimite `fetch` la `/api/auth/login`, redirecționează.    - `admin/views/dashboard.html`: sidebar cu secțiunile:      * **Setări Generale:** nume club, slogan, email, telefon, adresă, link‑uri Facebook/TikTok/Instagram.      * **Promoții:** gestiune promoție globală (active/inactive, discount, etichetă, perioadă).      * **Antrenori:** CRUD complet (nume, specializare, certificări, poză, citat, activ/inactiv).      * **Evenimente:** CRUD (titlu, dată, locație, descriere, galerie foto). Evenimentele sunt doar trecute – adminul le adaugă după ce au avut loc.      * **Program:** tabel editable cu zile/ore/categorii.      * **Abonamente:** CRUD planuri (nume, preț lunar, preț anual, beneficii, evidențiat).      * **Produse:** CRUD complet (nume, descriere, preț, preț vechi, etichetă reducere, etichetă contextuală, categorie, imagine URL, stoc, activ/inactiv).      * **Comenzi:** vizualizare comenzi primite.      * **Mesaje:** vezi mesajele din formularul de contact.    - Fiecare secțiune încarcă datele prin fetch la ruta API corespunzătoare și salvează modificările. După salvare, toast verde de confirmare.  5. **Design și experiență (toate paginile):**    - Temă: negru (#0a0a0a), auriu (#d4af37, #f0c040), roșu (#8b0000, #c62828). Glassmorphism pe carduri, navbar și formulare.    - Particule canvas aurii plutitoare pe toate paginile. Cursor personalizat (cerc auriu cu trail). Animații la scroll, carduri 3D cu tilt, preloader animat.    - Fonturi Google: 'Bebas Neue' (titluri), 'Montserrat' (corp), 'Oswald' (subtitluri).    - 100% responsive (320px–2560px), fără emoji‑uri, doar Font Awesome.  6. **Alte cerințe:**    - Serverul pornește fără erori (`node server.js`). Fișierul principal este `server.js` (nu `src/index.js`).    - În `package.json`, setează `\"start\": \"node server.js\"` și `\"engines\": { \"node\": \"20.x\" }`. Creează fișierul `.node-version` cu `20`.    - După deploy, orice modificare din dashboard se reflectă pe paginile publice după refresh.    - Proiectul este complet și gata de producție.  7. **După terminare, returnează toate fișierele modificate sau create în formatul exact:** ### cale/relativă/la/fișier.ext conținut complet ### END",
@@ -920,26 +935,59 @@
       "desc": "Fișier: server.js\nÎnlocuiește `app.get('*', (req, res, next) => { ... })` cu `app.use((req, res) => { ... })` pentru a trata rutele necunoscute fără path-to-regexp, păstrând aceeași logică internă de fallback SPA\n\nSkill-uri relevante:\nSkill: accessibility\n# Accessibility (WCAG 2.2)\n\nThis skill ensures that digital interfaces are Perceivable, Operable, Understandable, and Robust (POUR) for all users, including those using screen readers, switch controls, or keyboard navigation. It focuses on the technical implementation of WCAG 2.2 success criteria.\n\n\n\nSkill: agent-architecture-audit\n# Agent Architecture Audit\n\nA diagnostic workflow for agent systems that hide failures behind wrapper layers, stale memory, retry loops, or transport/rendering mutations.\n\n## When to Activate\n\n**MANDATORY for:**\n- Releasing any agent or LLM-powered application to production\n- Shipping features with \n\nSkill: agent-eval\n# Agent Eval Skill\n\nA lightweight CLI tool for comparing coding agents head-to-head on reproducible tasks. Every \"which coding agent is best?\" comparison runs on vibes — this tool systematizes it.\n\n## When to Activate\n\n- Comparing coding agents (Claude Code, Aider, Codex, etc.) on your own codebase\n\n\nReguli:\n---\npaths:\n  - \"**/*.component.ts\"\n  - \"**/*.component.html\"\n  - \"**/*.service.ts\"\n  - \"**/*.directive.ts\"\n  - \"**/*.pipe.ts\"\n  - \"**/*.guard.ts\"\n  - \"**/*.resolver.ts\"\n  - \"**/*.module.ts\"\n---\n# Angular Coding Style\n> This file extends [common/coding-style.md](../common/coding-style.md) with Angular specific content.\nAlways check the project's Angular version before writing code — features differ significantly between versions. Run `ng version` or inspect `package.json`. When creating a new project, do not pin a version unless the user specifies one.\n---\npaths:\n  - \"**/*.ets\"\n  - \"**/*.ts\"\n  - \"**/module.json5\"\n  - \"**/oh-package.json5\"\n  - \"**/build-profile.json5\"\n---\n# HarmonyOS / ArkTS Coding Style\n> This file extends [common/coding-style.md](../common/coding-style.md) with HarmonyOS and ArkTS-specific content.\n## ArkTS Language Constraints\n\nIMPORTANT: Returnează fiecare fișier generat/modificat în formatul strict:\n### cale/relativă/la/fișier.ext\nconținutul complet al fișierului\n### END\nNu include explicații în afara blocurilor ###.\nFolosește DOAR căi relative la proiect, nu absolute.\n",
       "agent": "harmonyos-app-resolver",
       "status": "pending"
+    },
+    {
+      "id": "9dc60327",
+      "desc": "**package.json** - Elimină `sql.js` din dependencies și adaugă `better-sqlite3`\n\nSkill-uri relevante:\nSkill: codebase-onboarding\n# Codebase Onboarding\n\nSystematically analyze an unfamiliar codebase and produce a structured onboarding guide. Designed for developers joining a new project or setting up Claude Code in an existing repo for the first time.\n\n## When to Use\n\n- First time opening a project with Claude Code\n- Joining a\n\nSkill: coding-standards\n# Coding Standards & Best Practices\n\nBaseline coding conventions applicable across projects.\n\nThis skill is the shared floor, not the detailed framework playbook.\n\n- Use `frontend-patterns` for React, state, forms, rendering, and UI architecture.\n- Use `backend-patterns` or `api-design` for reposito\n\nSkill: cpp-coding-standards\n# C++ Coding Standards (C++ Core Guidelines)\n\nComprehensive coding standards for modern C++ (C++17/20/23) derived from the [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines). Enforces type safety, resource safety, immutability, and clarity.\n\n## When to Use\n\n- Writing\n\nIMPORTANT: Returnează fiecare fișier generat/modificat în formatul strict:\n### cale/relativă/la/fișier.ext\nconținutul complet al fișierului\n### END\nNu include explicații în afara blocurilor ###.\nFolosește DOAR căi relative la proiect, nu absolute.\n",
+      "agent": "chief-of-staff",
+      "status": "pending"
+    },
+    {
+      "id": "95abd501",
+      "desc": "**Execuție npm** - Rulează `npm uninstall sql.js && npm install better-sqlite3`\n\nSkill-uri relevante:\nSkill: make-interfaces-feel-better\n# Make Interfaces Feel Better\n\nUse this skill for the small design-engineering details that compound into a\nmore polished interface.\n\nSource: salvaged from stale community PR #1659 by `linus707`.\n\n## When to Use\n\n- The user says the UI feels off, flat, generic, cramped, jumpy, or unfinished.\n- You a\n\nSkill: mysql-patterns\n# MySQL Patterns\n\nUse this skill when working on MySQL or MariaDB schema design, migrations,\nslow-query investigation, queue-style transactions, connection pools, or\nproduction database configuration. Prefer exact version checks before applying a\nfeature-specific pattern because MySQL and MariaDB ha\n\nSkill: nestjs-patterns\n# NestJS Development Patterns\n\nProduction-grade NestJS patterns for modular TypeScript backends.\n\n## When to Activate\n\n- Building NestJS APIs or services\n- Structuring modules, controllers, and providers\n- Adding DTO validation, guards, interceptors, or exception filters\n- Configuring environment-aw\n\nIMPORTANT: Returnează fiecare fișier generat/modificat în formatul strict:\n### cale/relativă/la/fișier.ext\nconținutul complet al fișierului\n### END\nNu include explicații în afara blocurilor ###.\nFolosește DOAR căi relative la proiect, nu absolute.\n",
+      "agent": "build-error-resolver",
+      "status": "pending"
+    },
+    {
+      "id": "a0db3b93",
+      "desc": "**config/db.js** - Rescrie complet: elimină wrapper-ele sql.js (StatementWrapper, DatabaseWrapper), inițializarea async, persistența manuală și auto-salvarea; folosește direct `require('better-sqlite3')` și `new Database('./boxing.db')` cu API-ul nativ sincron\n\nSkill-uri relevante:\nSkill: angular-developer\n# Angular Developer Guidelines\n\n## When to Activate\n\n- Working in any Angular project or codebase\n- Creating or scaffolding a new Angular project, application, or library\n- Generating components, services, directives, pipes, guards, or resolvers\n- Implementing reactivity with Angular Signals, `linke\n\nSkill: api-connector-builder\n# API Connector Builder\n\nUse this when the job is to add a repo-native integration surface, not just a generic HTTP client.\n\nThe point is to match the host repository's pattern:\n\n- connector layout\n- config schema\n- auth model\n- error handling\n- test style\n- registration/discovery wiring\n\n## When to\n\nSkill: api-design\n# API Design Patterns\n\nConventions and best practices for designing consistent, developer-friendly REST APIs.\n\n## When to Activate\n\n- Designing new API endpoints\n- Reviewing existing API contracts\n- Adding pagination, filtering, or sorting\n- Implementing error handling for APIs\n- Planning API versio\n\nReguli:\n---\npaths:\n  - \"**/*.component.ts\"\n  - \"**/*.component.html\"\n  - \"**/*.service.ts\"\n  - \"**/*.directive.ts\"\n  - \"**/*.pipe.ts\"\n  - \"**/*.guard.ts\"\n  - \"**/*.resolver.ts\"\n  - \"**/*.module.ts\"\n---\n# Angular Coding Style\n> This file extends [common/coding-style.md](../common/coding-style.md) with Angular specific content.\nAlways check the project's Angular version before writing code — features differ significantly between versions. Run `ng version` or inspect `package.json`. When creating a new project, do not pin a version unless the user specifies one.\n\nIMPORTANT: Returnează fiecare fișier generat/modificat în formatul strict:\n### cale/relativă/la/fișier.ext\nconținutul complet al fișierului\n### END\nNu include explicații în afara blocurilor ###.\nFolosește DOAR căi relative la proiect, nu absolute.\n",
+      "agent": "database-reviewer",
+      "status": "pending"
+    },
+    {
+      "id": "4c6229db",
+      "desc": "**server.js** - Actualizează `startServer()`: elimină `await initDb()` (devine sincron), păstrează `ensureAdminOnStartup()` și restul logicii neschimbate\n\nSkill-uri relevante:\nSkill: mcp-server-patterns\n# MCP Server Patterns\n\nThe Model Context Protocol (MCP) lets AI assistants call tools, read resources, and use prompts from your server. Use this skill when building or maintaining MCP servers. The SDK API evolves; check Context7 (query-docs for \"MCP\") or the official MCP documentation for current m\n\nSkill: nestjs-patterns\n# NestJS Development Patterns\n\nProduction-grade NestJS patterns for modular TypeScript backends.\n\n## When to Activate\n\n- Building NestJS APIs or services\n- Structuring modules, controllers, and providers\n- Adding DTO validation, guards, interceptors, or exception filters\n- Configuring environment-aw\n\nSkill: nextjs-turbopack\n# Next.js and Turbopack\n\nNext.js 16+ uses Turbopack by default for local development: an incremental bundler written in Rust that significantly speeds up dev startup and hot updates.\n\n## When to Use\n\n- **Turbopack (default dev)**: Use for day-to-day development. Faster cold start and HMR, especially\n\nIMPORTANT: Returnează fiecare fișier generat/modificat în formatul strict:\n### cale/relativă/la/fișier.ext\nconținutul complet al fișierului\n### END\nNu include explicații în afara blocurilor ###.\nFolosește DOAR căi relative la proiect, nu absolute.\n",
+      "agent": "architect",
+      "status": "pending"
+    },
+    {
+      "id": "ecd920ed",
+      "desc": "**tests/run.js** - Rulează testele pentru a verifica integritatea după migrare\n\nSkill-uri relevante:\nSkill: accessibility\n# Accessibility (WCAG 2.2)\n\nThis skill ensures that digital interfaces are Perceivable, Operable, Understandable, and Robust (POUR) for all users, including those using screen readers, switch controls, or keyboard navigation. It focuses on the technical implementation of WCAG 2.2 success criteria.\n\n\n\nSkill: agent-architecture-audit\n# Agent Architecture Audit\n\nA diagnostic workflow for agent systems that hide failures behind wrapper layers, stale memory, retry loops, or transport/rendering mutations.\n\n## When to Activate\n\n**MANDATORY for:**\n- Releasing any agent or LLM-powered application to production\n- Shipping features with \n\nSkill: agent-eval\n# Agent Eval Skill\n\nA lightweight CLI tool for comparing coding agents head-to-head on reproducible tasks. Every \"which coding agent is best?\" comparison runs on vibes — this tool systematizes it.\n\n## When to Activate\n\n- Comparing coding agents (Claude Code, Aider, Codex, etc.) on your own codebase\n\n\nReguli:\n---\npaths:\n  - \"**/*.component.ts\"\n  - \"**/*.component.html\"\n  - \"**/*.service.ts\"\n  - \"**/*.directive.ts\"\n  - \"**/*.pipe.ts\"\n  - \"**/*.guard.ts\"\n  - \"**/*.resolver.ts\"\n  - \"**/*.module.ts\"\n---\n# Angular Coding Style\n> This file extends [common/coding-style.md](../common/coding-style.md) with Angular specific content.\nAlways check the project's Angular version before writing code — features differ significantly between versions. Run `ng version` or inspect `package.json`. When creating a new project, do not pin a version unless the user specifies one.\n---\npaths:\n  - \"**/*.ets\"\n  - \"**/*.ts\"\n  - \"**/module.json5\"\n  - \"**/oh-package.json5\"\n  - \"**/build-profile.json5\"\n---\n# HarmonyOS / ArkTS Coding Style\n> This file extends [common/coding-style.md](../common/coding-style.md) with HarmonyOS and ArkTS-specific content.\n## ArkTS Language Constraints\n\nIMPORTANT: Returnează fiecare fișier generat/modificat în formatul strict:\n### cale/relativă/la/fișier.ext\nconținutul complet al fișierului\n### END\nNu include explicații în afara blocurilor ###.\nFolosește DOAR căi relative la proiect, nu absolute.\n",
+      "agent": "architect",
+      "status": "pending"
     }
   ],
   "plan": [],
   "status": "completed",
   "checkpoint": {
-    "step": 1,
+    "step": 5,
     "files": {
       ".env": "e79b6b83ad870624b4b7b98259d14b61",
       ".node-version": "183ee5c38f5718616e4d909d5298b395",
-      "database.sqlite": "faf5271532244b61c8dd0d25537b2532",
+      "boxing.db": "92ca0d14cd0b699cab9d9551be951fa8",
+      "boxing.db-shm": "db0b315065c749ffb6886322406ae06e",
+      "boxing.db-wal": "14449ae5cfe83988fd91df38d5275f00",
+      "database.sqlite": "83e9380574655502d9e20b44c430580b",
       "generated.html": "9534a41b1ef95be5f7b518e0889b9086",
       "generated.js": "71f61f33b1dc8f80f6251ad0b4f3cbf1",
-      "package-lock.json": "25f8acaa558028efb5589a8141a3144e",
-      "package.json": "1ce18565e3996b49f2ab5a35d3baa3ad",
+      "package-lock.json": "0b66400c90189dd4c758d13b8f302de8",
+      "package.json": "1f1096deac9ac6dc64361181968203b2",
       "plan.md": "38f53ee07f8e5a55e52edd2b265127cd",
       "README.md": "196403285299eb09c05cd702f04c1b88",
-      "server.js": "c5bf8f1b878ad27d5ac3dc2f5d53ddb9",
+      "server.js": "a9fa57f37de7c95265a14ecc2d267190",
       "server.log": "f393068995cb155c9217474a58d21809",
       "server_output.log": "4a17c945a1d72951685ce9118c556283",
-      "state.json": "939713e826cccc85978863e3867c5928",
+      "state.json": "0a061e05f24fca80751203c27d830afe",
       "_auth_output.txt": "a117a64fe517cb9a66e11d9cfed51765",
       "admin\\css\\admin.css": "729675882b97df506dc4baa3b2b3665a",
       "admin\\images\\admin-badge.png": "d55e8a046f52307b86fe909a8cd4b2e4",
@@ -947,7 +995,7 @@
       "admin\\js\\admin.js": "be607cc0a065ab88efd29fe623b0a4cc",
       "admin\\views\\dashboard.html": "ca4ce87124ec5f3debf1425c7b61bc93",
       "admin\\views\\login.html": "8f4888cfb442eb37a3976330dc2f3f77",
-      "config\\db.js": "0c92bd51ca0b22a859c37954a2a12e18",
+      "config\\db.js": "237e0cbec3bea32ea09fa0d18bac03fe",
       "middleware\\auth.js": "5de06a3676438e0ddd4c95b003e153ea",
       "middleware\\security.js": "b25decb9a6968b451feb13a33da43475",
       "middleware\\validate.js": "4518e8a8f38be4fa7156360ebe84ecd5",
@@ -999,7 +1047,7 @@
       "routes\\promotions.js": "1704c77d9925480cc39fb671922d0e70",
       "routes\\schedule.js": "fea1325759ae18e65821744f949994c1",
       "routes\\settings.js": "8ddeb11f3d44e6ad524c86a5eda55ff9",
-      "tests\\run.js": "ab01321f65a09ded3ebfda939848f6df",
+      "tests\\run.js": "d09d7d68f67818afcc08a8544cf4aa94",
       "tests\\test-auth.js": "67f2f0956df34dfd5b5a432e8f62d564",
       "tests\\test-checkout.js": "bb7805dbcfdb4290f2dcdaee3cbe87ff",
       "tests\\test-coaches.js": "d1380554cfff5a1b948d31215278a61f",
@@ -1013,5 +1061,5 @@
     }
   },
   "modified_files": {},
-  "updated": 1782776036.836983
+  "updated": 1782776867.2400734
 }
